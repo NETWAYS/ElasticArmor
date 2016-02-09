@@ -1,2 +1,9 @@
+# Exclude all hidden files
+.*
+
+# and every bytecode file
 *.pyc
-.vagrant
+
+# and the virtual python environment
+/Python2.6
+
