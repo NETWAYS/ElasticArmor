@@ -283,7 +283,7 @@ class UnixDaemon(object):
         if not pid:
             self.log.error('%s is NOT running', self.name)
             sys.exit(1)
-        self.log.info('Issueing reload procedures of %s', self.name)
+        self.log.info('Issuing reload procedures of %s', self.name)
         if pid != True:
             os.kill(pid, signal.SIGHUP)
         return 0
