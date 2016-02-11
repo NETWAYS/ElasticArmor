@@ -54,4 +54,8 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        logging.critical('Interrupt received. Application has been aborted.')
+        sys.exit(1)
