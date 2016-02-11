@@ -59,7 +59,7 @@ class ElasticConnection(LoggingAware, object):
         with self._unreachable_nodes_lock.writeContext:
             for node in self._unreachable_nodes[:]:
                 try:
-                    if requests.head(node).ok():
+                    if requests.head(node).raise_for_status():
                         self._unreachable_nodes.remove(node)
                         reachable_nodes.append(node)
                         self.log.debug('Node "%s" is reachable and being made available again.', node)
