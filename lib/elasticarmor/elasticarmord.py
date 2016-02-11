@@ -32,24 +32,23 @@ class ElasticArmor(UnixDaemon):
         self._proxy.launch()
 
     def before_daemonize(self):
-        pass
+        settings = Settings()
+        root_log = logging.getLogger()
+        root_log.setLevel(settings.log_level)
+
+        if settings.detach:
+            root_log.handlers = [settings.log_handler]
+        elif root_log.isEnabledFor(logging.DEBUG):
+            # The default StreamHandler is the only one at this time
+            root_log.handlers[0].setFormatter(logging.Formatter(FILE_LOG_FORMAT_DEBUG))
 
 
 def main():
-    logging.basicConfig(level=logging.ERROR, format=FILE_LOG_FORMAT)
-    settings = Settings()
-    root_log = logging.getLogger()
-    root_log.setLevel(settings.log_level)
+    logging.basicConfig(level=logging.INFO, format=FILE_LOG_FORMAT)
 
+    settings = Settings()
     daemon = ElasticArmor(settings.pidfile, settings.umask, settings.chdir, settings.user,
                       settings.group, settings.detach, settings.log_file)
-
-    if settings.detach:
-        root_log.handlers = [settings.log_handler]
-    elif root_log.isEnabledFor(logging.DEBUG):
-        # The default StreamHandler is the only one at this time
-        root_log.handlers[0].setFormatter(logging.Formatter(FILE_LOG_FORMAT_DEBUG))
-
     return getattr(daemon, settings.arguments[0])()
 
 
