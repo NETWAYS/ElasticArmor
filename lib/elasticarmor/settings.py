@@ -8,11 +8,14 @@ import socket
 import sys
 from logging.handlers import SysLogHandler
 
+import requests
+
 from elasticarmor import *
 from elasticarmor.util.auth import LdapUsergroupBackend
 from elasticarmor.util.config import Parser
 from elasticarmor.util.daemon import get_daemon_option_parser
 from elasticarmor.util.elastic import ElasticConnection
+from elasticarmor.util.functions import compare_major_and_minor_version
 from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['Settings']
@@ -230,7 +233,32 @@ class Settings(LoggingAware, object):
 
     @property
     def elasticsearch(self):
-        return ElasticConnection(self.elasticsearch_nodes)
+        nodes = self.elasticsearch_nodes
+        for node in nodes:
+            try:
+                response = requests.get(node)
+                response.raise_for_status()
+            except requests.RequestException as error:
+                self.log.warning('Node "%s" is not reachable. Error: %s', node, error)
+            else:
+                try:
+                    result = response.json()
+                    node_version = result['version']['number']
+                except (ValueError, TypeError, KeyError):
+                    self._exit('There went something wrong with node "%s". Are you'
+                               ' sure that this is a Elasticsearch node?', node)
+
+                if not any(compare_major_and_minor_version(node_version, version) == 0
+                           for version in SUPPORTED_ELASTICSEARCH_VERSIONS):
+                    self.log.warning('Node "%s" has a version which is not officially supported. (%s) You'
+                                     ' may experience unexpected or invalid results.', node, node_version)
+                    # TODO(3057): Use the following once we've got a test-suite
+                    """self.log.warning('Node "%s" has a version which is not officially supported. If you know'
+                                     ' that ElasticArmor is fully compatible with version "%s" you can help us'
+                                     ' by sending us the results of a test ran against this particular node.',
+                                     node, node_version)"""
+
+        return ElasticConnection(nodes)
 
     @property
     def elasticsearch_nodes(self):
@@ -247,7 +275,6 @@ class Settings(LoggingAware, object):
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             self._exit('It is mandatory to provide at least one elasticsearch node.')
 
-        # TODO: Verify that each node is a Elasticsearch 1.7.x instance
         return nodes
 
     @property

@@ -6,6 +6,7 @@ SYSLOG_DATE_FORMAT = '%b %e %H:%M:%S'
 SYSLOG_FORMAT ='%(asctime)s %(name)s: %(message)s'
 FILE_LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
 FILE_LOG_FORMAT_DEBUG = '%(asctime)s - %(process)d:%(threadName)s:%(name)s - %(levelname)s - %(message)s'
+SUPPORTED_ELASTICSEARCH_VERSIONS = ['1.7']
 
 DEFAULT_CONFIG = '/etc/elasticarmor/config.ini'
 DEFAULT_LOGFILE = '/var/log/elasticarmor/elasticarmor.log'
