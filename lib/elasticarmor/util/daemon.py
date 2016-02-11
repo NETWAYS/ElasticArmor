@@ -143,7 +143,7 @@ class UnixDaemon(object):
 
                 fcntl.flock(self._pidfp.fileno(), flags)
                 self._pidlocked = True
-            except:
+            except (OSError, IOError):
                 pass
 
     def _closepidfile(self):
