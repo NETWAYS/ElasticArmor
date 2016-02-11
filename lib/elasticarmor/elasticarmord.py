@@ -45,6 +45,8 @@ class ElasticArmor(UnixDaemon):
 
 def main():
     logging.basicConfig(level=logging.INFO, format=FILE_LOG_FORMAT)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
 
     settings = Settings()
     daemon = ElasticArmor(settings.pidfile, settings.umask, settings.chdir, settings.user,
