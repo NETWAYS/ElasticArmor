@@ -25,7 +25,6 @@ class Client(object):
 
     def is_authenticated(self):
         """Return whether this client authenticated itself by providing a username and password."""
-        # TODO: Allow anonymous access by IP[&Port]
         return self.username is not None and self.password is not None
 
     def __str__(self):

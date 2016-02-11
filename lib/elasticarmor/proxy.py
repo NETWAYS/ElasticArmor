@@ -32,6 +32,7 @@ PRETTY_ERROR_FORMAT = '''{
 class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
     def __init__(self):
         settings = Settings()
+        self.allow_from = settings.allow_from
         self.group_backend = settings.group_backend
         self.elasticsearch = settings.elasticsearch
 
@@ -241,9 +242,12 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             return
 
         if not self.client.is_authenticated():
-            self.send_error(401, None, 'Authorization Required. Please authenticate yourself to access this realm.',
-                            {'WWW-Authenticate': 'Basic realm="Elasticsearch - Protected by ElasticArmor"'})
-            return
+            # In case a client is not authenticated check if anonymous access is permitted
+            allowed_ports = self.server.allow_from.get(self.client.address, [])
+            if allowed_ports is not None and self.client.port not in allowed_ports:
+                self.send_error(401, None, 'Authorization Required. Please authenticate yourself to access this realm.',
+                                {'WWW-Authenticate': 'Basic realm="Elasticsearch - Protected by ElasticArmor"'})
+                return
         elif self.client.groups is None:
             self.send_error(
                 403, explain='Failed to fetch your group memberships. Please contact an administrator.')

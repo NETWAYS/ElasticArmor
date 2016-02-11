@@ -4,6 +4,7 @@ import ConfigParser
 import errno
 import logging
 import os.path
+import socket
 import sys
 from logging.handlers import SysLogHandler
 
@@ -25,6 +26,7 @@ class Settings(LoggingAware, object):
         'application': APP_NAME,
         'level': 'error',
         'elasticsearch': DEFAULT_NODE,
+        'allow_from': 'localhost',
         'address': DEFAULT_ADDRESS,
         'port': DEFAULT_PORT,
         'secured': 'false',
@@ -194,6 +196,37 @@ class Settings(LoggingAware, object):
 
         self._check_file_permissions(certificate_path, 'r')
         return certificate_path
+
+    @property
+    def allow_from(self):
+        allow_from = {}
+        for host_and_port in self.config.get('proxy', 'allow_from').split(','):
+            try:
+                host, port = host_and_port.split(':')
+            except ValueError:
+                host = host_and_port
+                port = None
+            else:
+                port = int(port) if port.strip() else None
+
+            try:
+                ip_list = socket.gethostbyname_ex(host.strip())[2]
+            except socket.gaierror as error:
+                self.log.warning('Failed to resolve hostname "%s". An error occurred: %s', host, error)
+            else:
+                for ip in ip_list:
+                    if ip not in allow_from:
+                        if port:
+                            allow_from[ip] = [port]
+                        else:
+                            allow_from[ip] = None
+                    elif allow_from[ip] is not None:
+                        if port:
+                            allow_from[ip].append(port)
+                        else:
+                            allow_from[ip] = None
+
+        return allow_from
 
     @property
     def elasticsearch(self):
