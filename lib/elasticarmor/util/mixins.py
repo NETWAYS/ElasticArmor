@@ -16,3 +16,7 @@ class LoggingAware:
         except AttributeError:
             self.__class__.__log = logging.getLogger(self.__module__)
             return self.__class__.__log
+
+    def is_debugging(self):
+        """Return whether debug logging is enabled."""
+        return self.log.isEnabledFor(logging.DEBUG)

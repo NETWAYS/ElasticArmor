@@ -51,10 +51,12 @@ class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
         self.serve_forever()
 
     def process_request(self, request, client_address):
+        self.log.debug('Accepted request from "%s:%u".', *client_address)
         thread = threading.Thread(target=self.process_request_thread, args=(request, client_address))
         thread.setDaemon(1)  # Required because UnixDaemon utilizes atexit for cleanup purposes
         thread.request_thread = True  # Required to simplify identification when cleaning up
         thread.start()
+        self.log.debug('Started thread %s to process request from "%s:%u".', thread.name, *client_address)
 
     def shutdown(self):
         self.log.debug('Stopping to serve incoming requests...')
@@ -72,7 +74,6 @@ class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
         self.log.debug('Closed socket.')
 
 
-# TODO: Log sent and received headers
 class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
     keep_alive_hint = 'timeout={0}, max={1}'.format(CONNECTION_TIMEOUT, CONNECTION_REQUEST_LIMIT)
     server_version = APP_NAME + '/' + VERSION
@@ -140,8 +141,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
 
         if content_length > 0:
+            self.log.debug('Fetching request payload of length %u...', content_length)
             self._body = self.rfile.read(content_length)
         else:
+            self.log.debug('Request payload is either empty or it\'s a HEAD request.')
             self._body = ''
 
         return self._body
@@ -179,6 +182,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # We're logging requests by ourselves, thus we'll ignore BaseHTTPRequestHandler's builtin messages
 
+    def send_header(self, keyword, value):
+        BaseHTTPRequestHandler.send_header(self, keyword, value)
+        self.log.debug('Sent header "%s: %s".', keyword, value)
+
     def send_error(self, code, message=None, explain=None, headers=None):
         # BaseHTTPRequestHandler's implementation of send_error suffers from various issues but the
         # most obvious one is flexibility, thus we're overwriting it here to accommodate this.
@@ -211,6 +218,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         self.end_headers()
 
         if self.command != 'HEAD' and code >= 200 and code not in (204, 304):
+            self.log.debug('Sending response payload of length %u...', len(content))
             self.wfile.write(content)
 
         if code != 408:  # 408 = Request timeout; This is not triggered by the client, so there is no need to log it
@@ -220,18 +228,29 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
     def fetch_request(self):
         self.raw_requestline = self.rfile.readline()  # Extract the first header line, required by parse_request()
         if not self.raw_requestline:
+            self.log.debug('No request line received. Closing connection. (This is'
+                           ' likely because the client has closed the connection!)')
             self.close_connection = True
             return
         elif not self.parse_request():
+            self.log.debug('Invalid request received. Closing connection.')
             return
+
+        if self.is_debugging():
+            self.log.debug('Received request line "%s".', self.raw_requestline.rstrip())
+            for name, value in self.headers.items():
+                self.log.debug('Received header "%s: %s".', name, value)
 
         self._received_requests += 1
         if self._received_requests == CONNECTION_REQUEST_LIMIT:
+            self.log.debug('Client "%s" reached request limit of %u. Connection is about to be closed.',
+                           self.client, CONNECTION_REQUEST_LIMIT)
             self.close_connection = True
 
         # TODO: http://tools.ietf.org/html/rfc7230#section-3.2.4 (Second paragraph)
 
         url_parts = urlparse(self.path)
+        path = url_parts.path.rstrip(' /')
         query = parse_query(url_parts.query)
         if query.get('pretty', False):
             # TODO: Elasticsearch responds also with YAML if desired by the client (format=yaml)
@@ -254,8 +273,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             return
 
         self._options = self.headers.extract_connection_options()
-        path = '/' if not url_parts.path else url_parts.path.rstrip(' /')
-        request = ElasticRequest.create_request(self.command, path, query, self.headers, self.body)
+        if self._options:
+            self.log.debug('Extracted connection options: %s', self._options)
+
+        request = ElasticRequest.create_request(self.command, path if path else '/', query, self.headers, self.body)
         if request is None:
             # TODO: Elasticsearch responds with text/plain, not application/json!
             self.send_error(400, explain='Unable to process this request. No request handler found.')
@@ -297,6 +318,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
         self.end_headers()
         if response.content:
+            self.log.debug('Sending response payload of length %s...', headers['Content-Length'])
             self.wfile.write(response.content)
 
         self.log.info('Forwarded response from Elasticsearch for request "%s %s" to client "%s".',
