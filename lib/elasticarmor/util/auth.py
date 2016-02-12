@@ -148,6 +148,11 @@ class LdapUsergroupBackend(LdapUserBackend):
         self.group_name_attribute = settings.ldap_group_name_attribute
         self.group_membership_attribute = settings.ldap_group_membership_attribute
 
+    def clear_cache(self):
+        """Clear the internal group membership cache."""
+        with self._cache_lock.writeContext:
+            self._group_cache.clear()
+
     @Protector('_cache_lock')
     def get_group_memberships(self, username):
         """Fetch and return all usergroups the user identified by the given username is a member of."""

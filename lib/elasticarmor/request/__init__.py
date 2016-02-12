@@ -90,6 +90,18 @@ class ElasticRequest(LoggingAware, object):
             except ValidationError:
                 pass
 
+    @classmethod
+    def clear_caches(cls):
+        """Clear the cache of all registered request handlers."""
+        for class_obj in _RequestRegistry.registry:
+            cls.log.debug('Clearing cache of request handler "%s"...', class_obj.__name__)
+            class_obj.clear_cache()
+
+    @classmethod
+    def clear_cache(cls):
+        """Clear any caches. Gets called once the user reloads the application."""
+        pass
+
     def validate(self):
         """Take a quick look at the request and decide whether it can be handled
         or not. Should raise ValidationError if this is not the case."""

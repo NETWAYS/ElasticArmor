@@ -5,6 +5,7 @@ import sys
 
 from elasticarmor import *
 from elasticarmor.proxy import ElasticReverseProxy
+from elasticarmor.request import ElasticRequest
 from elasticarmor.settings import Settings
 from elasticarmor.util.daemon import UnixDaemon
 
@@ -25,7 +26,11 @@ class ElasticArmor(UnixDaemon):
         self._proxy.shutdown()
 
     def handle_reload(self):
-        pass  # TODO: Cache invalidation
+        self.log.info('Reloading request handler caches...')
+        ElasticRequest.clear_caches()
+        if self._proxy.group_backend is not None:
+            self.log.info('Reloading group membership cache...')
+            self._proxy.group_backend.clear_cache()
 
     def run(self):
         self.log.info('Launching reverse proxy...')
