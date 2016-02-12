@@ -2,21 +2,24 @@
 
 import logging
 
+from elasticarmor.util import classproperty
+
 __all__ = ['LoggingAware']
 
 
 class LoggingAware:
-    """Logging mixin which provides a convenience property for lazy logging."""
+    """Logging mixin which provides a convenience property and methods for lazy logging."""
 
-    @property
-    def log(self):
+    @classproperty
+    def log(cls):
         """Return a logger instance properly set up for the class utilizing this mixin."""
         try:
-            return self.__class__.__log
+            return cls.__log
         except AttributeError:
-            self.__class__.__log = logging.getLogger(self.__module__)
-            return self.__class__.__log
+            cls.__log = logging.getLogger(cls.__module__)
+            return cls.__log
 
-    def is_debugging(self):
+    @classmethod
+    def is_debugging(cls):
         """Return whether debug logging is enabled."""
-        return self.log.isEnabledFor(logging.DEBUG)
+        return cls.log.isEnabledFor(logging.DEBUG)
