@@ -11,11 +11,11 @@ from logging.handlers import SysLogHandler
 import requests
 
 from elasticarmor import *
+from elasticarmor.util import compare_major_and_minor_version
 from elasticarmor.util.auth import LdapUsergroupBackend
 from elasticarmor.util.config import Parser
 from elasticarmor.util.daemon import get_daemon_option_parser
 from elasticarmor.util.elastic import ElasticConnection
-from elasticarmor.util.functions import compare_major_and_minor_version
 from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['Settings']

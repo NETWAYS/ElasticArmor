@@ -14,8 +14,8 @@ from ldap import LDAPError
 from elasticarmor import *
 from elasticarmor.request import ElasticRequest, RequestError
 from elasticarmor.settings import Settings
+from elasticarmor.util import format_ldap_error
 from elasticarmor.util.auth import Client
-from elasticarmor.util.functions import format_ldap_error
 from elasticarmor.util.http import parse_query, HttpHeaders
 from elasticarmor.util.mixins import LoggingAware
 
