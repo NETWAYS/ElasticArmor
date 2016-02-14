@@ -10,6 +10,7 @@ from SocketServer import ThreadingMixIn
 from urlparse import urlparse
 
 from ldap import LDAPError
+from requests import RequestException
 
 from elasticarmor import *
 from elasticarmor.request import ElasticRequest, RequestError
@@ -112,6 +113,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         except socket.timeout:
             self.log.debug('Client "%s" timed out. Closing connection.', self.client)
             self.send_error(408, explain='Idle time limit exceeded. (%u Seconds)' % CONNECTION_TIMEOUT)
+        except RequestException as error:
+            self.log.error('An error occurred while communicating with Elasticsearch: %s', error)
+            self.send_error(502, explain='An error occurred while communicating with Elasticsearch.'
+                                         ' Please contact an administrator.')
         except:
             try:
                 body = self.body

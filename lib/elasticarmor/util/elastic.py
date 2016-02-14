@@ -90,15 +90,26 @@ class ElasticConnection(LoggingAware, object):
         self.log.debug('Forwarding request "%s %s?%s" to Elasticsearch...',
                        request.method, request.path, encoded_query)
 
+        first_error = None
         with requests.Session() as session:
             for node in self._reachable_nodes:
                 prepared_request.prepare_url(node + request.path, encoded_query)
 
                 try:
                     response = session.send(prepared_request)
+                except requests.Timeout:
+                    self.log.warning('Node "%s" timed out.')
+                    self._mark_as_unreachable(node)
                 except requests.RequestException as error:
                     self.log.warning('Failed to connect to node "%s". An error occurred: %s', node, error)
                     self._mark_as_unreachable(node)
+                    if first_error is None:
+                        first_error = error
                 else:
                     self.log.debug('Got response with status %u from node "%s".', response.status_code, node)
                     return response
+
+        if first_error is not None:
+            # Re-raise the exception which occurred first to indicate
+            # to the user that we were not able to fetch a response
+            raise first_error
