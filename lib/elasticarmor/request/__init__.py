@@ -68,25 +68,25 @@ class ElasticRequest(LoggingAware, object):
     """
     __metaclass__ = _RequestRegistry
 
-    def __init__(self, method, path, query, headers, body):
+    def __init__(self, command, path, query, headers, body):
         super(ElasticRequest, self).__init__()
 
         self.path = path
         self.body = body
         self.query = query
-        self.method = method
+        self.command = command
         self.headers = headers
 
         self.validate()
 
     @staticmethod
-    def create_request(method, path, query, headers, body):
+    def create_request(command, path, query, headers, body):
         """Return a instance of the first matching request handler
         for the given request. Returns None if no handler matches."""
 
         for class_obj in _RequestRegistry.registry:
             try:
-                return class_obj(method, path, query, headers, body)
+                return class_obj(command, path, query, headers, body)
             except ValidationError:
                 pass
 

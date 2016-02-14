@@ -83,12 +83,12 @@ class ElasticConnection(LoggingAware, object):
         """Forward the given request to Elasticsearch and return its response.
         Returns None if it was not possible to receive a response."""
         prepared_request = requests.PreparedRequest()
-        prepared_request.prepare_method(request.method)
+        prepared_request.prepare_method(request.command)
         prepared_request.prepare_headers(request.headers)
         prepared_request.prepare_body(request.body, None)
         encoded_query = urllib.urlencode(request.query, True)
         self.log.debug('Forwarding request "%s %s?%s" to Elasticsearch...',
-                       request.method, request.path, encoded_query)
+                       request.command, request.path, encoded_query)
 
         first_error = None
         with requests.Session() as session:
