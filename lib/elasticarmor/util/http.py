@@ -89,6 +89,16 @@ class HttpHeaders(httplib.HTTPMessage):
 
         return options
 
+    def extend_via_field(self, received_protocol, received_by, comment=None):
+        """Register the given Via field values without losing any existing ones."""
+        formatted_values = '{0} {1}{2}'.format(received_protocol, received_by, ' ' + comment if comment else '')
+
+        intermediaries = self.get('Via', '')
+        if intermediaries:
+            self['Via'] = ', '.join((intermediaries, formatted_values))
+        else:
+            self['Via'] = formatted_values
+
     @classmethod
     def from_http_header_dict(cls, http_header_dict):
         """Create and return a new instance of HttpHeaders based on the given HTTPHeaderDict object.

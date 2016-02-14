@@ -324,6 +324,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             return
 
         if response is None:
+            request.headers.extend_via_field(self.protocol_version, APP_NAME)
             response = self.server.elasticsearch.process(request)
             if response is None:
                 self.send_error(504, explain='No response received from any of the configured Elasticsearch nodes.')
@@ -333,6 +334,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         # object is overwritten to avoid a differentiation between it and the new one in the
         # context object. If this causes issues, feel free to refactor it.
         response.headers = HttpHeaders.from_http_header_dict(response.headers)
+        response.headers.extend_via_field(self.protocol_version, APP_NAME)
         response.headers.extract_connection_options()
 
         self._context.response = response  # Now that we got a response, we can update the context
@@ -340,7 +342,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(502, explain='Bad or malicious message framing detected. Please contact an administrator.')
             return
 
-        # TODO: Via? (http://tools.ietf.org/html/rfc7230#section-5.7.1)
         self.send_response(response.status_code, response.reason)
         for name, value in response.headers.items():
             self.send_header(name, value)
