@@ -96,7 +96,7 @@ class ElasticConnection(LoggingAware, object):
                 prepared_request.prepare_url(node + request.path, encoded_query)
 
                 try:
-                    response = session.send(prepared_request)
+                    response = session.send(prepared_request, stream=True)
                 except requests.Timeout:
                     self.log.warning('Node "%s" timed out.')
                     self._mark_as_unreachable(node)

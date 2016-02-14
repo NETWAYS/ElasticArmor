@@ -6,7 +6,10 @@ import cStringIO
 
 from requests.structures import CaseInsensitiveDict
 
-__all__ = ['is_false', 'parse_query', 'HttpHeaders', 'HttpContext']
+__all__ = ['is_false', 'parse_query', 'prepare_chunk', 'close_chunks', 'trailer_chunks',
+           'read_chunked_content', 'ChunkParserError', 'HttpHeaders', 'HttpContext']
+
+CRLF = '\r\n'
 
 
 def is_false(value):
@@ -18,6 +21,59 @@ def parse_query(query):
     """Parse the given query string and return it as dictionary."""
     return dict((name, [] if len(values) == 1 and is_false(values[0]) else values)
                 for name, values in urlparse.parse_qs(query, keep_blank_values=True).iteritems())
+
+
+def prepare_chunk(data):
+    """Prepare the given data to be sent as chunk and return the result."""
+    return hex(len(data))[2:] + CRLF + data + CRLF
+
+
+def close_chunks(trailers={}):
+    """Return the bytes to close a chunked transmission."""
+    return '0' + CRLF + trailer_chunks(trailers) + CRLF
+
+
+def trailer_chunks(trailers):
+    """Prepare the given chunk trailers and return the result."""
+    return CRLF.join('{0}: {1}'.format(k, v) for k, v in trailers.iteritems())
+
+
+def read_chunked_content(in_file):
+    """Read from the given file-like object until no chunked content is left and return it."""
+    content = ''
+    while True:
+        chunk_size = in_file.readline()
+        if chunk_size:
+            try:
+                size = int(chunk_size.strip().split(';')[0], 16)
+            except ValueError:
+                raise ChunkParserError('Got invalid chunk-size "{0!r}"'.format(chunk_size))
+
+            data = in_file.read(size)
+            if len(data) == size:
+                if size == 0:
+                    break
+
+                content += data
+                crlf = in_file.readline()
+                if crlf not in CRLF:
+                    raise ChunkParserError('Expected CRLF. Got {0!r} instead.'.format(crlf))
+            else:
+                raise ChunkParserError('Got incomplete chunk. ({0:d} != {1:d})'.format(len(data), size))
+        else:
+            raise ChunkParserError('Expected chunk-size. Got nothing.')
+
+    trailer_line = in_file.readline()
+    while trailer_line not in CRLF:
+        trailer_line = in_file.readline()
+        # Discard any trailers, we cannot handle them anyway..
+
+    return content
+
+
+class ChunkParserError(Exception):
+    """Raised by function read_chunked_content() in case of a parsing error."""
+    pass
 
 
 class HttpHeaders(httplib.HTTPMessage):
@@ -105,9 +161,9 @@ class HttpHeaders(httplib.HTTPMessage):
         HTTPHeaderDict is a class provided by module requests.packages.urllib3._collections."""
         file_like = cStringIO.StringIO()
         for name, value in http_header_dict.iteritems():  # iteritems() already yields multiple values separately!
-            file_like.write('{0}: {1}\r\n'.format(name, value))
+            file_like.write('{0}: {1}{2}'.format(name, value, CRLF))
 
-        file_like.write('\r\n')  # HTTP headers need to be terminated by a single CRLF
+        file_like.write(CRLF)  # HTTP headers need to be terminated by a single CRLF
 
         try:
             file_like.seek(0)  # Rewind the cursor as we want to start reading the headers from the very beginning
@@ -152,3 +208,16 @@ class HttpContext(object):
                 return False
 
         return True
+
+    def has_chunked_payload(self):
+        """Return whether a message has a chunked payload attached to it.
+
+        See http://tools.ietf.org/html/rfc7230#section-3.3.1 paragraph 6 for an explanation."""
+
+        if self.response is None:
+            return self.request.headers.get('Transfer-Encoding', '').strip().lower() == 'chunked'
+
+        if self.request.command != 'HEAD' and not (self.request.command == 'GET' and self.response.status_code == 304):
+            return self.response.headers.get('Transfer-Encoding', '').strip().lower() == 'chunked'
+
+        return False

@@ -17,11 +17,12 @@ from elasticarmor.request import ElasticRequest, RequestError
 from elasticarmor.settings import Settings
 from elasticarmor.util import format_ldap_error
 from elasticarmor.util.auth import Client
-from elasticarmor.util.http import parse_query, HttpHeaders, HttpContext
+from elasticarmor.util.http import *
 from elasticarmor.util.mixins import LoggingAware
 
 CONNECTION_TIMEOUT = 5  # Seconds
 CONNECTION_REQUEST_LIMIT = 100
+MAX_CHUNK_SIZE = 4096  # Bytes, used when transferring response payloads
 DENSE_ERROR_FORMAT = '{"error":"%(explain)s","status":%(code)d}'
 PRETTY_ERROR_FORMAT = '''{
   "error" : "%(explain)s",
@@ -115,6 +116,12 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.close_connection = True
             self.log.debug('Client "%s" timed out. Closing connection.', self.client)
             self.send_error(408, explain='Idle time limit exceeded. (%u Seconds)' % CONNECTION_TIMEOUT)
+        except ChunkParserError as error:
+            self.log.debug('Client "%s" sent an invalid chunked payload. Error: %s', self.client, error)
+            # We do not know what else is still "on the line" thus
+            # we just drop the connection to prevent further issues
+            self.close_connection = True
+            self.send_error(400, explain='Payload encoding invalid. Error: {0}'.format(error))
         except RequestException as error:
             self.log.error('An error occurred while communicating with Elasticsearch: %s', error)
             self.send_error(502, explain='An error occurred while communicating with Elasticsearch.'
@@ -141,18 +148,21 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         if self._body is not None:
             return self._body
 
-        # TODO: Chunked Transfer Coding (http://tools.ietf.org/html/rfc7230#section-4.1)
-
-        content_length = 0
-        if self.headers and self.command != 'HEAD':
-            content_length = int(self.headers.get('Content-Length', 0))
-
-        if content_length > 0:
-            self.log.debug('Fetching request payload of length %u...', content_length)
-            self._body = self.rfile.read(content_length)
+        if self._context.has_chunked_payload():
+            self.log.debug('Fetching streamed request payload...')
+            self._body = read_chunked_content(self.rfile)
+            self.log.debug('Completed fetching payload of length %u.', len(self._body))
         else:
-            self.log.debug('Request payload is either empty or it\'s a HEAD request.')
-            self._body = ''
+            content_length = 0
+            if self.headers and self.command != 'HEAD':
+                content_length = int(self.headers.get('Content-Length', 0))
+
+            if content_length > 0:
+                self.log.debug('Fetching request payload of length %u...', content_length)
+                self._body = self.rfile.read(content_length)
+            else:
+                self.log.debug('Request payload is either empty or it\'s a HEAD request.')
+                self._body = ''
 
         return self._body
 
@@ -278,10 +288,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             # TODO: Elasticsearch responds also with YAML if desired by the client (format=yaml)
             self.error_message_format = PRETTY_ERROR_FORMAT
 
-        if self.command != 'HEAD' and 'Transfer-Encoding' in self.headers and 'Content-Length' not in self.headers:
-            self.send_error(411, explain='Requests with transfer coding are required to provide a content length.')
-            return
-
         if not self.client.is_authenticated():
             # In case a client is not authenticated check if anonymous access is permitted
             allowed_ports = self.server.allow_from.get(self.client.address, [])
@@ -293,6 +299,14 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(
                 403, explain='Failed to fetch your group memberships. Please contact an administrator.')
             return
+
+        expectations = [v.lower() for v in self.headers.getheaders('Expect')]
+        if expectations and ('100-continue' not in expectations or len(expectations) > 1):
+            self.send_error(417)
+            return
+        elif self.request_version >= 'HTTP/1.1' and '100-continue' in expectations:
+            self.send_response(100)
+            self.log.debug('Answered to 100-continue expectation.')
 
         self._options = self.headers.extract_connection_options()
         if self._options:
@@ -353,9 +367,14 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_header('Connection', 'keep-alive')  # Should be the last sent header, always
 
         self.end_headers()
-        if response.content:
-            self.log.debug('Sending response payload of length %s...', headers['Content-Length'])
-            self.wfile.write(response.content)
+
+        self.log.debug('Transferring response payload...')
+        chunked_content = self._context.has_chunked_payload()
+        for data in response.raw.stream(MAX_CHUNK_SIZE, decode_content=False):
+            self.wfile.write(prepare_chunk(data) if chunked_content else data)
+        else:
+            if chunked_content:
+                self.wfile.write(close_chunks())
 
         self.log.info('Forwarded response from Elasticsearch for request "%s %s" to client "%s".',
                       self.command, self.path, self.client)
