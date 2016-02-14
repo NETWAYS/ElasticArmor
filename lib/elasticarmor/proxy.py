@@ -17,7 +17,7 @@ from elasticarmor.request import ElasticRequest, RequestError
 from elasticarmor.settings import Settings
 from elasticarmor.util import format_ldap_error
 from elasticarmor.util.auth import Client
-from elasticarmor.util.http import parse_query, HttpHeaders
+from elasticarmor.util.http import parse_query, HttpHeaders, HttpContext
 from elasticarmor.util.mixins import LoggingAware
 
 CONNECTION_TIMEOUT = 5  # Seconds
@@ -85,6 +85,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
     def __init__(self, request, client_address, server):
         self._received_requests = 0
+        self._context = None
         self._options = None
         self._client = None
         self._body = None
@@ -241,6 +242,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.log.debug('Invalid request received. Closing connection.')
             return
 
+        self._context = HttpContext(self)
+        if not self._context.has_proper_framing():
+            self.send_error(400, explain='Bad or malicious message framing detected.')
+            return
+
         if self.is_debugging():
             self.log.debug('Received request line "%s".', self.raw_requestline.rstrip())
             for name, value in self.headers.items():
@@ -294,6 +300,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         if request is None:
             return
 
+        # Update the current context with the fetched request handler.
+        # Might be of use for some handler and does not hurt if not..
+        self._context.request = request
+
         # TODO: Fetch restrictions and register them on the client object for further processing
 
         try:
@@ -308,11 +318,20 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                 self.send_error(504, explain='No response received from any of the configured Elasticsearch nodes.')
                 return
 
+        # Convert the response's header object so that we can use our own utilities. The original
+        # object is overwritten to avoid a differentiation between it and the new one in the
+        # context object. If this causes issues, feel free to refactor it.
+        response.headers = HttpHeaders.from_http_header_dict(response.headers)
+        response.headers.extract_connection_options()
+
+        self._context.response = response  # Now that we got a response, we can update the context
+        if not self._context.has_proper_framing():
+            self.send_error(502, explain='Bad or malicious message framing detected. Please contact an administrator.')
+            return
+
         # TODO: Via? (http://tools.ietf.org/html/rfc7230#section-5.7.1)
         self.send_response(response.status_code, response.reason)
-        headers = HttpHeaders.from_http_header_dict(response.headers)
-        headers.extract_connection_options()
-        for name, value in headers.items():
+        for name, value in response.headers.items():
             self.send_header(name, value)
 
         if self.close_connection:

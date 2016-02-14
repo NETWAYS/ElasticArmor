@@ -6,7 +6,7 @@ import cStringIO
 
 from requests.structures import CaseInsensitiveDict
 
-__all__ = ['is_false', 'parse_query', 'HttpHeaders']
+__all__ = ['is_false', 'parse_query', 'HttpHeaders', 'HttpContext']
 
 
 def is_false(value):
@@ -104,3 +104,41 @@ class HttpHeaders(httplib.HTTPMessage):
             return cls(file_like, 0)
         finally:
             file_like.close()
+
+
+class HttpContext(object):
+    """HttpContext container for requests and responses.
+
+    Provides some utilities to check a message's integrity, validity and state."""
+
+    def __init__(self, request, response=None):
+        self.request = request
+        self.response = response
+
+    def has_proper_framing(self):
+        """Return whether a message's framing is valid.
+
+        See http://tools.ietf.org/html/rfc7230#section-3.3.3 articles 3 and 4 for an explanation."""
+
+        if self.response is None:
+            headers = self.request.headers
+        else:
+            headers = self.response.headers
+
+        content_length_found = False
+        if 'Content-Length' in headers:
+            content_length_found = True
+
+            try:
+                content_length = int(headers['Content-Length'])
+                if content_length < 0 or any(int(v) != content_length for v in headers.getheaders('Content-Length')):
+                    return False
+            except ValueError:
+                return False
+
+        if 'Transfer-Encoding' in headers:
+            if content_length_found or (
+                    self.response is None and headers['Transfer-Encoding'].strip().lower() != 'chunked'):
+                return False
+
+        return True
