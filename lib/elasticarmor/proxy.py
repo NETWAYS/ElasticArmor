@@ -186,9 +186,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
         return self._client
 
-    def log_message(self, fmt, *args):
-        pass  # We're logging requests by ourselves, thus we'll ignore BaseHTTPRequestHandler's builtin messages
-
     def send_header(self, keyword, value):
         BaseHTTPRequestHandler.send_header(self, keyword, value)
         self.log.debug('Sent header "%s: %s".', keyword, value)
@@ -208,6 +205,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                 explain = default_explain
 
         self.send_response(code, message)
+        self.send_header('Server', self.version_string())
+        self.send_header('Date', self.date_time_string())
         if headers:
             for name, value in headers.iteritems():
                 self.send_header(name, value)
@@ -231,6 +230,17 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         if code != 408:  # 408 = Request timeout; This is not triggered by the client, so there is no need to log it
             self.log.info('Refused request "%s %s" issued by "%s" with status %u. Reason: %s (%s).',
                           self.command, self.path, self.client, code, message, explain)
+
+    def send_response(self, code, message=None):
+        # BaseHTTPRequestHandler's implementation of send_response is not entirely appropriate
+        # for a proxy so we're overwriting it here to accomplish what we require.
+        if message is None:
+            try:
+                message = self.responses[code][0]
+            except KeyError:
+                message = ''
+
+        self.wfile.write("%s %d %s\r\n" % (self.protocol_version, code, message))
 
     def fetch_request(self):
         self.raw_requestline = self.rfile.readline()  # Extract the first header line, required by parse_request()
