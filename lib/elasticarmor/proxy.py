@@ -112,6 +112,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.setup()
             self.handle()
         except socket.timeout:
+            self.close_connection = True
             self.log.debug('Client "%s" timed out. Closing connection.', self.client)
             self.send_error(408, explain='Idle time limit exceeded. (%u Seconds)' % CONNECTION_TIMEOUT)
         except RequestException as error:
