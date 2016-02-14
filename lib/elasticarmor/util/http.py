@@ -122,6 +122,25 @@ class HttpHeaders(httplib.HTTPMessage):
 
         return []
 
+    def isheader(self, line):
+        """Determine whether a given line is a legal header.
+
+        Properly complies with http://tools.ietf.org/html/rfc7230#section-3.2.4 regarding whitespace."""
+
+        colon_position = line.find(':')
+        if colon_position > 0:
+            header_name = line[:colon_position]
+            if header_name.strip() == header_name:
+                return header_name.lower()
+
+    def addcontinue(self, key, more):
+        """Add more field data from a continuation line.
+
+        Properly complies with http://tools.ietf.org/html/rfc7230#section-3.2.4 regarding line folding."""
+
+        prev = self.dict[key]
+        self.dict[key] = prev + ' ' + more
+
     def extract_connection_options(self):
         """Remove and return all connection specific options as case insensitive dictionary.
         The Keep-Alive header is already parsed and its values registered as dictionary."""
@@ -161,7 +180,7 @@ class HttpHeaders(httplib.HTTPMessage):
         HTTPHeaderDict is a class provided by module requests.packages.urllib3._collections."""
         file_like = cStringIO.StringIO()
         for name, value in http_header_dict.iteritems():  # iteritems() already yields multiple values separately!
-            file_like.write('{0}: {1}{2}'.format(name, value, CRLF))
+            file_like.write('{0}: {1}{2}'.format(name.strip(), value, CRLF))
 
         file_like.write(CRLF)  # HTTP headers need to be terminated by a single CRLF
 

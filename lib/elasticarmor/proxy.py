@@ -263,6 +263,13 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.log.debug('Invalid request received. Closing connection.')
             return
 
+        if self.headers.status in ('No headers', 'Non-header line where header expected'):
+            # Since headers are completely optional, "No headers" is actually not an error per se but the
+            # implementation of httplib.HTTPMessage.readheaders() emits this status only if the required
+            # CRLF after the request line is missing hence we consider it as an error as well.
+            self.send_error(400, explain='Invalid header syntax detected.')
+            return
+
         if self.is_debugging():
             self.log.debug('Received request line "%s".', self.raw_requestline.rstrip())
             for name, value in self.headers.items():
@@ -278,8 +285,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.log.debug('Client "%s" reached request limit of %u. Connection is about to be closed.',
                            self.client, CONNECTION_REQUEST_LIMIT)
             self.close_connection = True
-
-        # TODO: http://tools.ietf.org/html/rfc7230#section-3.2.4 (Second paragraph)
 
         url_parts = urlparse(self.path)
         path = url_parts.path.rstrip(' /')
