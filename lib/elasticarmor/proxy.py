@@ -253,15 +253,15 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.log.debug('Invalid request received. Closing connection.')
             return
 
-        self._context = HttpContext(self)
-        if not self._context.has_proper_framing():
-            self.send_error(400, explain='Bad or malicious message framing detected.')
-            return
-
         if self.is_debugging():
             self.log.debug('Received request line "%s".', self.raw_requestline.rstrip())
             for name, value in self.headers.items():
                 self.log.debug('Received header "%s: %s".', name, value)
+
+        self._context = HttpContext(self)
+        if not self._context.has_proper_framing():
+            self.send_error(400, explain='Bad or malicious message framing detected.')
+            return
 
         self._received_requests += 1
         if self._received_requests == CONNECTION_REQUEST_LIMIT:
