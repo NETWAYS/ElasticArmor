@@ -83,18 +83,23 @@ class ElasticConnection(LoggingAware, object):
     def process(self, request):
         """Send the given request to Elasticsearch and return its response.
         Returns None if it was not possible to receive a response."""
-        prepared_request = requests.PreparedRequest()
-        prepared_request.prepare_method(request.command)
-        prepared_request.prepare_headers(request.headers)
-        prepared_request.prepare_body(request.body, None)
-        encoded_query = urllib.urlencode(request.query, True)
-        self.log.debug('Processing Elasticsearch request "%s %s?%s"...',
-                       request.command, request.path, encoded_query)
+        if isinstance(request, requests.PreparedRequest):
+            prepared_request = request
+            request_path = request.url
+        else:
+            prepared_request = requests.PreparedRequest()
+            prepared_request.prepare_method(request.command)
+            prepared_request.prepare_headers(request.headers)
+            prepared_request.prepare_body(request.body, None)
+            encoded_query = urllib.urlencode(request.query, True)
+            request_path = request.path + ('?' + encoded_query if encoded_query else '')
+
+        self.log.debug('Processing Elasticsearch request "%s %s"...', prepared_request.method, request_path)
 
         first_error = None
         with requests.Session() as session:
             for node in self._reachable_nodes:
-                prepared_request.prepare_url(node + request.path, encoded_query)
+                prepared_request.prepare_url(node + request_path, None)
 
                 try:
                     # TODO: Interpret the timeout= query parameter for Elasticsearch
