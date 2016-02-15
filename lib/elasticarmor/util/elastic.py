@@ -11,6 +11,7 @@ from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['ElasticConnection']
 
+DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
 
 
@@ -96,9 +97,10 @@ class ElasticConnection(LoggingAware, object):
                 prepared_request.prepare_url(node + request.path, encoded_query)
 
                 try:
-                    response = session.send(prepared_request, stream=True)
+                    # TODO: Interpret the timeout= query parameter for Elasticsearch
+                    response = session.send(prepared_request, stream=True, timeout=DEFAULT_TIMEOUT)
                 except requests.Timeout:
-                    self.log.warning('Node "%s" timed out.')
+                    self.log.warning('Node "%s" timed out.', node)
                     self._mark_as_unreachable(node)
                 except requests.RequestException as error:
                     self.log.warning('Failed to connect to node "%s". An error occurred: %s', node, error)
