@@ -113,3 +113,5 @@ class ElasticConnection(LoggingAware, object):
             # Re-raise the exception which occurred first to indicate
             # to the user that we were not able to fetch a response
             raise first_error
+        else:
+            self.log.debug('No response received from any of the configured Elasticsearch nodes.')
