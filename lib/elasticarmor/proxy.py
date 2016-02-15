@@ -254,6 +254,9 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         self.wfile.write("%s %d %s\r\n" % (self.protocol_version, code, message))
 
     def fetch_request(self):
+        # Free some memory as we're not closing the connection and thus the thread is kept alive
+        self._context = self._body = self.options = self.headers = self.command = self.path = None
+
         self.raw_requestline = self.rfile.readline()  # Extract the first header line, required by parse_request()
         if not self.raw_requestline:
             self.log.debug('No request line received. Closing connection. (This is'
