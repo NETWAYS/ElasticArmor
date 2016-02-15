@@ -56,6 +56,7 @@ class DummyResponse(object):
 
     def __init__(self):
         self.reason = None
+        self.options = None
         self.content = None
         self.status_code = None
         self.headers = CaseInsensitiveDict()
@@ -76,6 +77,7 @@ class ElasticRequest(LoggingAware, object):
         self.query = query
         self.command = command
         self.headers = headers
+        self.options = None
 
         self.validate()
 

@@ -143,7 +143,17 @@ class HttpHeaders(httplib.HTTPMessage):
 
     def extract_connection_options(self):
         """Remove and return all connection specific options as case insensitive dictionary.
-        The Keep-Alive header is already parsed and its values registered as dictionary."""
+
+        Header fields being handled:
+        - Connection
+        - TE
+        - Trailer
+        - Transfer-Encoding
+        - Proxy-Authenticate
+        - Proxy-Authorization
+
+        Keep-Alive is returned as dictionary and all others as list in case of multiple values."""
+
         options = CaseInsensitiveDict()
         for option in self.getheaders('Connection'):
             if option in self:
@@ -151,7 +161,7 @@ class HttpHeaders(httplib.HTTPMessage):
                     options[option] = dict(tuple(v.strip() for v in value.split('='))
                                            for value in self.getheaders(option))
                 else:
-                    options[option] = self[option]
+                    options[option] = self[option].strip().lower()
 
                 del self[option]
             elif option.lower() == 'keep-alive':
@@ -161,6 +171,13 @@ class HttpHeaders(httplib.HTTPMessage):
 
         if options:
             del self['Connection']
+
+        headers = ['TE', 'Trailer', 'Transfer-Encoding', 'Proxy-Authenticate', 'Proxy-Authorization']
+        for header_name in (h for h in headers if h in self):
+            if header_name in options:
+                options[header_name].extend(v.strip().lower() for v in self[header_name].split(', '))
+            else:
+                options[header_name] = [self[header_name]]
 
         return options
 
@@ -207,8 +224,10 @@ class HttpContext(object):
 
         if self.response is None:
             headers = self.request.headers
+            options = self.request.options
         else:
             headers = self.response.headers
+            options = self.response.options
 
         content_length_found = False
         if 'Content-Length' in headers:
@@ -221,9 +240,9 @@ class HttpContext(object):
             except ValueError:
                 return False
 
-        if 'Transfer-Encoding' in headers:
+        if options is not None and 'Transfer-Encoding' in options:
             if content_length_found or (
-                    self.response is None and headers['Transfer-Encoding'].strip().lower() != 'chunked'):
+                    self.response is None and options['Transfer-Encoding'][-1] != 'chunked'):
                 return False
 
         return True
@@ -234,9 +253,11 @@ class HttpContext(object):
         See http://tools.ietf.org/html/rfc7230#section-3.3.1 paragraph 6 for an explanation."""
 
         if self.response is None:
-            return self.request.headers.get('Transfer-Encoding', '').strip().lower() == 'chunked'
+            return self.request.options is not None and \
+                   self.request.options.get('Transfer-Encoding', [None])[-1] == 'chunked'
 
         if self.request.command != 'HEAD' and not (self.request.command == 'GET' and self.response.status_code == 304):
-            return self.response.headers.get('Transfer-Encoding', '').strip().lower() == 'chunked'
+            return self.response.options is not None and \
+                   self.response.options.get('Transfer-Encoding', [None])[-1] == 'chunked'
 
         return False

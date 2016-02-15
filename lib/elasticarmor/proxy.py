@@ -87,9 +87,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         self._received_requests = 0
         self._context = None
-        self._options = None
         self._client = None
         self._body = None
+
+        self.options = None
 
         # These attributes will be set by parse_request(). They're initialized here
         # to prevent my IDE from complaining and to simplify error handling..
@@ -275,6 +276,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             for name, value in self.headers.items():
                 self.log.debug('Received header "%s: %s".', name, value)
 
+        self.options = self.headers.extract_connection_options()
+        if self.options:
+            self.log.debug('Extracted connection options: %s', self.options)
+
         self._context = HttpContext(self)
         if not self._context.has_proper_framing():
             self.send_error(400, explain='Bad or malicious message framing detected.')
@@ -313,16 +318,13 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_response(100)
             self.log.debug('Answered to 100-continue expectation.')
 
-        self._options = self.headers.extract_connection_options()
-        if self._options:
-            self.log.debug('Extracted connection options: %s', self._options)
-
         request = ElasticRequest.create_request(self.command, path if path else '/', query, self.headers, self.body)
         if request is None:
             # TODO: Elasticsearch responds with text/plain, not application/json!
             self.send_error(400, explain='Unable to process this request. No request handler found.')
             return
 
+        request.options = self.options
         return request
 
     def handle_one_request(self):
@@ -354,7 +356,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         # context object. If this causes issues, feel free to refactor it.
         response.headers = HttpHeaders.from_http_header_dict(response.headers)
         response.headers.extend_via_field(self.protocol_version, APP_NAME)
-        response.headers.extract_connection_options()
+        response.options = response.headers.extract_connection_options()
 
         self._context.response = response  # Now that we got a response, we can update the context
         if not self._context.has_proper_framing():
