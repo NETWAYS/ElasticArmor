@@ -348,9 +348,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             return
 
         if response is None:
+            self.log.debug('Forwarding request "%s %s" to Elasticsearch...', self.command, self.path)
             request.headers.extend_via_field(self.protocol_version, APP_NAME)
             response = self.server.elasticsearch.process(request)
             if response is None:
+                self.log.debug('No response received from any of the configured Elasticsearch nodes.')
                 self.send_error(504, explain='No response received from any of the configured Elasticsearch nodes.')
                 return
 

@@ -81,14 +81,14 @@ class ElasticConnection(LoggingAware, object):
         self._check_flag.clear()
 
     def process(self, request):
-        """Forward the given request to Elasticsearch and return its response.
+        """Send the given request to Elasticsearch and return its response.
         Returns None if it was not possible to receive a response."""
         prepared_request = requests.PreparedRequest()
         prepared_request.prepare_method(request.command)
         prepared_request.prepare_headers(request.headers)
         prepared_request.prepare_body(request.body, None)
         encoded_query = urllib.urlencode(request.query, True)
-        self.log.debug('Forwarding request "%s %s?%s" to Elasticsearch...',
+        self.log.debug('Processing Elasticsearch request "%s %s?%s"...',
                        request.command, request.path, encoded_query)
 
         first_error = None
@@ -115,5 +115,3 @@ class ElasticConnection(LoggingAware, object):
             # Re-raise the exception which occurred first to indicate
             # to the user that we were not able to fetch a response
             raise first_error
-        else:
-            self.log.debug('No response received from any of the configured Elasticsearch nodes.')
