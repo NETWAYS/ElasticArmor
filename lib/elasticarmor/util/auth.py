@@ -5,9 +5,11 @@ import threading
 
 import ldap
 
+from elasticarmor.util.elastic import ElasticRole
 from elasticarmor.util.rwlock import ReadWriteLock, Protector
 
-__all__ = ['Client', 'LdapBackend', 'LdapUserBackend', 'LdapUsergroupBackend']
+__all__ = ['Client', 'LdapBackend', 'LdapUserBackend', 'LdapUsergroupBackend',
+           'ElasticsearchRoleBackend']
 
 CACHE_INVALIDATION_INTERVAL = 900  # Seconds
 
@@ -181,3 +183,26 @@ class LdapUsergroupBackend(LdapUserBackend):
                 self.unbind()
 
         return memberships
+
+
+class ElasticsearchRoleBackend(object):
+    """Elasticsearch backend class providing role related operations."""
+
+    def __init__(self, settings):
+        self.connection = settings.elasticsearch
+
+    def get_role_memberships(self, client):
+        """Fetch and return all roles the given client is a member of."""
+        response = self.connection.process(ElasticRole.search(client.name, client.groups))
+        if response is None:
+            return
+
+        response.raise_for_status()
+        result = response.json()
+
+        roles = []
+        for hit in result.get('hits', {}).get('hits', []):
+            if '_id' in hit and hit.get('_source'):
+                roles.append(ElasticRole.from_search_result(hit))
+
+        return roles
