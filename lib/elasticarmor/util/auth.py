@@ -1,17 +1,79 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
+import socket
 import time
 import threading
 
 import ldap
+import requests
 
+from elasticarmor.util import format_ldap_error, format_elasticsearch_error
 from elasticarmor.util.elastic import ElasticRole
+from elasticarmor.util.mixins import LoggingAware
 from elasticarmor.util.rwlock import ReadWriteLock, Protector
 
-__all__ = ['Client', 'LdapBackend', 'LdapUserBackend', 'LdapUsergroupBackend',
+__all__ = ['Auth', 'Client', 'LdapBackend', 'LdapUserBackend', 'LdapUsergroupBackend',
            'ElasticsearchRoleBackend']
 
 CACHE_INVALIDATION_INTERVAL = 900  # Seconds
+
+
+class Auth(LoggingAware, object):
+    """Auth manager class for everything involved in authentication and authorization."""
+
+    def __init__(self, settings):
+        self.allow_from = settings.allow_from
+        self.role_backend = settings.role_backend
+        self.group_backend = settings.group_backend
+
+    def authenticate(self, client, populate=True):
+        """Authenticate the given client and return whether it succeeded or not."""
+        if client.username is None or client.password is None:
+            # In case we have no authentication credentials check if access by ip[:port] is permitted
+            allowed_ports = self.allow_from.get(client.address, [])
+            if allowed_ports is not None and client.port not in allowed_ports:
+                return False
+            else:
+                try:
+                    default_timeout = socket.getdefaulttimeout()
+                    socket.setdefaulttimeout(2)
+                    hostname = socket.gethostbyaddr(client.address)[0]
+                except IOError:
+                    hostname = client.address
+                finally:
+                    socket.setdefaulttimeout(default_timeout)
+
+                client.name = hostname if allowed_ports is None else '%s:%u' % (hostname, client.port)
+        else:
+            client.name = client.username
+
+        if populate:
+            self.populate(client)
+
+        client.authenticated = True
+        return True
+
+    def populate(self, client):
+        """Populate the group and role memberships of the given client."""
+        if self.group_backend is not None:
+            self.log.debug('Fetching group memberships for client "%s"...', client)
+
+            try:
+                client.groups = self.group_backend.get_group_memberships(client)
+            except ldap.LDAPError as error:
+                self.log.error('Failed to fetch ldap group memberships for client "%s". %s.',
+                               client, format_ldap_error(error))
+        else:
+            client.groups = []
+
+        if client.groups is not None:
+            self.log.debug('Fetching role memberships for client "%s"...', client)
+
+            try:
+                client.roles = self.role_backend.get_role_memberships(client)
+            except requests.RequestException as error:
+                self.log.error('Failed to fetch Elasticsearch role memberships for client "%s". Error: %s',
+                               client, format_elasticsearch_error(error))
 
 
 class Client(object):

@@ -11,8 +11,8 @@ from logging.handlers import SysLogHandler
 import requests
 
 from elasticarmor import *
-from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version
-from elasticarmor.util.auth import LdapUsergroupBackend
+from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version, propertycache
+from elasticarmor.util.auth import LdapUsergroupBackend, ElasticsearchRoleBackend
 from elasticarmor.util.config import Parser
 from elasticarmor.util.daemon import get_daemon_option_parser
 from elasticarmor.util.elastic import ElasticConnection
@@ -232,6 +232,7 @@ class Settings(LoggingAware, object):
         return allow_from
 
     @property
+    @propertycache
     def elasticsearch(self):
         nodes = self.elasticsearch_nodes
         for node in nodes:
@@ -282,6 +283,10 @@ class Settings(LoggingAware, object):
         self._group_backend_type = self.config.get('group_backend', 'backend').lower()
         if self._group_backend_type in ('ldap', 'msldap'):
             return LdapUsergroupBackend(self)
+
+    @property
+    def role_backend(self):
+        return ElasticsearchRoleBackend(self)
 
     @property
     def ldap_url(self):
