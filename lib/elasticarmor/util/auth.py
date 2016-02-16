@@ -84,13 +84,11 @@ class Client(object):
         self.port = port
 
         self.name = None
+        self.authenticated = False
         self.username = None
         self.password = None
         self.groups = None
-
-    def is_authenticated(self):
-        """Return whether this client authenticated itself by providing a username and password."""
-        return self.username is not None and self.password is not None
+        self.roles = None
 
     def __str__(self):
         """Return a human readable string representation for this client.

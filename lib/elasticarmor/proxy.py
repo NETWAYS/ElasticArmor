@@ -9,14 +9,13 @@ from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from SocketServer import ThreadingMixIn
 from urlparse import urlparse
 
-from ldap import LDAPError
 from requests import RequestException
 
 from elasticarmor import *
 from elasticarmor.request import ElasticRequest, RequestError
 from elasticarmor.settings import Settings
-from elasticarmor.util import format_ldap_error, format_elasticsearch_error
-from elasticarmor.util.auth import Client
+from elasticarmor.util import format_elasticsearch_error
+from elasticarmor.util.auth import Auth, Client
 from elasticarmor.util.http import *
 from elasticarmor.util.mixins import LoggingAware
 
@@ -34,8 +33,7 @@ PRETTY_ERROR_FORMAT = '''{
 class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
     def __init__(self):
         settings = Settings()
-        self.allow_from = settings.allow_from
-        self.group_backend = settings.group_backend
+        self.auth = Auth(settings)
         self.elasticsearch = settings.elasticsearch
 
         HTTPServer.__init__(self, (settings.listen_address, settings.listen_port),
@@ -187,15 +185,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                     self._client.username = username
                     self._client.password = password
 
-                    if self.server.group_backend is not None:
-                        try:
-                            self._client.groups = self.server.group_backend.get_group_memberships(username)
-                        except LDAPError as error:
-                            self.log.error('Failed to fetch ldap group memberships for user "%s". %s.',
-                                           username, format_ldap_error(error))
-                    else:
-                        self._client.groups = []
-
         return self._client
 
     def send_header(self, keyword, value):
@@ -302,16 +291,16 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             # TODO: Elasticsearch responds also with YAML if desired by the client (format=yaml)
             self.error_message_format = PRETTY_ERROR_FORMAT
 
-        if not self.client.is_authenticated():
-            # In case a client is not authenticated check if anonymous access is permitted
-            allowed_ports = self.server.allow_from.get(self.client.address, [])
-            if allowed_ports is not None and self.client.port not in allowed_ports:
-                self.send_error(401, None, 'Authorization Required. Please authenticate yourself to access this realm.',
-                                {'WWW-Authenticate': 'Basic realm="Elasticsearch - Protected by ElasticArmor"'})
-                return
-        elif self.client.groups is None:
+        if not self.client.authenticated and not self.server.auth.authenticate(self.client):
+            self.send_error(401, None, 'Authorization Required. Please authenticate yourself to access this realm.',
+                            {'WWW-Authenticate': 'Basic realm="Elasticsearch - Protected by ElasticArmor"'})
+            return
+        elif self.client.groups is None or self.client.roles is None:
             self.send_error(
-                403, explain='Failed to fetch your group memberships. Please contact an administrator.')
+                403, explain='Failed to fetch your group/role memberships. Please contact an administrator.')
+            return
+        elif not self.client.roles:
+            self.send_error(403, explain='You\'re not permitted to access this realm.')
             return
 
         expectations = [v.lower() for v in self.headers.getheaders('Expect')]
