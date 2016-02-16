@@ -11,7 +11,7 @@ from logging.handlers import SysLogHandler
 import requests
 
 from elasticarmor import *
-from elasticarmor.util import compare_major_and_minor_version
+from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version
 from elasticarmor.util.auth import LdapUsergroupBackend
 from elasticarmor.util.config import Parser
 from elasticarmor.util.daemon import get_daemon_option_parser
@@ -239,7 +239,7 @@ class Settings(LoggingAware, object):
                 response = requests.get(node)
                 response.raise_for_status()
             except requests.RequestException as error:
-                self.log.warning('Node "%s" is not reachable. Error: %s', node, error)
+                self.log.warning('Node "%s" is not reachable. Error: %s', node, format_elasticsearch_error(error))
             else:
                 try:
                     result = response.json()

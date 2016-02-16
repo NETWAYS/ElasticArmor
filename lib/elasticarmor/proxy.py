@@ -15,7 +15,7 @@ from requests import RequestException
 from elasticarmor import *
 from elasticarmor.request import ElasticRequest, RequestError
 from elasticarmor.settings import Settings
-from elasticarmor.util import format_ldap_error
+from elasticarmor.util import format_ldap_error, format_elasticsearch_error
 from elasticarmor.util.auth import Client
 from elasticarmor.util.http import *
 from elasticarmor.util.mixins import LoggingAware
@@ -124,7 +124,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.close_connection = True
             self.send_error(400, explain='Payload encoding invalid. Error: {0}'.format(error))
         except RequestException as error:
-            self.log.error('An error occurred while communicating with Elasticsearch: %s', error)
+            self.log.error('An error occurred while communicating with Elasticsearch: %s',
+                           format_elasticsearch_error(error))
             self.send_error(502, explain='An error occurred while communicating with Elasticsearch.'
                                          ' Please contact an administrator.')
         except:

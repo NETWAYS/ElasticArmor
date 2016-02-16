@@ -2,7 +2,8 @@
 
 from distutils.version import StrictVersion
 
-__all__ = ['format_ldap_error', 'compare_major_and_minor_version', 'classproperty']
+__all__ = ['format_ldap_error', 'format_elasticsearch_error', 'compare_major_and_minor_version',
+           'classproperty']
 
 
 def format_ldap_error(error):
@@ -17,6 +18,16 @@ def format_ldap_error(error):
         error_message = str(error)
 
     return error_message
+
+
+def format_elasticsearch_error(error):
+    """Return a string representation of the given RequestException."""
+    try:
+        return error.response.json()['error']
+    except AttributeError:
+        return str(error)
+    except (ValueError, KeyError):
+        return error.response.content
 
 
 def compare_major_and_minor_version(version_to_compare, version_to_compare_with):

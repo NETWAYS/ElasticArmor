@@ -6,6 +6,7 @@ import threading
 
 import requests
 
+from elasticarmor.util import format_elasticsearch_error
 from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
@@ -65,7 +66,8 @@ class ElasticConnection(LoggingAware, object):
                         reachable_nodes.append(node)
                         self.log.debug('Node "%s" is reachable and being made available again.', node)
                 except requests.RequestException as error:
-                    self.log.debug('Node "%s" is still unreachable. Error: %s', node, error)
+                    self.log.debug('Node "%s" is still unreachable. Error: %s',
+                                   node, format_elasticsearch_error(error))
 
         if reachable_nodes:
             # Make the now reachable nodes available again and ensure that the priority order is restored
@@ -108,7 +110,8 @@ class ElasticConnection(LoggingAware, object):
                     self.log.warning('Node "%s" timed out.', node)
                     self._mark_as_unreachable(node)
                 except requests.RequestException as error:
-                    self.log.warning('Failed to connect to node "%s". An error occurred: %s', node, error)
+                    self.log.warning('Failed to connect to node "%s". An error occurred: %s',
+                                     node, format_elasticsearch_error(error))
                     self._mark_as_unreachable(node)
                     if first_error is None:
                         first_error = error
