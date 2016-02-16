@@ -19,6 +19,7 @@ class Client(object):
         self.address = address
         self.port = port
 
+        self.name = None
         self.username = None
         self.password = None
         self.groups = None
@@ -29,7 +30,10 @@ class Client(object):
 
     def __str__(self):
         """Return a human readable string representation for this client.
-        That's either the username or the address and port concatenated with a colon."""
+        That's either the name, username or the address and port concatenated with a colon."""
+        if self.name is not None:
+            return self.name
+
         if self.username is not None:
             return self.username
 
@@ -122,15 +126,15 @@ class LdapUserBackend(LdapBackend):
         self.user_object_class = settings.ldap_user_object_class
         self.user_name_attribute = settings.ldap_user_name_attribute
 
-    def fetch_user_dn(self, username):
-        """Fetch and return the DN of the given username.
+    def fetch_user_dn(self, user):
+        """Fetch and return the DN of the given user.
         Raises either ldap.NO_RESULTS_RETURNED if no DN could be found or ldap.LDAPError if multiple DNs were found."""
-        user_filter = {'objectClass': self.user_object_class, self.user_name_attribute: username}
+        user_filter = {'objectClass': self.user_object_class, self.user_name_attribute: user}
         result = self.search(self.user_base_dn, user_filter, [])
         if not result:
-            raise ldap.NO_RESULTS_RETURNED({'desc': 'No DN found for user {0}'.format(username)})
+            raise ldap.NO_RESULTS_RETURNED({'desc': 'No DN found for user {0}'.format(user)})
         elif len(result) > 1:
-            raise ldap.LDAPError({'desc': 'Multiple DNs found for user {0}'.format(username)})
+            raise ldap.LDAPError({'desc': 'Multiple DNs found for user {0}'.format(user)})
 
         return result[0][0]
 
@@ -154,9 +158,9 @@ class LdapUsergroupBackend(LdapUserBackend):
             self._group_cache.clear()
 
     @Protector('_cache_lock')
-    def get_group_memberships(self, username):
-        """Fetch and return all usergroups the user identified by the given username is a member of."""
-        membership_cache = self._group_cache.get(username)
+    def get_group_memberships(self, client):
+        """Fetch and return all usergroups the given client is a member of."""
+        membership_cache = self._group_cache.get(client.name)
         now = time.time()
 
         if membership_cache is not None and membership_cache['expires'] > now:
@@ -165,12 +169,12 @@ class LdapUsergroupBackend(LdapUserBackend):
             with self._cache_lock.writeContext:
                 self.bind()
                 group_filter = {'objectClass': self.group_object_class,
-                                self.group_membership_attribute: self.fetch_user_dn(username)}
+                                self.group_membership_attribute: self.fetch_user_dn(client.name)}
                 results = self.search(self.group_base_dn, group_filter, [self.group_name_attribute])
                 memberships = []
                 for result in (r for r in results if self.group_name_attribute in r[1]):
                     memberships.extend(result[1][self.group_name_attribute])
-                self._group_cache[username] = {
+                self._group_cache[client.name] = {
                     'memberships': memberships,
                     'expires': now + CACHE_INVALIDATION_INTERVAL
                 }
