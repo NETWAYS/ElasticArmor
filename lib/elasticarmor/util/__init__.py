@@ -3,7 +3,7 @@
 from distutils.version import StrictVersion
 
 __all__ = ['format_ldap_error', 'format_elasticsearch_error', 'compare_major_and_minor_version',
-           'classproperty']
+           'classproperty', 'propertycache']
 
 
 def format_ldap_error(error):
@@ -62,3 +62,25 @@ class classproperty(object):
 
     def __get__(self, instance, owner):
         return self.func(owner)
+
+
+class propertycache(object):
+    """Cache decorator for object properties.
+
+    Usage:
+        class Foo(object):
+            @property
+            @propertycache
+            def bar(self):
+                return <some-value>
+    """
+
+    def __init__(self, func):
+        self.func = func
+        self.result = None
+
+    def __call__(self, instance):
+        if self.result is None:
+            self.result = self.func(instance)
+
+        return self.result
