@@ -10,7 +10,7 @@ from elasticarmor.util import format_elasticsearch_error
 from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['ElasticConnection']
+__all__ = ['ElasticConnection', 'ElasticObject']
 
 DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
@@ -132,3 +132,29 @@ class ElasticConnection(LoggingAware, object):
             # Re-raise the exception which occurred first to indicate
             # to the user that we were not able to fetch a response
             raise first_error
+
+
+class ElasticObject(LoggingAware, object):
+    """Base class for all objects stored in our internal Elasticsearch index."""
+    index_name = '.elasticarmor'
+    document_type = '_all'
+
+    def __init__(self, id):
+        self.id = id
+
+    @classmethod
+    def request(cls, endpoint=None, **kwargs):
+        """Create and return a new request based on the given arguments.
+
+        If argument endpoint is given but no url using the keyword arguments a default url without
+        scheme and host of the following form is used: /index/document-type/endpoint"""
+
+        if endpoint is not None and 'url' not in kwargs:
+            kwargs['url'] = '/{0}/{1}/{2}'.format(cls.index_name, cls.document_type, endpoint)
+
+        return requests.Request(**kwargs)
+
+    @classmethod
+    def from_search_result(cls, result):
+        """Create and return a new instance of this class using the given result from a previous search request."""
+        return cls(result['_id'], **result['_source'])
