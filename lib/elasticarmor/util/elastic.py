@@ -10,7 +10,7 @@ from elasticarmor.util import format_elasticsearch_error
 from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['ElasticConnection', 'ElasticObject']
+__all__ = ['ElasticConnection', 'ElasticObject', 'ElasticRole']
 
 DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
@@ -158,3 +158,55 @@ class ElasticObject(LoggingAware, object):
     def from_search_result(cls, result):
         """Create and return a new instance of this class using the given result from a previous search request."""
         return cls(result['_id'], **result['_source'])
+
+
+class ElasticRole(ElasticObject):
+    """ElasticRole object representing a client's role."""
+    document_type = 'role'
+
+    def __init__(self, id, name, permissions, restrictions):
+        super(ElasticRole, self).__init__(id)
+        self.name = name
+        self.users = None
+        self.groups = None
+        self.permissions = permissions
+        self.restrictions = restrictions
+
+    @classmethod
+    def search(cls, user=None, groups=None):
+        """Create and return a new search request to fetch roles the
+        given user or one of the given groups is a member of."""
+        data = None
+        if user or groups:
+            conditions = []
+            if user:
+                conditions.append({'term': {'users': user}})
+
+            if groups:
+                conditions.append({
+                    'bool': {
+                        'should': [{'term': {'groups': group}} for group in groups]
+                    }
+                })
+
+            data = {
+                'query': {
+                    'filtered': {
+                        'query': {
+                            'match_all': {}
+                        },
+                        'filter': {
+                            'bool': {
+                                'should': conditions
+                            }
+                        }
+                    }
+                }
+            }
+
+        query_params = {
+            'filter_path': 'hits.hits._id,hits.hits._source',
+            '_source': 'name,permissions,restrictions'
+        }
+
+        return cls.request('_search', method='GET', params=query_params, json=data)
