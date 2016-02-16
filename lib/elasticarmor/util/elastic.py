@@ -85,23 +85,32 @@ class ElasticConnection(LoggingAware, object):
     def process(self, request):
         """Send the given request to Elasticsearch and return its response.
         Returns None if it was not possible to receive a response."""
-        if isinstance(request, requests.PreparedRequest):
-            prepared_request = request
-            request_path = request.url
-        else:
+        try:  # It's either a ElasticRequestHandler, a ElasticRequest ..
+            request_path = request.path
+            encoded_query = urllib.urlencode(request.query, True)
             prepared_request = requests.PreparedRequest()
             prepared_request.prepare_method(request.command)
             prepared_request.prepare_headers(request.headers)
             prepared_request.prepare_body(request.body, None)
-            encoded_query = urllib.urlencode(request.query, True)
-            request_path = request.path + ('?' + encoded_query if encoded_query else '')
+        except AttributeError:  # .. or a requests.Request
+            request_path = request.url
+            encoded_query = urllib.urlencode(request.params, True)
+            prepared_request = requests.PreparedRequest()
+            prepared_request.prepare_method(request.method)
+            prepared_request.prepare_headers(request.headers)
+            prepared_request.prepare_body(request.data, request.files, request.json)
 
-        self.log.debug('Processing Elasticsearch request "%s %s"...', prepared_request.method, request_path)
+        if prepared_request.body:
+            self.log.debug('Processing Elasticsearch request "%s %s" with body %r...', prepared_request.method,
+                           request_path + ('?' + encoded_query if encoded_query else ''), prepared_request.body)
+        else:
+            self.log.debug('Processing Elasticsearch request "%s %s"...', prepared_request.method,
+                           request_path + ('?' + encoded_query if encoded_query else ''))
 
         first_error = None
         with requests.Session() as session:
             for node in self._reachable_nodes:
-                prepared_request.prepare_url(node + request_path, None)
+                prepared_request.prepare_url(node + request_path, encoded_query)
 
                 try:
                     # TODO: Interpret the timeout= query parameter for Elasticsearch
