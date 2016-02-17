@@ -34,9 +34,10 @@ class Auth(LoggingAware, object):
             if allowed_ports is not None and client.port not in allowed_ports:
                 return False
             else:
+                default_timeout = socket.getdefaulttimeout()
+                socket.setdefaulttimeout(2)
+
                 try:
-                    default_timeout = socket.getdefaulttimeout()
-                    socket.setdefaulttimeout(2)
                     hostname = socket.gethostbyaddr(client.address)[0]
                 except IOError:
                     hostname = client.address
@@ -55,7 +56,7 @@ class Auth(LoggingAware, object):
 
     def populate(self, client):
         """Populate the group and role memberships of the given client."""
-        if self.group_backend is not None:
+        if self.group_backend is not None and client.username is not None:
             self.log.debug('Fetching group memberships for client "%s"...', client)
 
             try:
