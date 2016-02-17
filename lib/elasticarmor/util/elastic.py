@@ -168,7 +168,7 @@ class ElasticObject(LoggingAware, object):
         # If this is false, it is the developer's fault or it may indicate some incompatibility
         # to the used Elasticsearch version. Anyway, we need to make sure this is a fatal error
         # and truly no one should catch assertion errors.
-        assert '_id' in result
+        assert '_id' in result, 'Document id missing'
 
         if not result.get('_source'):
             raise ElasticSearchError('Search result with id "{0}" is missing a source document'.format(result['_id']))
