@@ -8,7 +8,7 @@ import ldap
 import requests
 
 from elasticarmor.util import format_ldap_error, format_elasticsearch_error
-from elasticarmor.util.elastic import ElasticRole
+from elasticarmor.util.elastic import ElasticSearchError, ElasticRole
 from elasticarmor.util.mixins import LoggingAware
 from elasticarmor.util.rwlock import ReadWriteLock, Protector
 
@@ -245,7 +245,7 @@ class LdapUsergroupBackend(LdapUserBackend):
         return memberships
 
 
-class ElasticsearchRoleBackend(object):
+class ElasticsearchRoleBackend(LoggingAware, object):
     """Elasticsearch backend class providing role related operations."""
 
     def __init__(self, settings):
@@ -262,7 +262,9 @@ class ElasticsearchRoleBackend(object):
 
         roles = []
         for hit in result.get('hits', {}).get('hits', []):
-            if '_id' in hit and hit.get('_source'):
+            try:
                 roles.append(ElasticRole.from_search_result(hit))
+            except ElasticSearchError as error:
+                self.log.warning('Failed to create role from search result. An error occurred: %s', error)
 
         return roles

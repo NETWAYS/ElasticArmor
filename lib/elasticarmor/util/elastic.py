@@ -10,10 +10,14 @@ from elasticarmor.util import format_elasticsearch_error
 from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['ElasticConnection', 'ElasticObject', 'ElasticRole']
+__all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole']
 
 DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
+
+
+class ElasticSearchError(Exception):
+    pass
 
 
 class ElasticConnection(LoggingAware, object):
@@ -156,8 +160,23 @@ class ElasticObject(LoggingAware, object):
 
     @classmethod
     def from_search_result(cls, result):
-        """Create and return a new instance of this class using the given result from a previous search request."""
-        return cls(result['_id'], **result['_source'])
+        """Create and return a new instance of this class using the given result from a previous search request.
+
+        Raises ElasticSearchError if the given search result is invalid.
+        Overwrite this if you need to process non-default search results."""
+
+        # If this is false, it is the developer's fault or it may indicate some incompatibility
+        # to the used Elasticsearch version. Anyway, we need to make sure this is a fatal error
+        # and truly no one should catch assertion errors.
+        assert '_id' in result
+
+        if not result.get('_source'):
+            raise ElasticSearchError('Search result with id "{0}" is missing a source document'.format(result['_id']))
+
+        try:
+            return cls(result['_id'], **result['_source'])
+        except TypeError:
+            raise ElasticSearchError('Search result with id "{0}" is missing one or more fields'.format(result['_id']))
 
 
 class ElasticRole(ElasticObject):
