@@ -20,6 +20,7 @@ class _RequestRegistry(type):
         class_obj = super(_RequestRegistry, mcs).__new__(mcs, class_name, base_classes, namespace)
         if class_name != 'ElasticRequest':
             mcs.registry.append(class_obj)
+            mcs.registry = sorted(mcs.registry, key=lambda c: c.priority, reverse=True)
 
         return class_obj
 
@@ -68,6 +69,10 @@ class ElasticRequest(LoggingAware, object):
     Every derived class placed in this sub-module is automatically being imported and used.
     """
     __metaclass__ = _RequestRegistry
+
+    # The priority of a request handler. The higher the value, the earlier a request handler is
+    # asked to process a request. If you're not competing with other handlers, leave the default
+    priority = 0
 
     def __init__(self, command, path, query, headers, body):
         super(ElasticRequest, self).__init__()
