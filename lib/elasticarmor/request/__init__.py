@@ -6,7 +6,7 @@ from requests.structures import CaseInsensitiveDict
 
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['ElasticRequest', 'DummyResponse', 'ValidationError', 'RequestError', 'PermissionError']
+__all__ = ['ElasticRequest', 'DummyResponse', 'RequestError', 'PermissionError']
 
 
 class _RequestRegistry(type):
@@ -23,11 +23,6 @@ class _RequestRegistry(type):
             mcs.registry = sorted(mcs.registry, key=lambda c: c.priority, reverse=True)
 
         return class_obj
-
-
-class ValidationError(Exception):
-    """Raised by instances of ElasticRequest in case validating a request has failed."""
-    pass
 
 
 class RequestError(Exception):
@@ -84,18 +79,15 @@ class ElasticRequest(LoggingAware, object):
         self.headers = headers
         self.options = None
 
-        self.validate()
-
     @staticmethod
     def create_request(command, path, query, headers, body):
         """Return a instance of the first matching request handler
         for the given request. Returns None if no handler matches."""
 
         for class_obj in _RequestRegistry.registry:
-            try:
-                return class_obj(command, path, query, headers, body)
-            except ValidationError:
-                pass
+            handler = class_obj(command, path, query, headers, body)
+            if handler.is_valid():
+                return handler
 
     @classmethod
     def clear_caches(cls):
@@ -109,9 +101,8 @@ class ElasticRequest(LoggingAware, object):
         """Clear any caches. Gets called once the user reloads the application."""
         pass
 
-    def validate(self):
-        """Take a quick look at the request and decide whether it can be handled
-        or not. Should raise ValidationError if this is not the case."""
+    def is_valid(self):
+        """Take a quick look at the request and return whether it can be handled or not."""
         raise NotImplementedError()
 
     def inspect(self, client):
