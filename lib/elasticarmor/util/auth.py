@@ -260,7 +260,10 @@ class ElasticsearchRoleBackend(LoggingAware, object):
 
     def get_role_memberships(self, client):
         """Fetch and return all roles the given client is a member of."""
-        response = self.connection.process(ElasticRole.search(client.name, client.groups))
+        request = ElasticRole.search(client.name, client.groups)
+        request.params['size'] = 1000  # If you know how to express "unlimited", feel free to change this!
+
+        response = self.connection.process(request)
         if response is None:
             return
 
