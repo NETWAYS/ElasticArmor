@@ -64,6 +64,9 @@ class Auth(LoggingAware, object):
             except ldap.LDAPError as error:
                 self.log.error('Failed to fetch ldap group memberships for client "%s". %s.',
                                client, format_ldap_error(error))
+            else:
+                self.log.debug('Client "%s" is a member of the following groups: %s',
+                               client, ', '.join(client.groups) or 'None')
         else:
             client.groups = []
 
@@ -75,6 +78,9 @@ class Auth(LoggingAware, object):
             except requests.RequestException as error:
                 self.log.error('Failed to fetch Elasticsearch role memberships for client "%s". Error: %s',
                                client, format_elasticsearch_error(error))
+            else:
+                self.log.debug('Client "%s" is a member of the following roles: %s',
+                               client, ', '.join(r.name for r in client.roles) or 'None')
 
 
 class Client(object):
