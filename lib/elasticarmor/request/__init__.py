@@ -1,6 +1,7 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
 import os
+import json
 
 from requests.structures import CaseInsensitiveDict
 
@@ -71,6 +72,7 @@ class ElasticRequest(LoggingAware, object):
 
     def __init__(self, command, path, query, headers, body):
         super(ElasticRequest, self).__init__()
+        self._json = None
 
         self.path = path
         self.body = body
@@ -100,6 +102,13 @@ class ElasticRequest(LoggingAware, object):
     def clear_cache(cls):
         """Clear any caches. Gets called once the user reloads the application."""
         pass
+
+    @property
+    def json(self):
+        if self._json is None:
+            self._json = json.loads(self.body)
+
+        return self._json
 
     def is_valid(self):
         """Take a quick look at the request and return whether it can be handled or not."""
