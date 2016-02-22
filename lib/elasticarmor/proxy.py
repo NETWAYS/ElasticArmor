@@ -117,9 +117,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(408, explain='Idle time limit exceeded. (%u Seconds)' % CONNECTION_TIMEOUT)
         except ChunkParserError as error:
             self.log.debug('Client "%s" sent an invalid chunked payload. Error: %s', self.client, error)
-            # We do not know what else is still "on the line" thus
-            # we just drop the connection to prevent further issues
-            self.close_connection = True
             self.send_error(400, explain='Payload encoding invalid. Error: {0}'.format(error))
         except RequestException as error:
             self.log.error('An error occurred while communicating with Elasticsearch: %s',
@@ -204,6 +201,9 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                 message = default_message
             if explain is None:
                 explain = default_explain
+
+        if code == 400:
+            self.close_connection = True  # Bad guys don't deserve to be kept alive..
 
         self.send_response(code, message)
         self.send_header('Server', self.version_string())
