@@ -19,8 +19,10 @@ from elasticarmor.util.auth import Auth, Client
 from elasticarmor.util.http import *
 from elasticarmor.util.mixins import LoggingAware
 
+# TODO: Make all constants but the format strings configurable
 CONNECTION_TIMEOUT = 5  # Seconds
 CONNECTION_REQUEST_LIMIT = 100
+CONTENT_BUFFER_SIZE = 2**16  # Bytes, 64KiB
 MAX_CHUNK_SIZE = 4096  # Bytes, used when transferring response payloads
 DENSE_ERROR_FORMAT = '{"error":"%(explain)s","status":%(code)d}'
 PRETTY_ERROR_FORMAT = '''{
@@ -147,7 +149,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
         if self._context.has_chunked_payload():
             self.log.debug('Fetching streamed request payload...')
-            self._body = read_chunked_content(self.rfile)
+            self._body = read_chunked_content(self.rfile, CONTENT_BUFFER_SIZE)
             self.log.debug('Completed fetching payload of length %u.', len(self._body))
         else:
             content_length = 0

@@ -38,7 +38,7 @@ def trailer_chunks(trailers):
     return CRLF.join('{0}: {1}'.format(k, v) for k, v in trailers.iteritems())
 
 
-def read_chunked_content(in_file):
+def read_chunked_content(in_file, limit=None):
     """Read from the given file-like object until no chunked content is left and return it."""
     content = ''
     while True:
@@ -48,6 +48,9 @@ def read_chunked_content(in_file):
                 size = int(chunk_size.strip().split(';')[0], 16)
             except ValueError:
                 raise ChunkParserError('Got invalid chunk-size "{0!r}"'.format(chunk_size))
+
+            if limit and len(content) + size > limit:
+                raise ChunkParserError('Content length limit of {0} bytes exceeded'.format(limit))
 
             data = in_file.read(size)
             if len(data) == size:
