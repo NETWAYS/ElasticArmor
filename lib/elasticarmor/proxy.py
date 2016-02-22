@@ -311,6 +311,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             return
         elif self.request_version >= 'HTTP/1.1' and '100-continue' in expectations:
             self.send_response(100)
+            del self.headers['Expect']
             self.log.debug('Answered to 100-continue expectation.')
 
         request = ElasticRequest.create_request(self.command, path if path else '/', query, self.headers, self.body)
