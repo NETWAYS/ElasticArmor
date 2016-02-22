@@ -329,8 +329,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         # Might be of use for some handler and does not hurt if not..
         self._context.request = request
 
-        # TODO: Fetch restrictions and register them on the client object for further processing
-
         try:
             response = request.inspect(self.client)
         except RequestError as error:
