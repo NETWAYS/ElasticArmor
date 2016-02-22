@@ -175,7 +175,7 @@ class HttpHeaders(httplib.HTTPMessage):
         if options:
             del self['Connection']
 
-        headers = ['TE', 'Trailer', 'Transfer-Encoding', 'Proxy-Authenticate', 'Proxy-Authorization']
+        headers = ['Host', 'TE', 'Trailer', 'Transfer-Encoding', 'Proxy-Authenticate', 'Proxy-Authorization']
         for header_name in (h for h in headers if h in self):
             if header_name in options:
                 options[header_name].extend(v.strip().lower() for v in self[header_name].split(', '))
