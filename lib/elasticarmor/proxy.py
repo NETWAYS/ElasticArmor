@@ -163,11 +163,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                 content_length = int(self.headers.get('Content-Length', 0))
 
             if content_length > 0:
+                self.log.debug('Fetching request payload of length %u...', content_length)
                 if content_length > CONTENT_BUFFER_SIZE:
                     raise RequestEntityTooLarge(
                         'Content length limit of {0} bytes exceeded'.format(CONTENT_BUFFER_SIZE))
 
-                self.log.debug('Fetching request payload of length %u...', content_length)
                 self._body = self.rfile.read(content_length)
             else:
                 self.log.debug('Request payload is either empty or it\'s a HEAD request.')
@@ -219,6 +219,14 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
         if code == 400:
             self.close_connection = True  # Bad guys don't deserve to be kept alive..
+        elif not self.close_connection:
+            try:
+                # We need to fetch the request payload even if it's not necessary to handle
+                # the request as the remaining data will most likely cause misbehaviour
+                _ = self.body
+            except Exception as error:  # Fetch the request payload no matter what..
+                self.log.debug('Failed to fetch the remaining request payload. An error occurred: %s', error)
+                self.close_connection = True  # ..but close the connection if it's not possible
 
         self.send_response(code, message)
         self.send_header('Server', self.version_string())
