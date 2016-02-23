@@ -129,15 +129,17 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                            format_elasticsearch_error(error))
             self.send_error(502, explain='An error occurred while communicating with Elasticsearch.'
                                          ' Please contact an administrator.')
-        except:
+        except Exception:
+            exc_info = sys.exc_info()  # Fetch exception information now..
+
             try:
                 body = self.body
-            except (socket.timeout, RequestEntityTooLarge):
+            except Exception:  # ..as it may refer to a different one later on
                 body = None
 
             self.log.error('Unhandled exception occurred while handling request "%s" from %s:'
                            '\nHeaders:\n%s\nBody:\n%s\n', self.requestline, client_address,
-                           self.headers, body, exc_info=True)
+                           self.headers, body, exc_info=exc_info)
             self.send_error(
                 500, explain='An error occurred while processing this request. Please contact an administrator.')
         finally:
