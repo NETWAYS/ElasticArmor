@@ -120,6 +120,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         except ChunkParserError as error:
             self.log.debug('Client "%s" sent an invalid chunked payload. Error: %s', self.client, error)
             self.send_error(400, explain='Payload encoding invalid. Error: {0}'.format(error))
+        except RequestEntityTooLarge as error:
+            self.log.debug('Client "%s" exceeded the buffer size limit. Closing connection.', self.client)
+            self.close_connection = True
+            self.send_error(413, explain=str(error))
         except RequestException as error:
             self.log.error('An error occurred while communicating with Elasticsearch: %s',
                            format_elasticsearch_error(error))
@@ -128,7 +132,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         except:
             try:
                 body = self.body
-            except socket.timeout:
+            except (socket.timeout, RequestEntityTooLarge):
                 body = None
 
             self.log.error('Unhandled exception occurred while handling request "%s" from %s:'
@@ -157,6 +161,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                 content_length = int(self.headers.get('Content-Length', 0))
 
             if content_length > 0:
+                if content_length > CONTENT_BUFFER_SIZE:
+                    raise RequestEntityTooLarge(
+                        'Content length limit of {0} bytes exceeded'.format(CONTENT_BUFFER_SIZE))
+
                 self.log.debug('Fetching request payload of length %u...', content_length)
                 self._body = self.rfile.read(content_length)
             else:

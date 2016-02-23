@@ -7,7 +7,8 @@ import cStringIO
 from requests.structures import CaseInsensitiveDict
 
 __all__ = ['is_false', 'parse_query', 'prepare_chunk', 'close_chunks', 'trailer_chunks',
-           'read_chunked_content', 'ChunkParserError', 'HttpHeaders', 'HttpContext']
+           'read_chunked_content', 'ChunkParserError', 'RequestEntityTooLarge',
+           'HttpHeaders', 'HttpContext']
 
 CRLF = '\r\n'
 
@@ -50,7 +51,7 @@ def read_chunked_content(in_file, limit=None):
                 raise ChunkParserError('Got invalid chunk-size "{0!r}"'.format(chunk_size))
 
             if limit and len(content) + size > limit:
-                raise ChunkParserError('Content length limit of {0} bytes exceeded'.format(limit))
+                raise RequestEntityTooLarge('Content length limit of {0} bytes exceeded'.format(limit))
 
             data = in_file.read(size)
             if len(data) == size:
@@ -76,6 +77,11 @@ def read_chunked_content(in_file, limit=None):
 
 class ChunkParserError(Exception):
     """Raised by function read_chunked_content() in case of a parsing error."""
+    pass
+
+
+class RequestEntityTooLarge(Exception):
+    """Raised by function read_chunked_content() in case the buffer size limit has been exceeded."""
     pass
 
 
