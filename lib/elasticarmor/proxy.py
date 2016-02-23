@@ -212,6 +212,9 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             if explain is None:
                 explain = default_explain
 
+        self.log.debug('Starting error response with status code %u, status message "%s" and explain message "%s".',
+                       code, message, explain)
+
         if code == 400:
             self.close_connection = True  # Bad guys don't deserve to be kept alive..
 
