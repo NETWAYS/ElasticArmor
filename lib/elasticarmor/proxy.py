@@ -137,7 +137,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
             self.log.error('Unhandled exception occurred while handling request "%s" from %s:'
                            '\nHeaders:\n%s\nBody:\n%s\n', self.requestline, client_address,
-                           self.headers, self.body, exc_info=True)
+                           self.headers, body, exc_info=True)
             self.send_error(
                 500, explain='An error occurred while processing this request. Please contact an administrator.')
         finally:
