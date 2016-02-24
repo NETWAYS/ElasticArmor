@@ -91,11 +91,6 @@ class ElasticConnection(LoggingAware, object):
         Returns None if it was not possible to receive a response."""
         try:  # It's either a ElasticRequestHandler, a ElasticRequest ..
             request_path = request.path
-            encoded_query = urllib.urlencode(request.query, True)
-            prepared_request = requests.PreparedRequest()
-            prepared_request.prepare_method(request.command)
-            prepared_request.prepare_headers(request.headers)
-            prepared_request.prepare_body(request.body, None)
         except AttributeError:  # .. or a requests.Request
             request_path = request.url
             encoded_query = urllib.urlencode(request.params, True)
@@ -103,6 +98,12 @@ class ElasticConnection(LoggingAware, object):
             prepared_request.prepare_method(request.method)
             prepared_request.prepare_headers(request.headers)
             prepared_request.prepare_body(request.data, request.files, request.json)
+        else:
+            encoded_query = urllib.urlencode(request.query, True)
+            prepared_request = requests.PreparedRequest()
+            prepared_request.prepare_method(request.command)
+            prepared_request.prepare_headers(request.headers)
+            prepared_request.prepare_body(request.body, None)
 
         if prepared_request.body:
             self.log.debug('Processing Elasticsearch request "%s %s" with body %r...', prepared_request.method,
