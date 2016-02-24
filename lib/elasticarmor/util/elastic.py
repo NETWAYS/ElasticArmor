@@ -197,8 +197,6 @@ class ElasticRole(ElasticObject):
         given user or one of the given groups is a member of."""
         data = None
         if user or groups:
-            # We're lowercasing search terms here, because we do not require a particular mapping for role
-            # objects, thus Elasticsearch analyzes values of inserted documents and lowercases everything.
             conditions = []
             if user:
                 conditions.append({'query': {'match': {'users': user}}})
