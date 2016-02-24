@@ -201,12 +201,12 @@ class ElasticRole(ElasticObject):
             # objects, thus Elasticsearch analyzes values of inserted documents and lowercases everything.
             conditions = []
             if user:
-                conditions.append({'term': {'users': user.lower()}})
+                conditions.append({'query': {'match': {'users': user}}})
 
             if groups:
                 conditions.append({
                     'bool': {
-                        'should': [{'term': {'groups': group.lower()}} for group in groups]
+                        'should': [{'query': {'match': {'groups': group}}} for group in groups]
                     }
                 })
 
