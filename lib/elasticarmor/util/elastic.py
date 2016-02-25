@@ -446,8 +446,13 @@ class QueryDslParser(object):
 
             self.fields.extend((None, None, field) for field in fields)
 
-    def fuzzy_like_this_field_query(self):
-        pass
+    def fuzzy_like_this_field_query(self, obj):
+        """Parse the given fuzzy_like_this_field query. Raises ElasticSearchError in case the query is malformed."""
+        field_name = next(obj.iterkeys())
+        if field_name:
+            self.fields.append((None, None, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in fuzzy_like_this_field query "{0!r}"'.format(obj))
 
     def function_score_query(self):
         pass
