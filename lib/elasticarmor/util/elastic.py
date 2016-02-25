@@ -324,10 +324,10 @@ class QueryDslParser(object):
         except KeyError:
             raise ElasticSearchError('Unknown query "{0}"'.format(name))
 
-    def _parse_filter(self, name, obj):
+    def _parse_filter(self, name, obj, index=None, document=None):
         """Parse the given filter. Raises ElasticSearchError if it is unknown."""
         try:
-            self._filter_parsers[name](obj)
+            self._filter_parsers[name](obj, index, document)
         except KeyError:
             raise ElasticSearchError('Unknown filter "{0}"'.format(name))
 
