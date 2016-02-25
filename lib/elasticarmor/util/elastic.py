@@ -508,8 +508,13 @@ class QueryDslParser(object):
         if 'filter' in obj:
             self.filter(obj['filter'])
 
-    def fuzzy_query(self):
-        pass
+    def fuzzy_query(self, obj):
+        """Parse the given fuzzy query. Raises ElasticSearchError in case the query is malformed."""
+        field_name = next(obj.iterkeys())
+        if field_name:
+            self.fields.append((None, None, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in fuzzy query "{0!r}"'.format(obj))
 
     def geo_shape_query(self):
         pass
