@@ -230,3 +230,296 @@ class ElasticRole(ElasticObject):
         }
 
         return cls.request('_search', method='GET', params=query_params, json=data)
+
+
+class QueryDslParser(object):
+    def __init__(self):
+        self.permissions = []
+        self.indices = []
+        self.documents = []
+        self.fields = []
+
+        self._query_parsers = {
+            'query': self.query,
+            'match': self.match_query,
+            'match_phrase': self.match_phrase_query,
+            'match_phrase_prefix': self.match_phrase_prefix_query,
+            'multi_match': self.multi_match_query,
+            'bool': self.bool_query,
+            'boosting': self.boosting_query,
+            'common': self.common_query,
+            'constant_score': self.constant_score_query,
+            'dis_max': self.dis_max_query,
+            'filtered': self.filtered_query,
+            'fuzzy_like_this': self.fuzzy_like_this_query,
+            'flt': self.fuzzy_like_this_query,
+            'fuzzy_like_this_field': self.fuzzy_like_this_field_query,
+            'flt_field': self.fuzzy_like_this_field_query,
+            'function_score': self.function_score_query,
+            'fuzzy': self.fuzzy_query,
+            'geo_shape': self.geo_shape_query,
+            'has_child': self.has_child_query,
+            'has_parent': self.has_parent_query,
+            'ids': self.ids_query,
+            'indices': self.indices_query,
+            'match_all': self.match_all_query,
+            'more_like_this': self.more_like_this_query,
+            'mlt': self.more_like_this_query,
+            'nested': self.nested_query,
+            'prefix': self.prefix_query,
+            'query_string': self.query_string_query,
+            'simple_query_string': self.simple_query_string_query,
+            'range': self.range_query,
+            'regexp': self.regexp_query,
+            'span_first': self.span_first_query,
+            'span_multi': self.span_multi_query,
+            'span_near': self.span_near_query,
+            'span_not': self.span_not_query,
+            'span_or': self.span_or_query,
+            'span_term': self.span_term_query,
+            'term': self.term_query,
+            'terms': self.terms_query,
+            'in': self.terms_query,
+            'top_children': self.top_children_query,
+            'wildcard': self.wildcard_query,
+            'template': self.template_query
+        }
+
+        self._filter_parsers = {
+            'filter': self.filter,
+            'and': self.and_filter,
+            'bool': self.bool_filter,
+            'exists': self.exists_filter,
+            'geo_bounding_box': self.geo_bounding_box_filter,
+            'geo_distance': self.geo_distance_filter,
+            'geo_distance_range': self.geo_distance_range_filter,
+            'geo_polygon': self.geo_polygon_filter,
+            'geo_shape': self.geo_shape_filter,
+            'geohash_cell': self.geohash_cell_filter,
+            'has_child': self.has_child_filter,
+            'has_parent': self.has_parent_filter,
+            'ids': self.ids_filter,
+            'indices': self.indices_filter,
+            'limit': self.limit_filter,
+            'match_all': self.match_all_filter,
+            'missing': self.missing_filter,
+            'nested': self.nested_filter,
+            'not': self.not_filter,
+            'or': self.or_filter,
+            'prefix': self.prefix_filter,
+            'fquery': self.query_filter,
+            'range': self.range_filter,
+            'regexp': self.regexp_filter,
+            'script': self.script_filter,
+            'term': self.term_filter,
+            'terms': self.terms_filter,
+            'in': self.terms_filter,
+            'type': self.type_filter
+        }
+
+    def _parse_query(self):
+        pass
+
+    def _parse_filter(self):
+        pass
+
+    def query(self):
+        pass
+
+    def match_query(self):
+        pass
+
+    def match_phrase_query(self):
+        pass
+
+    def match_phrase_prefix_query(self):
+        pass
+
+    def multi_match_query(self):
+        pass
+
+    def bool_query(self):
+        pass
+
+    def boosting_query(self):
+        pass
+
+    def common_query(self):
+        pass
+
+    def constant_score_query(self):
+        pass
+
+    def dis_max_query(self):
+        pass
+
+    def filtered_query(self):
+        pass
+
+    def fuzzy_like_this_query(self):
+        pass
+
+    def fuzzy_like_this_field_query(self):
+        pass
+
+    def function_score_query(self):
+        pass
+
+    def fuzzy_query(self):
+        pass
+
+    def geo_shape_query(self):
+        pass
+
+    def has_child_query(self):
+        pass
+
+    def has_parent_query(self):
+        pass
+
+    def ids_query(self):
+        pass
+
+    def indices_query(self):
+        pass
+
+    def match_all_query(self):
+        pass
+
+    def more_like_this_query(self):
+        pass
+
+    def nested_query(self):
+        pass
+
+    def prefix_query(self):
+        pass
+
+    def query_string_query(self):
+        pass
+
+    def simple_query_string_query(self):
+        pass
+
+    def range_query(self):
+        pass
+
+    def regexp_query(self):
+        pass
+
+    def span_first_query(self):
+        pass
+
+    def span_multi_query(self):
+        pass
+
+    def span_near_query(self):
+        pass
+
+    def span_not_query(self):
+        pass
+
+    def span_or_query(self):
+        pass
+
+    def span_term_query(self):
+        pass
+
+    def term_query(self):
+        pass
+
+    def terms_query(self):
+        pass
+
+    def top_children_query(self):
+        pass
+
+    def wildcard_query(self):
+        pass
+
+    def template_query(self):
+        pass
+
+    def filter(self):
+        pass
+
+    def and_filter(self):
+        pass
+
+    def bool_filter(self):
+        pass
+
+    def exists_filter(self):
+        pass
+
+    def geo_bounding_box_filter(self):
+        pass
+
+    def geo_distance_filter(self):
+        pass
+
+    def geo_distance_range_filter(self):
+        pass
+
+    def geo_polygon_filter(self):
+        pass
+
+    def geo_shape_filter(self):
+        pass
+
+    def geohash_cell_filter(self):
+        pass
+
+    def has_child_filter(self):
+        pass
+
+    def has_parent_filter(self):
+        pass
+
+    def ids_filter(self):
+        pass
+
+    def indices_filter(self):
+        pass
+
+    def limit_filter(self):
+        pass
+
+    def match_all_filter(self):
+        pass
+
+    def missing_filter(self):
+        pass
+
+    def nested_filter(self):
+        pass
+
+    def not_filter(self):
+        pass
+
+    def or_filter(self):
+        pass
+
+    def prefix_filter(self):
+        pass
+
+    def query_filter(self):
+        pass
+
+    def range_filter(self):
+        pass
+
+    def regexp_filter(self):
+        pass
+
+    def script_filter(self):
+        pass
+
+    def term_filter(self):
+        pass
+
+    def terms_filter(self):
+        pass
+
+    def type_filter(self):
+        pass
