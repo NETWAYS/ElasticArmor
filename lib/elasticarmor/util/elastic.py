@@ -345,9 +345,9 @@ class QueryDslParser(object):
 
         return object_name, data[object_name]
 
-    def query(self, obj):
+    def query(self, obj, index=None, document=None):
         """Recurse into the given query and parse its contents."""
-        self._parse_query(*self._read_object(obj))
+        self._parse_query(*self._read_object(obj), index=index, document=document)
 
     def match_query(self, obj):
         """Parse the given match query. Raises ElasticSearchError in case the query is malformed."""
