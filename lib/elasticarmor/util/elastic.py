@@ -516,11 +516,13 @@ class QueryDslParser(object):
         else:
             raise ElasticSearchError('Missing field name in fuzzy query "{0!r}"'.format(obj))
 
-    def geo_shape_query(self, obj):
+    def geo_shape_query(self, obj, index=None, document=None):
         """Parse the given geo_shape query. Raises ElasticSearchError in case the query is malformed."""
         field_name = next(obj.iterkeys())
         if not field_name:
             raise ElasticSearchError('Missing field name in geo_shape query "{0!r}"'.format(obj))
+
+        self.fields.append((index, document, field_name))
 
         try:
             shape = obj[field_name]['indexed_shape']
@@ -534,8 +536,6 @@ class QueryDslParser(object):
             except KeyError:
                 raise ElasticSearchError('Invalid "indexed_shape" definition in geo_shape query "{0!r}"'.format(obj))
 
-            self.indices.append(index)
-            self.documents.append((index, document))
             self.fields.append((index, document, field))
 
     def has_child_query(self, obj):
