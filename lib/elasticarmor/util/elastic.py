@@ -381,7 +381,7 @@ class QueryDslParser(object):
             else:
                 self.query(obj[keyword], index, document)
 
-    def boosting_query(self, obj):
+    def boosting_query(self, obj, index=None, document=None):
         """Parse the given boosting query. Raises ElasticSearchError in case the query is malformed."""
         if 'positive' not in obj or 'negative' not in obj:
             raise ElasticSearchError(
@@ -390,9 +390,9 @@ class QueryDslParser(object):
         for keyword in ['positive', 'negative']:
             if isinstance(obj[keyword], list):
                 for query in obj[keyword]:
-                    self.query(query)
+                    self.query(query, index, document)
             else:
-                self.query(obj[keyword])
+                self.query(obj[keyword], index, document)
 
     def common_query(self, obj):
         """Parse the given common query. Raises ElasticSearchError in case the query is malformed."""
