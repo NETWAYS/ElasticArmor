@@ -538,8 +538,20 @@ class QueryDslParser(object):
             self.documents.append((index, document))
             self.fields.append((index, document, field))
 
-    def has_child_query(self):
-        pass
+    def has_child_query(self, obj):
+        """Parse the given has_child query. Raises ElasticSearchError in case the query is malformed."""
+        if 'query' not in obj and 'filter' not in obj:
+            raise ElasticSearchError('No query and filter given in has_child query "{0!r}"'.format(obj))
+
+        try:
+            self.documents.append((None, obj['type']))
+        except KeyError:
+            raise ElasticSearchError('Missing document type in has_child query "{0!r}"'.format(obj))
+
+        if 'query' in obj:
+            self.query(obj['query'])
+        if 'filter' in obj:
+            self.filter(obj['filter'])
 
     def has_parent_query(self):
         pass
