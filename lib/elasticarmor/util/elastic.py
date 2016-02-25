@@ -394,11 +394,11 @@ class QueryDslParser(object):
             else:
                 self.query(obj[keyword], index, document)
 
-    def common_query(self, obj):
+    def common_query(self, obj, index=None, document=None):
         """Parse the given common query. Raises ElasticSearchError in case the query is malformed."""
         field_name = next(obj.iterkeys())
         if field_name:
-            self.fields.append((None, None, field_name))
+            self.fields.append((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in common query "{0!r}"'.format(obj))
 
