@@ -350,10 +350,12 @@ class QueryDslParser(object):
         self._parse_query(*self._read_object(obj))
 
     def match_query(self, obj):
-        """Parse the given match query."""
+        """Parse the given match query. Raises ElasticSearchError in case the field name is missing."""
         field_name = next(obj.iterkeys())
         if field_name:
             self.fields.append((None, None, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in match query "{0!r}"'.format(obj))
 
     def multi_match_query(self):
         pass
