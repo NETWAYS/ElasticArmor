@@ -349,8 +349,11 @@ class QueryDslParser(object):
         """Recurse into the given query and parse its contents."""
         self._parse_query(*self._read_object(obj))
 
-    def match_query(self):
-        pass
+    def match_query(self, obj):
+        """Parse the given match query."""
+        field_name = next(obj.iterkeys())
+        if field_name:
+            self.fields.append((None, None, field_name))
 
     def match_phrase_query(self):
         pass
