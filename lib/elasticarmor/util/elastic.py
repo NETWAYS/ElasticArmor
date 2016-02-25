@@ -242,8 +242,8 @@ class QueryDslParser(object):
         self._query_parsers = {
             'query': self.query,
             'match': self.match_query,
-            'match_phrase': self.match_phrase_query,
-            'match_phrase_prefix': self.match_phrase_prefix_query,
+            'match_phrase': self.match_query,
+            'match_phrase_prefix': self.match_query,
             'multi_match': self.multi_match_query,
             'bool': self.bool_query,
             'boosting': self.boosting_query,
@@ -354,12 +354,6 @@ class QueryDslParser(object):
         field_name = next(obj.iterkeys())
         if field_name:
             self.fields.append((None, None, field_name))
-
-    def match_phrase_query(self):
-        pass
-
-    def match_phrase_prefix_query(self):
-        pass
 
     def multi_match_query(self):
         pass
