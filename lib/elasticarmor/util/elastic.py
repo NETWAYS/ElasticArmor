@@ -463,8 +463,9 @@ class QueryDslParser(object):
     def template_query(self):
         pass
 
-    def filter(self):
-        pass
+    def filter(self, obj):
+        """Recurse into the given filter and parse its contents."""
+        self._parse_filter(*self._read_object(obj))
 
     def and_filter(self):
         pass
