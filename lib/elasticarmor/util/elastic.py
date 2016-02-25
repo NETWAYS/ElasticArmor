@@ -434,17 +434,17 @@ class QueryDslParser(object):
         if 'query' in obj:
             self.query(obj['query'], index, document)
 
-    def fuzzy_like_this_query(self, obj):
+    def fuzzy_like_this_query(self, obj, index=None, document=None):
         """Parse the given fuzzy_like_this query. Raises ElasticSearchError in case the query is malformed."""
         try:
             fields = obj['fields']
         except KeyError:
-            self.fields.append((None, None, '_all'))
+            self.fields.append((index, document, '_all'))
         else:
             if not fields:
                 raise ElasticSearchError('No fields provided in fuzzy_like_this query "{0!r}"'.format(obj))
 
-            self.fields.extend((None, None, field) for field in fields)
+            self.fields.extend((index, document, field) for field in fields)
 
     def fuzzy_like_this_field_query(self, obj):
         """Parse the given fuzzy_like_this_field query. Raises ElasticSearchError in case the query is malformed."""
