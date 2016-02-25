@@ -349,11 +349,11 @@ class QueryDslParser(object):
         """Recurse into the given query and parse its contents."""
         self._parse_query(*self._read_object(obj), index=index, document=document)
 
-    def match_query(self, obj):
+    def match_query(self, obj, index=None, document=None):
         """Parse the given match query. Raises ElasticSearchError in case the query is malformed."""
         field_name = next(obj.iterkeys())
         if field_name:
-            self.fields.append((None, None, field_name))
+            self.fields.append((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in match query "{0!r}"'.format(obj))
 
