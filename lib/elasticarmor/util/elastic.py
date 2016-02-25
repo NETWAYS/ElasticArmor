@@ -331,8 +331,23 @@ class QueryDslParser(object):
         except KeyError:
             raise ElasticSearchError('Unknown filter "{0}"'.format(name))
 
-    def query(self):
-        pass
+    def _read_object(self, data):
+        """Validate and return an object from the given data. Raises ElasticSearchError if the validation fails."""
+        try:
+            object_name = next(data.iterkeys())
+        except AttributeError:
+            raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(data))
+
+        if not object_name:
+            raise ElasticSearchError('Missing start object')
+        elif not isinstance(data[object_name], dict):
+            raise ElasticSearchError('Invalid start object "{0!r}"'.format(data[object_name]))
+
+        return object_name, data[object_name]
+
+    def query(self, obj):
+        """Recurse into the given query and parse its contents."""
+        self._parse_query(*self._read_object(obj))
 
     def match_query(self):
         pass
