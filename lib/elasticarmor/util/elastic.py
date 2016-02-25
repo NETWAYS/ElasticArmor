@@ -425,14 +425,14 @@ class QueryDslParser(object):
         for query in queries:
             self.query(query, index, document)
 
-    def filtered_query(self, obj):
+    def filtered_query(self, obj, index=None, document=None):
         """Parse the given filtered query. Raises ElasticSearchError in case the query is malformed."""
         if 'filter' not in obj:
             raise ElasticSearchError('Keyword "filter" missing in filtered query "{0!r}"'.format(obj))
 
-        self.filter(obj['filter'])
+        self.filter(obj['filter'], index, document)
         if 'query' in obj:
-            self.query(obj['query'])
+            self.query(obj['query'], index, document)
 
     def fuzzy_like_this_query(self, obj):
         """Parse the given fuzzy_like_this query. Raises ElasticSearchError in case the query is malformed."""
