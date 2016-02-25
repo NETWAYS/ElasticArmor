@@ -357,8 +357,17 @@ class QueryDslParser(object):
         else:
             raise ElasticSearchError('Missing field name in match query "{0!r}"'.format(obj))
 
-    def multi_match_query(self):
-        pass
+    def multi_match_query(self, obj):
+        """Parse the given multi_match query. Raises ElasticSearchError in case the query provides no fields."""
+        try:
+            fields = obj['fields']
+        except KeyError:
+            raise ElasticSearchError('Keyword "fields" missing in multi_match query "{0!r}"'.format(obj))
+
+        if not fields:
+            raise ElasticSearchError('No fields provided in multi_match query "{0!r}"'.format(obj))
+
+        self.fields.extend((None, None, field) for field in fields)
 
     def bool_query(self):
         pass
