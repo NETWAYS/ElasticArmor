@@ -369,7 +369,7 @@ class QueryDslParser(object):
 
         self.fields.extend((index, document, field) for field in fields)
 
-    def bool_query(self, obj):
+    def bool_query(self, obj, index=None, document=None):
         """Parse the given bool query. Raises ElasticSearchError in case the query is malformed."""
         if 'must' not in obj and 'must_not' not in obj and 'should' not in obj:
             raise ElasticSearchError('No valid keyword given in bool query "{0!r}"'.format(obj))
@@ -377,9 +377,9 @@ class QueryDslParser(object):
         for keyword in (kw for kw in ['must', 'must_not', 'should'] if kw in obj):
             if isinstance(obj[keyword], list):
                 for query in obj[keyword]:
-                    self.query(query)
+                    self.query(query, index, document)
             else:
-                self.query(obj[keyword])
+                self.query(obj[keyword], index, document)
 
     def boosting_query(self, obj):
         """Parse the given boosting query. Raises ElasticSearchError in case the query is malformed."""
