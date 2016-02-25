@@ -350,7 +350,7 @@ class QueryDslParser(object):
         self._parse_query(*self._read_object(obj))
 
     def match_query(self, obj):
-        """Parse the given match query. Raises ElasticSearchError in case the field name is missing."""
+        """Parse the given match query. Raises ElasticSearchError in case the query is malformed."""
         field_name = next(obj.iterkeys())
         if field_name:
             self.fields.append((None, None, field_name))
@@ -358,7 +358,7 @@ class QueryDslParser(object):
             raise ElasticSearchError('Missing field name in match query "{0!r}"'.format(obj))
 
     def multi_match_query(self, obj):
-        """Parse the given multi_match query. Raises ElasticSearchError in case the query provides no fields."""
+        """Parse the given multi_match query. Raises ElasticSearchError in case the query is malformed."""
         try:
             fields = obj['fields']
         except KeyError:
