@@ -508,11 +508,11 @@ class QueryDslParser(object):
         if 'filter' in obj:
             self.filter(obj['filter'], index, document)
 
-    def fuzzy_query(self, obj):
+    def fuzzy_query(self, obj, index=None, document=None):
         """Parse the given fuzzy query. Raises ElasticSearchError in case the query is malformed."""
         field_name = next(obj.iterkeys())
         if field_name:
-            self.fields.append((None, None, field_name))
+            self.fields.append((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in fuzzy query "{0!r}"'.format(obj))
 
