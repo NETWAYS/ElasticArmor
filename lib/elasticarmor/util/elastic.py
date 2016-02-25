@@ -454,8 +454,59 @@ class QueryDslParser(object):
         else:
             raise ElasticSearchError('Missing field name in fuzzy_like_this_field query "{0!r}"'.format(obj))
 
-    def function_score_query(self):
-        pass
+    def _parse_score_function(self, obj):
+        """Parse the given score function and return whether it was a success."""
+        if 'script_score' in obj:
+            self.permissions.append('<scripted_query_dsl>')  # TODO: Use a proper permission name
+        elif 'field_value_factor' in obj:
+            try:
+                self.fields.append((None, None, obj['field_value_factor']['field']))
+            except (TypeError, KeyError):
+                return False
+
+        elif 'linear' in obj or 'exp' in obj or 'gauss' in obj:
+            try:
+                field_name = next(obj.get('linear', obj.get('exp', obj.get('gauss', {}))).iterkeys())
+            except AttributeError:
+                field_name = None
+
+            if not field_name:
+                return False
+
+            self.fields.append((None, None, field_name))
+        elif 'weight' in obj or 'random_score' in obj:
+            pass  # These are not security relevant as of Elasticsearch v1.7
+        else:
+            return False
+
+        if 'filter' in obj:
+            self.filter(obj['filter'])
+
+        return True
+
+    def function_score_query(self, obj):
+        """Parse the given function_score query. Raises ElasticSearchError in case the query is malformed."""
+        if 'query' not in obj and 'filter' not in obj:
+            raise ElasticSearchError('No query and filter given in function_score query "{0!r}"'.format(obj))
+
+        try:
+            functions = obj['functions']
+        except KeyError:
+            if not self._parse_score_function(obj):
+                raise ElasticSearchError('No valid function given in function_score query "{0!r}"'.format(obj))
+        else:
+            if not functions:
+                raise ElasticSearchError('Not any score functions given in function_score query "{0!r}"'.format(obj))
+
+            for function_obj in functions:
+                if not self._parse_score_function(function_obj):
+                    raise ElasticSearchError(
+                        'Invalid function "{0!r}" given in function_score query "{1!r}"'.format(function_obj, obj))
+
+        if 'query' in obj:
+            self.query(obj['query'])
+        if 'filter' in obj:
+            self.filter(obj['filter'])
 
     def fuzzy_query(self):
         pass
