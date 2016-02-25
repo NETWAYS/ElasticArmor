@@ -568,8 +568,19 @@ class QueryDslParser(object):
         if 'filter' in obj:
             self.filter(obj['filter'])
 
-    def ids_query(self):
-        pass
+    def ids_query(self, obj):
+        """Parse the given ids query. Raises ElasticSearchError in case the query is malformed."""
+        try:
+            documents = obj['type']
+        except KeyError:
+            documents = ['_all']
+        else:
+            if not documents:
+                raise ElasticSearchError('Not any document types given in ids query "{0!r}"'.format(obj))
+            elif isinstance(documents, basestring):
+                documents = [documents]
+
+        self.documents.extend((None, document) for document in documents)
 
     def indices_query(self):
         pass
