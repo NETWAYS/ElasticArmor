@@ -402,8 +402,15 @@ class QueryDslParser(object):
         else:
             raise ElasticSearchError('Missing field name in common query "{0!r}"'.format(obj))
 
-    def constant_score_query(self):
-        pass
+    def constant_score_query(self, obj):
+        """Parse the given constant_score query. Raises ElasticSearchError in case the query is malformed."""
+        if 'query' not in obj and 'filter' not in obj:
+            raise ElasticSearchError('No valid keyword given in constant_score query "{0!r}"'.format(obj))
+
+        if 'query' in obj:
+            self.query(obj['query'])
+        if 'filter' in obj:
+            self.filter(obj['filter'])
 
     def dis_max_query(self):
         pass
