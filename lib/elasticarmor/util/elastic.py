@@ -412,8 +412,18 @@ class QueryDslParser(object):
         if 'filter' in obj:
             self.filter(obj['filter'])
 
-    def dis_max_query(self):
-        pass
+    def dis_max_query(self, obj):
+        """Parse the given dis_max query. Raises ElasticSearchError in case the query is malformed."""
+        try:
+            queries = obj['queries']
+        except KeyError:
+            raise ElasticSearchError('Keyword "queries" missing in dis_max query "{0!r}"'.format(obj))
+
+        if not queries:
+            raise ElasticSearchError('No queries provided in dis_max query "{0!r}"'.format(obj))
+
+        for query in queries:
+            self.query(query)
 
     def filtered_query(self):
         pass
