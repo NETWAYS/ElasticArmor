@@ -691,7 +691,7 @@ class QueryDslParser(object):
     def term_query(self, obj, index=None, document=None):
         pass
 
-    def terms_query(self):
+    def terms_query(self, obj, index=None, document=None):
         pass
 
     def top_children_query(self):
