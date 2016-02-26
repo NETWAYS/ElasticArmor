@@ -899,8 +899,25 @@ class QueryDslParser(object):
     def term_filter(self, obj, index=None, document=None):
         pass
 
-    def terms_filter(self):
-        pass
+    def terms_filter(self, obj, index=None, document=None):
+        """Parse the given terms filter. Raises ElasticSearchError in case the filter is malformed."""
+        field_name = next(obj.iterkeys())
+        if not field_name:
+            raise ElasticSearchError('Missing field name in terms filter "{0!r}"'.format(obj))
+
+        self.fields.append((index, document, field_name))
+        if isinstance(obj[field_name], list):
+            if not obj[field_name] or not isinstance(obj[field_name][0], basestring):
+                raise ElasticSearchError('Invalid field value definition in terms filter "{0!r}"'.format(obj))
+
+            self.fields.extend((index, document, field) for field in obj[field_name])
+        else:
+            try:
+                index, document, field = obj[field_name]['index'], obj[field_name]['type'], obj[field_name]['path']
+            except (TypeError, KeyError):
+                raise ElasticSearchError('Invalid lookup document in terms filter "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
 
     def type_filter(self):
         pass
