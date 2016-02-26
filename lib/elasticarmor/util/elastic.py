@@ -582,8 +582,32 @@ class QueryDslParser(object):
 
         self.documents.extend((index, document) for document in documents)
 
-    def indices_query(self):
-        pass
+    def indices_query(self, obj, index=None, document=None):
+        """Parse the given indices query. Raises ElasticSearchError in case the query is malformed."""
+        if 'index' not in obj and 'indices' not in obj:
+            raise ElasticSearchError('Keywords "index" and "indices" missing in indices query "{0!r}"'.format(obj))
+        elif 'query' not in obj:
+            raise ElasticSearchError('No query given in indices query "{0!r}"'.format(obj))
+
+        try:
+            indices = obj['indices']
+        except KeyError:
+            indices = [obj['index']]
+        else:
+            if not indices:
+                raise ElasticSearchError('No indices given in indices query "{0!r}"'.format(obj))
+
+        try:
+            no_match_query = obj['no_match_query']
+        except KeyError:
+            no_match_query = 'all'
+
+        if isinstance(no_match_query, dict):
+            self.query(no_match_query, '-' + ',-'.join(indices))
+        elif no_match_query not in ['all', 'none']:
+            raise ElasticSearchError('Invalid value for keyword "no_match_query" in indices query "{0!r}"'.format(obj))
+
+        self.query(obj['query'], ','.join(indices))
 
     def match_all_query(self):
         pass
