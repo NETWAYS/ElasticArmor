@@ -737,7 +737,7 @@ class QueryDslParser(object):
     def exists_filter(self, obj, index=None, document=None):
         pass
 
-    def geo_bounding_box_filter(self):
+    def geo_bounding_box_filter(self, obj, index=None, document=None):
         pass
 
     def geo_distance_filter(self):
