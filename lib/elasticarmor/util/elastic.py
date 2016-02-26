@@ -722,8 +722,17 @@ class QueryDslParser(object):
         for filter in filters:
             self.filter(filter, index, document)
 
-    def bool_filter(self):
-        pass
+    def bool_filter(self, obj, index=None, document=None):
+        """Parse the given bool filter. Raises ElasticSearchError in case the filter is malformed."""
+        if 'must' not in obj and 'must_not' not in obj and 'should' not in obj:
+            raise ElasticSearchError('No valid keyword given in bool filter "{0!r}"'.format(obj))
+
+        for keyword in (kw for kw in ['must', 'must_not', 'should'] if kw in obj):
+            if isinstance(obj[keyword], list):
+                for filter in obj[keyword]:
+                    self.filter(filter, index, document)
+            else:
+                self.filter(obj[keyword], index, document)
 
     def exists_filter(self):
         pass
