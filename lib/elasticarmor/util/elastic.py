@@ -656,8 +656,9 @@ class QueryDslParser(object):
     def prefix_query(self, obj, index=None, document=None):
         pass
 
-    def query_string_query(self):
-        pass
+    def query_string_query(self, obj, index=None, document=None):
+        """Parse the given query_string query."""
+        self.permissions.append('<query_string_permission>')  # TODO: Use a proper permission name
 
     def simple_query_string_query(self):
         pass
