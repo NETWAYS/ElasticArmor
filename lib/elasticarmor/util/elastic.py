@@ -694,8 +694,9 @@ class QueryDslParser(object):
     def terms_query(self, obj, index=None, document=None):
         pass
 
-    def top_children_query(self):
-        pass
+    def top_children_query(self, obj, index=None, document=None):
+        """Parse the given top_children query. Simply raises ElasticSearchError because it is deprecated."""
+        raise ElasticSearchError('The top_children has been obsoleted by the has_child query')
 
     def wildcard_query(self):
         pass
