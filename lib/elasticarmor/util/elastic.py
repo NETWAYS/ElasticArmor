@@ -804,7 +804,7 @@ class QueryDslParser(object):
         if 'filter' in obj:
             self.filter(obj['filter'], index, document)
 
-    def ids_filter(self):
+    def ids_filter(self, obj, index=None, document=None):
         pass
 
     def indices_filter(self):
