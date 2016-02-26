@@ -709,8 +709,18 @@ class QueryDslParser(object):
         """Recurse into the given filter and parse its contents."""
         self._parse_filter(*self._read_object(obj), index=index, document=document)
 
-    def and_filter(self):
-        pass
+    def and_filter(self, obj, index=None, document=None):
+        """Parse the given and filter. Raises ElasticSearchError in case the filter is malformed."""
+        try:
+            filters = obj['filters']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "filters" in and filter "{0!r}"'.format(obj))
+
+        if not filters:
+            raise ElasticSearchError('No filters given in and filter "{0!r}"'.format(obj))
+
+        for filter in filters:
+            self.filter(filter, index, document)
 
     def bool_filter(self):
         pass
