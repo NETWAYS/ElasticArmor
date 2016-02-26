@@ -846,8 +846,15 @@ class QueryDslParser(object):
     def missing_filter(self, obj, index=None, document=None):
         pass
 
-    def nested_filter(self):
-        pass
+    def nested_filter(self, obj, index=None, document=None):
+        """Parse the given nested filter. Raises ElasticSearchError in case the filter is malformed."""
+        if 'path' not in obj:
+            raise ElasticSearchError('Missing keyword "path" in nested filter "{0!r}"'.format(obj))
+        elif 'filter' not in obj:
+            raise ElasticSearchError('No filter given in nested filter "{0!r}"'.format(obj))
+
+        self.filter(obj['filter'], index, document)
+        self.fields.append((index, document, obj['path']))
 
     def not_filter(self):
         pass
