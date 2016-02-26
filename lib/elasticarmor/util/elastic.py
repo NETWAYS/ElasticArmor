@@ -835,8 +835,9 @@ class QueryDslParser(object):
 
         self.filter(obj['filter'], ','.join(indices))
 
-    def limit_filter(self):
-        pass
+    def limit_filter(self, obj, index=None, document=None):
+        """Parse the given limit filter."""
+        pass  # Not security relevant as of Elasticsearch v1.7
 
     def match_all_filter(self):
         pass
