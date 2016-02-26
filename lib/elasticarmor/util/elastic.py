@@ -679,7 +679,7 @@ class QueryDslParser(object):
     def span_near_query(self, obj, index=None, document=None):
         pass
 
-    def span_not_query(self):
+    def span_not_query(self, obj, index=None, document=None):
         pass
 
     def span_or_query(self):
