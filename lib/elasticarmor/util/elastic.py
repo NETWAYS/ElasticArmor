@@ -667,7 +667,7 @@ class QueryDslParser(object):
     def range_query(self, obj, index=None, document=None):
         pass
 
-    def regexp_query(self):
+    def regexp_query(self, obj, index=None, document=None):
         pass
 
     def span_first_query(self):
