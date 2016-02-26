@@ -876,7 +876,7 @@ class QueryDslParser(object):
         for filter in filters:
             self.filter(filter, index, document)
 
-    def prefix_filter(self):
+    def prefix_filter(self, obj, index=None, document=None):
         pass
 
     def query_filter(self):
