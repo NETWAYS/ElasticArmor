@@ -612,8 +612,36 @@ class QueryDslParser(object):
     def match_all_query(self, obj, index=None, document=None):
         pass
 
-    def more_like_this_query(self):
-        pass
+    def more_like_this_query(self, obj, index=None, document=None):
+        """Parse the given more_like_this query. Raises ElasticSearchError in case the query is malformed."""
+        if 'docs' not in obj and 'ids' not in obj and 'like_text' not in obj:
+            raise ElasticSearchError('No valid keyword given in more_like_this query "{0!r}"'.format(obj))
+
+        try:
+            fields = obj['fields']
+        except KeyError:
+            fields = ['_all']
+        else:
+            if not fields:
+                raise ElasticSearchError('No fields given in more_like_this query "{0!r}"'.format(obj))
+
+        try:
+            documents = obj['docs']
+        except KeyError:
+            self.fields.extend((index, document, field) for field in fields)
+        else:
+            if not documents:
+                raise ElasticSearchError('No documents given in more_like_this query "{0!r}"'.format(obj))
+
+            for document in documents:
+                try:
+                    index, document = document['_index'], document['_type']
+                except KeyError:
+                    raise ElasticSearchError('Invalid document definition in more_like_this query "{0!r}"'.format(obj))
+
+                # Artificial documents are intentionally ignored here because as with real documents we have
+                # no knowledge about a document's fields unless specifically mentioned by a restriction
+                self.fields.extend((index, document, field) for field in fields)
 
     def nested_query(self):
         pass
