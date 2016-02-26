@@ -863,8 +863,18 @@ class QueryDslParser(object):
         except KeyError:
             raise ElasticSearchError('No filter given in not filter "{0!r}"'.format(obj))
 
-    def or_filter(self):
-        pass
+    def or_filter(self, obj, index=None, document=None):
+        """Parse the given or filter. Raises ElasticSearchError in case the filter is malformed."""
+        try:
+            filters = obj['filters']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "filters" in or filter "{0!r}"'.format(obj))
+
+        if not filters:
+            raise ElasticSearchError('No filters given in or filter "{0!r}"'.format(obj))
+
+        for filter in filters:
+            self.filter(filter, index, document)
 
     def prefix_filter(self):
         pass
