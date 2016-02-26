@@ -896,7 +896,7 @@ class QueryDslParser(object):
         """Parse the given script filter."""
         self.permissions.append('<scripted_query_dsl>')  # TODO: Use a proper permission name
 
-    def term_filter(self):
+    def term_filter(self, obj, index=None, document=None):
         pass
 
     def terms_filter(self):
