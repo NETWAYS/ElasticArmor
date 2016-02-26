@@ -892,8 +892,9 @@ class QueryDslParser(object):
     def regexp_filter(self, obj, index=None, document=None):
         pass
 
-    def script_filter(self):
-        pass
+    def script_filter(self, obj, index=None, document=None):
+        """Parse the given script filter."""
+        self.permissions.append('<scripted_query_dsl>')  # TODO: Use a proper permission name
 
     def term_filter(self):
         pass
