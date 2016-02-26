@@ -653,7 +653,7 @@ class QueryDslParser(object):
         self.query(obj['query'], index, document)
         self.fields.append((index, document, obj['path']))
 
-    def prefix_query(self):
+    def prefix_query(self, obj, index=None, document=None):
         pass
 
     def query_string_query(self):
