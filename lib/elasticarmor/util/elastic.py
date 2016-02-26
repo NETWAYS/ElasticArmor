@@ -698,7 +698,7 @@ class QueryDslParser(object):
         """Parse the given top_children query. Simply raises ElasticSearchError because it is deprecated."""
         raise ElasticSearchError('The top_children has been obsoleted by the has_child query')
 
-    def wildcard_query(self):
+    def wildcard_query(self, obj, index=None, document=None):
         pass
 
     def template_query(self):
