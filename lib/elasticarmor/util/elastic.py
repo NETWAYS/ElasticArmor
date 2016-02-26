@@ -919,5 +919,5 @@ class QueryDslParser(object):
 
             self.fields.append((index, document, field))
 
-    def type_filter(self):
+    def type_filter(self, obj, index=None, document=None):
         pass
