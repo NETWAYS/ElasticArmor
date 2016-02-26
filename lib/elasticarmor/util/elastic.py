@@ -749,8 +749,27 @@ class QueryDslParser(object):
     def geo_polygon_filter(self, obj, index=None, document=None):
         pass
 
-    def geo_shape_filter(self):
-        pass
+    def geo_shape_filter(self, obj, index=None, document=None):
+        """Parse the given geo_shape filter. Raises ElasticSearchError in case the filter is malformed."""
+        field_name = next(obj.iterkeys())
+        if not field_name:
+            raise ElasticSearchError('Missing field name in geo_shape filter "{0!r}"'.format(obj))
+
+        self.fields.append((index, document, field_name))
+
+        try:
+            shape = obj[field_name]['indexed_shape']
+        except TypeError:
+            raise ElasticSearchError('Invalid JSON object in geo_shape filter "{0!r}"'.format(obj))
+        except KeyError:
+            pass
+        else:
+            try:
+                index, document, field = shape['index'], shape['type'], shape['path']
+            except KeyError:
+                raise ElasticSearchError('Invalid "indexed_shape" definition in geo_shape filter "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
 
     def geohash_cell_filter(self):
         pass
