@@ -771,7 +771,7 @@ class QueryDslParser(object):
 
             self.fields.append((index, document, field))
 
-    def geohash_cell_filter(self):
+    def geohash_cell_filter(self, obj, index=None, document=None):
         pass
 
     def has_child_filter(self):
