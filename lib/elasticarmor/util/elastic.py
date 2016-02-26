@@ -839,8 +839,9 @@ class QueryDslParser(object):
         """Parse the given limit filter."""
         pass  # Not security relevant as of Elasticsearch v1.7
 
-    def match_all_filter(self):
-        pass
+    def match_all_filter(self, obj, index=None, document=None):
+        """Parse the given match_all filter."""
+        pass  # Not security relevant as of Elasticsearch v1.7
 
     def missing_filter(self):
         pass
