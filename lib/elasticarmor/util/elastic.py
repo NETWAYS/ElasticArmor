@@ -660,8 +660,9 @@ class QueryDslParser(object):
         """Parse the given query_string query."""
         self.permissions.append('<query_string_permission>')  # TODO: Use a proper permission name
 
-    def simple_query_string_query(self):
-        pass
+    def simple_query_string_query(self, obj, index=None, document=None):
+        """Parse the given simple_query_string query."""
+        self.permissions.append('<query_string_permission>')  # TODO: Use a proper permission name
 
     def range_query(self):
         pass
