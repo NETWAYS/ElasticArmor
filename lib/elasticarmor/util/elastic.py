@@ -774,8 +774,20 @@ class QueryDslParser(object):
     def geohash_cell_filter(self, obj, index=None, document=None):
         pass
 
-    def has_child_filter(self):
-        pass
+    def has_child_filter(self, obj, index=None, document=None):
+        """Parse the given has_child filter. Raises ElasticSearchError in case the filter is malformed."""
+        if 'query' not in obj and 'filter' not in obj:
+            raise ElasticSearchError('No query and filter given in has_child filter "{0!r}"'.format(obj))
+
+        try:
+            self.documents.append((index, obj['type']))
+        except KeyError:
+            raise ElasticSearchError('Missing document type in has_child filter "{0!r}"'.format(obj))
+
+        if 'query' in obj:
+            self.query(obj['query'], index, document)
+        if 'filter' in obj:
+            self.filter(obj['filter'], index, document)
 
     def has_parent_filter(self):
         pass
