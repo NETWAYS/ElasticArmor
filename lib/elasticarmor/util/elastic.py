@@ -670,7 +670,7 @@ class QueryDslParser(object):
     def regexp_query(self, obj, index=None, document=None):
         pass
 
-    def span_first_query(self):
+    def span_first_query(self, obj, index=None, document=None):
         pass
 
     def span_multi_query(self):
