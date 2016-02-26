@@ -688,7 +688,7 @@ class QueryDslParser(object):
     def span_term_query(self, obj, index=None, document=None):
         pass
 
-    def term_query(self):
+    def term_query(self, obj, index=None, document=None):
         pass
 
     def terms_query(self):
