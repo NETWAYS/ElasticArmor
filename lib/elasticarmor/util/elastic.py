@@ -856,8 +856,12 @@ class QueryDslParser(object):
         self.filter(obj['filter'], index, document)
         self.fields.append((index, document, obj['path']))
 
-    def not_filter(self):
-        pass
+    def not_filter(self, obj, index=None, document=None):
+        """Parse the given not filter. Raises ElasticSearchError in case the filter is malformed."""
+        try:
+            self.filter(obj['filter'], index, document)
+        except KeyError:
+            raise ElasticSearchError('No filter given in not filter "{0!r}"'.format(obj))
 
     def or_filter(self):
         pass
