@@ -889,7 +889,7 @@ class QueryDslParser(object):
     def range_filter(self, obj, index=None, document=None):
         pass
 
-    def regexp_filter(self):
+    def regexp_filter(self, obj, index=None, document=None):
         pass
 
     def script_filter(self):
