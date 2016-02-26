@@ -807,8 +807,33 @@ class QueryDslParser(object):
     def ids_filter(self, obj, index=None, document=None):
         pass
 
-    def indices_filter(self):
-        pass
+    def indices_filter(self, obj, index=None, document=None):
+        """Parse the given indices filter. Raises ElasticSearchError in case the filter is malformed."""
+        if 'index' not in obj and 'indices' not in obj:
+            raise ElasticSearchError('Keywords "index" and "indices" missing in indices filter "{0!r}"'.format(obj))
+        elif 'filter' not in obj:
+            raise ElasticSearchError('No filter given in indices filter "{0!r}"'.format(obj))
+
+        try:
+            indices = obj['indices']
+        except KeyError:
+            indices = [obj['index']]
+        else:
+            if not indices:
+                raise ElasticSearchError('No indices given in indices filter "{0!r}"'.format(obj))
+
+        try:
+            no_match_filter = obj['no_match_filter']
+        except KeyError:
+            no_match_filter = 'all'
+
+        if isinstance(no_match_filter, dict):
+            self.filter(no_match_filter, '-' + ',-'.join(indices))
+        elif no_match_filter not in ['all', 'none']:
+            raise ElasticSearchError(
+                'Invalid value for keyword "no_match_filter" in indices filter "{0!r}"'.format(obj))
+
+        self.filter(obj['filter'], ','.join(indices))
 
     def limit_filter(self):
         pass
