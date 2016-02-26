@@ -886,7 +886,7 @@ class QueryDslParser(object):
         except KeyError:
             raise ElasticSearchError('No query given in query filter "{0!r}"'.format(obj))
 
-    def range_filter(self):
+    def range_filter(self, obj, index=None, document=None):
         pass
 
     def regexp_filter(self):
