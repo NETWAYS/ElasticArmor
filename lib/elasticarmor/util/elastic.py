@@ -843,7 +843,7 @@ class QueryDslParser(object):
         """Parse the given match_all filter."""
         pass  # Not security relevant as of Elasticsearch v1.7
 
-    def missing_filter(self):
+    def missing_filter(self, obj, index=None, document=None):
         pass
 
     def nested_filter(self):
