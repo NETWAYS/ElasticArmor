@@ -746,7 +746,7 @@ class QueryDslParser(object):
     def geo_distance_range_filter(self, obj, index=None, document=None):
         pass
 
-    def geo_polygon_filter(self):
+    def geo_polygon_filter(self, obj, index=None, document=None):
         pass
 
     def geo_shape_filter(self):
