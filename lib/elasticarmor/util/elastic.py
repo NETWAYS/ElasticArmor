@@ -701,8 +701,9 @@ class QueryDslParser(object):
     def wildcard_query(self, obj, index=None, document=None):
         pass
 
-    def template_query(self):
-        pass
+    def template_query(self, obj, index=None, document=None):
+        """Parse the given template query."""
+        self.permissions.append('<search_template_permission>')  # TODO: Use a proper permission name
 
     def filter(self, obj, index=None, document=None):
         """Recurse into the given filter and parse its contents."""
