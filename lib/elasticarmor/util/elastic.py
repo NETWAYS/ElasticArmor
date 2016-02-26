@@ -643,8 +643,15 @@ class QueryDslParser(object):
                 # no knowledge about a document's fields unless specifically mentioned by a restriction
                 self.fields.extend((index, document, field) for field in fields)
 
-    def nested_query(self):
-        pass
+    def nested_query(self, obj, index=None, document=None):
+        """Parse the given nested query. Raises ElasticSearchError in case the query is malformed."""
+        if 'path' not in obj:
+            raise ElasticSearchError('Missing keyword "path" in nested query "{0!r}"'.format(obj))
+        elif 'query' not in obj:
+            raise ElasticSearchError('No query given in nested query "{0!r}"'.format(obj))
+
+        self.query(obj['query'], index, document)
+        self.fields.append((index, document, obj['path']))
 
     def prefix_query(self):
         pass
