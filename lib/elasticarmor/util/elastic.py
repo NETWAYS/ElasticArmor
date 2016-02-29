@@ -470,7 +470,8 @@ class QueryDslParser(object):
 
         elif 'linear' in obj or 'exp' in obj or 'gauss' in obj:
             try:
-                field_name = next(obj.get('linear', obj.get('exp', obj.get('gauss', {}))).iterkeys())
+                field_name = self._read_field(
+                    obj.get('linear', obj.get('exp', obj.get('gauss', {}))), ['multi_value_mode'])
             except AttributeError:
                 field_name = None
 
