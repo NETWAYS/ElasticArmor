@@ -703,7 +703,11 @@ class QueryDslParser(object):
             raise ElasticSearchError('Missing keyword "match" in span_first query "{0!r}"'.format(obj))
 
     def span_multi_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given span_mult query. Raises ElasticSearchError in case the query is malformed."""
+        try:
+            self.query(obj['match'], index, document)
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "match" in span_multi query "{0!r}"'.format(obj))
 
     def span_near_query(self, obj, index=None, document=None):
         pass
