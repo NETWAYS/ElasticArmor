@@ -837,7 +837,12 @@ class QueryDslParser(object):
             raise ElasticSearchError('Missing field name in geo_distance_range filter "{0!r}"'.format(obj))
 
     def geo_distance_range_filter(self, obj, index=None, document=None):
-        pass
+        """Parse the given geo_distance_range filter. Raises ElasticSearchError in case the filter is malformed."""
+        field_name = self._read_field(obj, ['from', 'to'])
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in geo_distance_range filter "{0!r}"'.format(obj))
 
     def geo_polygon_filter(self, obj, index=None, document=None):
         pass
