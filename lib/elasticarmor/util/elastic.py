@@ -664,7 +664,12 @@ class QueryDslParser(object):
         self.fields.append((index, document, obj['path']))
 
     def prefix_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given prefix query. Raises ElasticSearchError in case the query is malformed."""
+        field_name = self._read_field(obj, ['rewrite'])
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in prefix query "{0!r}"'.format(obj))
 
     def query_string_query(self, obj, index=None, document=None):
         """Parse the given query_string query."""
