@@ -680,7 +680,12 @@ class QueryDslParser(object):
         self.permissions.append('<query_string_permission>')  # TODO: Use a proper permission name
 
     def range_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given range query. Raises ElasticSearchError in case the query is malformed."""
+        field_name = self._read_field(obj)
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in range query "{0!r}"'.format(obj))
 
     def regexp_query(self, obj, index=None, document=None):
         pass
