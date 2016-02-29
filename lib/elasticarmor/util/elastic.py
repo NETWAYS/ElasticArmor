@@ -355,7 +355,7 @@ class QueryDslParser(object):
 
     def match_query(self, obj, index=None, document=None):
         """Parse the given match query. Raises ElasticSearchError in case the query is malformed."""
-        field_name = next(obj.iterkeys())
+        field_name = self._read_field(obj)
         if field_name:
             self.fields.append((index, document, field_name))
         else:
