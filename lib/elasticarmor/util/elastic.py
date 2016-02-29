@@ -967,7 +967,11 @@ class QueryDslParser(object):
         pass  # Not security relevant as of Elasticsearch v1.7
 
     def missing_filter(self, obj, index=None, document=None):
-        pass
+        """Parse the given missing filter. Raises ElasticSearchError in case the filter is malformed."""
+        try:
+            self.fields.append((index, document, obj['field']))
+        except KeyError:
+            raise ElasticSearchError('Missing field name in missing filter "{0!r}"'.format(obj))
 
     def nested_filter(self, obj, index=None, document=None):
         """Parse the given nested filter. Raises ElasticSearchError in case the filter is malformed."""
