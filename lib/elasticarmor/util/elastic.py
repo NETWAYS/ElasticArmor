@@ -745,7 +745,12 @@ class QueryDslParser(object):
             self.query(query, index, document)
 
     def span_term_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given span_term query. Raises ElasticSearchError in case the query is malformed."""
+        field_name = self._read_field(obj)
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in span_term query "{0!r}"'.format(obj))
 
     def term_query(self, obj, index=None, document=None):
         pass
