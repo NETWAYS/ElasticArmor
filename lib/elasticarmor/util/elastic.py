@@ -10,7 +10,7 @@ from elasticarmor.util import format_elasticsearch_error
 from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole']
+__all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole', 'QueryDslParser']
 
 DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
