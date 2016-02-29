@@ -1067,4 +1067,8 @@ class QueryDslParser(object):
             self.fields.append((index, document, field))
 
     def type_filter(self, obj, index=None, document=None):
-        pass
+        """Parse the given type filter. Raises ElasticSearchError in case the filter is malformed."""
+        try:
+            self.documents.append((index, obj['value']))
+        except KeyError:
+            raise ElasticSearchError('Missing type name in type filter "{0!r}"'.format(obj))
