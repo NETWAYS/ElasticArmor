@@ -756,7 +756,7 @@ class QueryDslParser(object):
 
     def geo_shape_filter(self, obj, index=None, document=None):
         """Parse the given geo_shape filter. Raises ElasticSearchError in case the filter is malformed."""
-        field_name = next(obj.iterkeys())
+        field_name = self._read_field(obj)
         if not field_name:
             raise ElasticSearchError('Missing field name in geo_shape filter "{0!r}"'.format(obj))
 
