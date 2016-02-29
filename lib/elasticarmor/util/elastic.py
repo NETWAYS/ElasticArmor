@@ -345,6 +345,10 @@ class QueryDslParser(object):
 
         return object_name, data[object_name]
 
+    def _read_field(self, obj, blacklist=None):
+        """Identify and return the field name in the given object."""
+        return next(k for k in obj.iterkeys() if k[0] != '_' and (not blacklist or k not in blacklist))
+
     def query(self, obj, index=None, document=None):
         """Recurse into the given query and parse its contents."""
         self._parse_query(*self._read_object(obj), index=index, document=document)
