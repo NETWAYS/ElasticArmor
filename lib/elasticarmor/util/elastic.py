@@ -814,7 +814,11 @@ class QueryDslParser(object):
                 self.filter(obj[keyword], index, document)
 
     def exists_filter(self, obj, index=None, document=None):
-        pass
+        """Parse the given exists filter. Raises ElasticSearchError in case the filter is malformed."""
+        try:
+            self.fields.append((index, document, obj['field']))
+        except KeyError:
+            raise ElasticSearchError('Missing field name in exists filter "{0!r}"'.format(obj))
 
     def geo_bounding_box_filter(self, obj, index=None, document=None):
         pass
