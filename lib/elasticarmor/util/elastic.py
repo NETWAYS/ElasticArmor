@@ -875,7 +875,12 @@ class QueryDslParser(object):
             self.fields.append((index, document, field))
 
     def geohash_cell_filter(self, obj, index=None, document=None):
-        pass
+        """Parse the given geohash_cell filter. Raises ElasticSearchError in case the filter is malformed."""
+        field_name = self._read_field(obj, ['precision', 'neighbors'])
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in geohash_cell filter "{0!r}"'.format(obj))
 
     def has_child_filter(self, obj, index=None, document=None):
         """Parse the given has_child filter. Raises ElasticSearchError in case the filter is malformed."""
