@@ -906,7 +906,7 @@ class QueryDslParser(object):
 
     def terms_filter(self, obj, index=None, document=None):
         """Parse the given terms filter. Raises ElasticSearchError in case the filter is malformed."""
-        field_name = next(obj.iterkeys())
+        field_name = self._read_field(obj, ['execution'])
         if not field_name:
             raise ElasticSearchError('Missing field name in terms filter "{0!r}"'.format(obj))
 
