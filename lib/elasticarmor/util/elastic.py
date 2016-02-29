@@ -1019,7 +1019,12 @@ class QueryDslParser(object):
             raise ElasticSearchError('No query given in query filter "{0!r}"'.format(obj))
 
     def range_filter(self, obj, index=None, document=None):
-        pass
+        """Parse the given range filter. Raises ElasticSearchError in case the filter is malformed."""
+        field_name = self._read_field(obj, ['execution'])
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in range filter "{0!r}"'.format(obj))
 
     def regexp_filter(self, obj, index=None, document=None):
         pass
