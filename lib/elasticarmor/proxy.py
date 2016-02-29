@@ -16,6 +16,7 @@ from elasticarmor.request import ElasticRequest, RequestError
 from elasticarmor.settings import Settings
 from elasticarmor.util import format_elasticsearch_error
 from elasticarmor.util.auth import AuthorizationError, Auth, Client
+from elasticarmor.util.elastic import ElasticSearchError
 from elasticarmor.util.http import *
 from elasticarmor.util.mixins import LoggingAware
 
@@ -357,6 +358,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             response = request.inspect(self.client)
         except RequestError as error:
             self.send_error(error.status_code, explain=error.reason)
+            return
+        except ElasticSearchError as error:
+            self.log.warning('Failed to parse request "%s %s" of client "%s". An error occurred: %s',
+                             self.command, self.path, self.client, error)
+            self.send_error(400, explain='Failed to parse request. {0}'.format(error))
             return
         except AuthorizationError as error:
             self.log.error('Failed to authorize client "%s". An error occurred: %s', self.client, error)
