@@ -1,9 +1,10 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
 from distutils.version import StrictVersion
+from fnmatch import fnmatchcase
 
 __all__ = ['format_ldap_error', 'format_elasticsearch_error', 'compare_major_and_minor_version',
-           'classproperty', 'propertycache']
+           'pattern_match', 'classproperty', 'propertycache']
 
 
 def format_ldap_error(error):
@@ -41,6 +42,47 @@ def compare_major_and_minor_version(version_to_compare, version_to_compare_with)
     list_to_compare = version_to_compare.split('.')
     list_to_compare_with = version_to_compare_with.split('.')
     return cmp(StrictVersion('.'.join(list_to_compare[:2])), StrictVersion('.'.join(list_to_compare_with[:2])))
+
+
+def _locate_wildcards(pattern):
+    """Locate on which side (left and right) the given pattern contains wildcards."""
+    left = right = False
+    stripped = pattern.rstrip('*?')
+    if '*' not in stripped and '?' not in stripped:
+        right = True
+    else:
+        if stripped != pattern:
+            right = True
+
+        left = stripped.lstrip('*?') != stripped
+
+    return left, right
+
+
+def pattern_match(wild, tame):
+    """Return whether the given strings match.
+    Tries to produce a match even if both strings contain wildcards.
+    """
+
+    if wild == '*' or tame == wild:
+        return True  # Bail out early if it's clear that a match is possible
+
+    if '*' not in tame and '?' not in tame:
+        if '*' not in wild and '?' not in wild:
+            return False  # Neither of the strings contains wildcards so there is no chance they will ever match
+
+        return fnmatchcase(tame, wild)  # It's a usual literal == pattern comparison
+    elif '*' not in wild and '?' not in wild:
+        return False  # The tame string is wild but the wild one isn't thus a match is impossible
+
+    tame_left, tame_right = _locate_wildcards(tame)
+    wild_left, wild_right = _locate_wildcards(wild)
+    if tame_left and not wild_left or tame_right and not wild_right:
+        return False  # The tame string contains wildcards where the wild one doesn't thus a match is impossible
+
+    # Now the chances are good that we're able to produce a match but we must strip all asterisk wildcards from
+    # the tame string as they may cause false positives if question mark wildcards are present in the wild one
+    return fnmatchcase(tame.replace('*', ''), wild)
 
 
 class classproperty(object):
