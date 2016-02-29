@@ -619,7 +619,8 @@ class QueryDslParser(object):
         self.query(obj['query'], ','.join(indices))
 
     def match_all_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given match_all query."""
+        pass  # Not security relevant as of Elasticsearch v1.7
 
     def more_like_this_query(self, obj, index=None, document=None):
         """Parse the given more_like_this query. Raises ElasticSearchError in case the query is malformed."""
