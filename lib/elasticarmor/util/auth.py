@@ -113,6 +113,18 @@ class Client(object):
 
         return '%s:%u' % (self.address, self.port)
 
+    def can_read(self, index, document=None, field=None):
+        """Return whether this client is permitted to read the given entities."""
+        return any(restriction.permits_read(index, document, field)
+                   for role in self.roles
+                   for restriction in role.restrictions)
+
+    def can_write(self, index, document=None, field=None):
+        """Return whether this client is permitted to write the given entities."""
+        return any(restriction.permits_write(index, document, field)
+                   for role in self.roles
+                   for restriction in role.restrictions)
+
 
 class RestrictionError(AuthorizationError):
     """Raised by class Restriction in case of an error."""
@@ -395,8 +407,11 @@ class ElasticsearchRoleBackend(LoggingAware, object):
         roles = []
         for hit in result.get('hits', {}).get('hits', []):
             try:
-                roles.append(ElasticRole.from_search_result(hit))
+                role = ElasticRole.from_search_result(hit)
             except ElasticSearchError as error:
                 self.log.warning('Failed to create role from search result. An error occurred: %s', error)
+            else:
+                role.restrictions = [Restriction(r) for r in role.restrictions]
+                roles.append(role)
 
         return roles
