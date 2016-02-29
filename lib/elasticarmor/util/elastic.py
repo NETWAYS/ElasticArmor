@@ -688,7 +688,12 @@ class QueryDslParser(object):
             raise ElasticSearchError('Missing field name in range query "{0!r}"'.format(obj))
 
     def regexp_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given regexp query. Raises ElasticSearchError in case the query is malformed."""
+        field_name = self._read_field(obj)
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in regexp query "{0!r}"'.format(obj))
 
     def span_first_query(self, obj, index=None, document=None):
         pass
