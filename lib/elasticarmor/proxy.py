@@ -15,7 +15,7 @@ from elasticarmor import *
 from elasticarmor.request import ElasticRequest, RequestError
 from elasticarmor.settings import Settings
 from elasticarmor.util import format_elasticsearch_error
-from elasticarmor.util.auth import Auth, Client
+from elasticarmor.util.auth import AuthorizationError, Auth, Client
 from elasticarmor.util.http import *
 from elasticarmor.util.mixins import LoggingAware
 
@@ -357,6 +357,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             response = request.inspect(self.client)
         except RequestError as error:
             self.send_error(error.status_code, explain=error.reason)
+            return
+        except AuthorizationError as error:
+            self.log.error('Failed to authorize client "%s". An error occurred: %s', self.client, error)
+            self.send_error(
+                403, explain='An error occurred while checking your authorization. Please contact an administrator.')
             return
 
         if response is None:
