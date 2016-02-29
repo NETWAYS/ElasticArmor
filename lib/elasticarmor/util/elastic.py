@@ -576,16 +576,20 @@ class QueryDslParser(object):
     def ids_query(self, obj, index=None, document=None):
         """Parse the given ids query. Raises ElasticSearchError in case the query is malformed."""
         try:
+            # The documentation of Elasticsearch v1.7 states that this field is optional..
             documents = obj['type']
         except KeyError:
-            documents = [document or '_all']
+            # ..but since it may be embedded in a indices query/filter we
+            # need to register the current context if none is provided
+            if document:
+                self.documents.append((index, document))
         else:
             if not documents:
                 raise ElasticSearchError('Not any document types given in ids query "{0!r}"'.format(obj))
             elif isinstance(documents, basestring):
                 documents = [documents]
 
-        self.documents.extend((index, document) for document in documents)
+            self.documents.extend((index, document) for document in documents)
 
     def indices_query(self, obj, index=None, document=None):
         """Parse the given indices query. Raises ElasticSearchError in case the query is malformed."""
