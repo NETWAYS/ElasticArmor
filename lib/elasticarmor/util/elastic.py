@@ -773,7 +773,12 @@ class QueryDslParser(object):
         raise ElasticSearchError('The top_children has been obsoleted by the has_child query')
 
     def wildcard_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given wildcard query. Raises ElasticSearchError in case the query is malformed."""
+        field_name = self._read_field(obj, ['rewrite'])
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in wildcard query "{0!r}"'.format(obj))
 
     def template_query(self, obj, index=None, document=None):
         """Parse the given template query."""
