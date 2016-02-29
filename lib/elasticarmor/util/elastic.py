@@ -233,6 +233,29 @@ class ElasticRole(ElasticObject):
 
 
 class QueryDslParser(object):
+    """QueryDslParser object to parse Elasticsearch queries and filters.
+
+    The most common usage is probably as follows:
+
+        parser = QueryDslParser().query(json_body['query'])
+
+    But the parser is not limited to this single entry point.
+    Any other public method serves this purpose just as well:
+
+        QueryDslParser().bool_query(json_object['bool'])
+        QueryDslParser().and_filter(json_object['and'])
+
+    Once the parser has finished, all collected permissions, indices, documents
+    and their fields can be accessed using the respective instance attributes:
+
+        parser.permissions -> ['<permission-name>']
+        parser.indices -> ['<index-name>']
+        parser.documents -> [('<index-name>' | None, '<document-name>')]
+        parser.fields -> [('<index-name>' | None, '<document-name>' | None, '<field-name>')]
+
+    Any occurrence of 'None' indicates that no particular index or document is desired instead of the default ones.
+    """
+
     def __init__(self):
         self.permissions = []
         self.indices = []
