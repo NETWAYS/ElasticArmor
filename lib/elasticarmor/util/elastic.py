@@ -696,7 +696,11 @@ class QueryDslParser(object):
             raise ElasticSearchError('Missing field name in regexp query "{0!r}"'.format(obj))
 
     def span_first_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given span_first query. Raises ElasticSearchError in case the query is malformed."""
+        try:
+            self.query(obj['match'], index, document)
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "match" in span_first query "{0!r}"'.format(obj))
 
     def span_multi_query(self, obj, index=None, document=None):
         pass
