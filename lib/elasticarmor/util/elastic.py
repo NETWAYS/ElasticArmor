@@ -1004,7 +1004,12 @@ class QueryDslParser(object):
             self.filter(filter, index, document)
 
     def prefix_filter(self, obj, index=None, document=None):
-        pass
+        """Parse the given prefix filter. Raises ElasticSearchError in case the filter is malformed."""
+        field_name = self._read_field(obj)
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in prefix filter "{0!r}"'.format(obj))
 
     def query_filter(self, obj, index=None, document=None):
         """Parse the given query filter. Raises ElasticSearchError in case the filter is malformed."""
