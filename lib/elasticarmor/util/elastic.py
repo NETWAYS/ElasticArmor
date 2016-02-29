@@ -723,7 +723,13 @@ class QueryDslParser(object):
             self.query(query, index, document)
 
     def span_not_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given span_not query. Raises ElasticSearchError in case the query is malformed."""
+        try:
+            self.query(obj['include'], index, document)
+            self.query(obj['exclude'], index, document)
+        except KeyError:
+            raise ElasticSearchError(
+                'Mandatory keyword "include" or "exclude" missing in span_not query "{0!r}"'.format(obj))
 
     def span_or_query(self, obj, index=None, document=None):
         pass
