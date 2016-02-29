@@ -7,15 +7,20 @@ import threading
 import ldap
 import requests
 
-from elasticarmor.util import format_ldap_error, format_elasticsearch_error
+from elasticarmor.util import format_ldap_error, format_elasticsearch_error, pattern_match
 from elasticarmor.util.elastic import ElasticSearchError, ElasticRole
 from elasticarmor.util.mixins import LoggingAware
 from elasticarmor.util.rwlock import ReadWriteLock, Protector
 
-__all__ = ['Auth', 'Client', 'LdapBackend', 'LdapUserBackend', 'LdapUsergroupBackend',
-           'ElasticsearchRoleBackend']
+__all__ = ['AuthorizationError', 'Auth', 'Client', 'RestrictionError', 'Restriction', 'LdapBackend',
+           'LdapUserBackend', 'LdapUsergroupBackend', 'ElasticsearchRoleBackend']
 
 CACHE_INVALIDATION_INTERVAL = 900  # Seconds
+
+
+class AuthorizationError(Exception):
+    """Base class for all authorization related exceptions."""
+    pass
 
 
 class Auth(LoggingAware, object):
@@ -107,6 +112,123 @@ class Client(object):
             return self.username
 
         return '%s:%u' % (self.address, self.port)
+
+
+class RestrictionError(AuthorizationError):
+    """Raised by class Restriction in case of an error."""
+    pass
+
+
+class Restriction(object):
+    """Restriction object that represents a configured client restriction."""
+
+    def __init__(self, restriction):
+        self._parsed = False
+        self._read_only = None
+        self._index_patterns = []
+        self._index_includes = []
+        self._index_excludes = []
+        self._type_patterns = []
+        self._type_includes = []
+        self._type_excludes = []
+        self._field_patterns = []
+        self._field_includes = []
+        self._field_excludes = []
+
+        self.raw_restriction = restriction
+
+    def __str__(self):
+        return self.raw_restriction
+
+    def _parse_restriction(self):
+        if self._parsed:
+            return
+
+        parts = self.raw_restriction.split('/')
+        if not 1 > len(parts) <= 4:
+            raise RestrictionError('Invalid restriction "{0}"'.format(self.raw_restriction))
+
+        for index_pattern in (v.strip() for v in parts[1].split(',')):
+            if index_pattern.startswith('-'):
+                self._index_excludes.append(index_pattern[1:])
+            elif index_pattern.startswith('+'):
+                self._index_includes.append(index_pattern[1:])
+            else:
+                self._index_patterns.append(index_pattern)
+
+        if not self._index_patterns:
+            raise RestrictionError(
+                'Restriction "{0}" does not provide any index patterns'.format(self.raw_restriction))
+
+        if len(parts) > 2:
+            for type_pattern in (v.strip() for v in parts[2].split(',')):
+                if type_pattern.startswith('-'):
+                    self._type_excludes.append(type_pattern[1:])
+                elif type_pattern.startswith('+'):
+                    self._type_includes.append(type_pattern[1:])
+                else:
+                    self._type_patterns.append(type_pattern)
+
+            if not self._type_patterns:
+                raise RestrictionError(
+                    'Restriction "{0}" does not provide any document type patterns'.format(self.raw_restriction))
+
+        if len(parts) > 3:
+            for field_pattern in (v.strip() for v in parts[3].split(',')):
+                if field_pattern.startswith('-'):
+                    self._field_excludes.append(field_pattern[1:])
+                elif field_pattern.startswith('+'):
+                    self._field_includes.append(field_pattern[1:])
+                else:
+                    self._field_patterns.append(field_pattern)
+
+            if not self._field_patterns:
+                raise RestrictionError(
+                    'Restriction "{0}" does not provide any document field patterns'.format(self.raw_restriction))
+
+        self._read_only = parts[0] == 'read'
+        self._parsed = True
+
+    def _apply_restriction(self, subject, patterns, includes, excludes):
+        if not any(pattern_match(pattern, subject) for pattern in patterns):
+            return False
+
+        if not any(pattern_match(pattern, subject) for pattern in excludes):
+            return True
+
+        return any(pattern_match(pattern, subject) for pattern in includes)
+
+    def _check_permission(self, index, document, field):
+        if field is None and self._field_patterns or document is None and self._type_patterns:
+            # If it's not a document or field request and this restriction covers those access must be denied
+            return False
+        elif field is not None and not self._field_patterns or document is not None and not self._type_patterns:
+            return False  # It's the same the other way round
+
+        if not self._apply_restriction(index, self._index_patterns, self._index_includes, self._index_excludes):
+            return False
+        elif document is None:
+            return True
+
+        if not self._apply_restriction(document, self._type_patterns, self._type_includes, self._type_excludes):
+            return False
+        elif field is None:
+            return True
+
+        return self._apply_restriction(field, self._field_patterns, self._field_includes, self._field_excludes)
+
+    def permits_read(self, index, document=None, field=None):
+        """Return whether read access to the given entities is permitted."""
+        self._parse_restriction()
+        return self._check_permission(index, document, field)
+
+    def permits_write(self, index, document=None, field=None):
+        """Return whether write access to the given entities is permitted."""
+        self._parse_restriction()
+        if self._read_only:
+            return False
+
+        return self._check_permission(index, document, field)
 
 
 class LdapBackend(object):
