@@ -523,7 +523,7 @@ class QueryDslParser(object):
 
     def geo_shape_query(self, obj, index=None, document=None):
         """Parse the given geo_shape query. Raises ElasticSearchError in case the query is malformed."""
-        field_name = next(obj.iterkeys())
+        field_name = self._read_field(obj)
         if not field_name:
             raise ElasticSearchError('Missing field name in geo_shape query "{0!r}"'.format(obj))
 
