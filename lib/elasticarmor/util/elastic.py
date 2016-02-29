@@ -761,7 +761,12 @@ class QueryDslParser(object):
             raise ElasticSearchError('Missing field name in term query "{0!r}"'.format(obj))
 
     def terms_query(self, obj, index=None, document=None):
-        pass
+        """Parse the given terms query. Raises ElasticSearchError in case the query is malformed."""
+        field_name = self._read_field(obj, ['minimum_should_match'])
+        if field_name:
+            self.fields.append((index, document, field_name))
+        else:
+            raise ElasticSearchError('Missing field name in terms query "{0!r}"'.format(obj))
 
     def top_children_query(self, obj, index=None, document=None):
         """Parse the given top_children query. Simply raises ElasticSearchError because it is deprecated."""
