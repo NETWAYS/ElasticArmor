@@ -84,8 +84,9 @@ class ElasticRequest(LoggingAware, object):
     @staticmethod
     def create_request(command, path, query, headers, body):
         """Return a instance of the first matching request handler
-        for the given request. Returns None if no handler matches."""
+        for the given request. Returns None if no handler matches.
 
+        """
         for class_obj in _RequestRegistry.registry:
             handler = class_obj(command, path, query, headers, body)
             if handler.is_valid():
@@ -114,6 +115,10 @@ class ElasticRequest(LoggingAware, object):
         """Take a quick look at the request and return whether it can be handled or not."""
         raise NotImplementedError()
 
+    def applies_transformation(self, response):
+        """Return a reason for any transformations about to be applied on the given response."""
+        pass
+
     def inspect(self, client):
         """Take a deeper look at the request and check if the given client may do
         what is requested. Raising a instance of RequestError here immediately
@@ -121,8 +126,16 @@ class ElasticRequest(LoggingAware, object):
 
         Return a instance of DummyResponse to directly provide a response to the
         client without contacting Elasticsearch.
+
         """
         raise NotImplementedError()
+
+    def transform(self, stream):
+        """Apply required transformations on the given response-body stream and return a new iterable.
+        The returned iterable should preferably be fed by a generator but can also be a simple sequence.
+
+        """
+        return stream
 
 
 # Dynamically import all sub-modules to avoid manually adjusting

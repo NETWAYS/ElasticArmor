@@ -336,6 +336,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             del self.headers['Expect']
             self.log.debug('Answered to 100-continue expectation.')
 
+        # TODO: Request streaming (self.body -> <receive-generator> and request.body -> <forward-generator>)
+        # Will allow EL to simultaneously process requests already handled by us while we're still busy handling more!!1
         request = ElasticRequest.create_request(self.command, path if path else '/', query, self.headers, self.body)
         if request is None:
             # TODO: Elasticsearch responds with text/plain, not application/json!
@@ -391,6 +393,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(502, explain='Bad or malicious message framing detected. Please contact an administrator.')
             return
 
+        transformation_reason = request.applies_transformation(response)
+        if transformation_reason:
+            response.status_code = 203
+            response.headers['Warning'] = '214 {0} "{1}"'.format(self.server_version, transformation_reason)
+
         self.send_response(response.status_code, response.reason)
         for name, value in response.headers.items():
             self.send_header(name, value)
@@ -405,7 +412,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
         self.log.debug('Transferring response payload...')
         chunked_content = self._context.has_chunked_payload()
-        for data in response.raw.stream(MAX_CHUNK_SIZE, decode_content=False):
+        for data in request.transform(response.raw.stream(MAX_CHUNK_SIZE, decode_content=False)):
             self.wfile.write(prepare_chunk(data) if chunked_content else data)
         else:
             if chunked_content:
