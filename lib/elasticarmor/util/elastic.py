@@ -604,7 +604,7 @@ class QueryDslParser(object):
         except KeyError:
             # ..but since it may be embedded in a indices query/filter we
             # need to register the current context if none is provided
-            if document:
+            if index:
                 self.documents.append((index, document))
         else:
             if not documents:
@@ -943,7 +943,7 @@ class QueryDslParser(object):
         except KeyError:
             # ..but since it may be embedded in a indices query/filter we
             # need to register the current context if none is provided
-            if document:
+            if index:
                 self.documents.append((index, document))
         else:
             if not documents:
