@@ -74,10 +74,11 @@ class Settings(LoggingAware, object):
         try:
             return Settings.__config
         except AttributeError:
-            self._check_file_permissions(self.options.config, 'r')
             parser = Parser(self.default_configuration)
-            with open(self.options.config) as f:
-                parser.readfp(f)
+            if self._check_file_permissions(self.options.config, 'r', suppress_errors=True):
+                with open(self.options.config) as f:
+                    parser.readfp(f)
+
             Settings.__config = parser
             return Settings.__config
 
@@ -368,14 +369,14 @@ class Settings(LoggingAware, object):
 
             self._exit('It is mandatory to provide an attribute where a group\'s members are stored.')
 
-    def _check_file_permissions(self, path, open_mode):
+    def _check_file_permissions(self, path, open_mode, suppress_errors=False):
         remove = open_mode[0] == 'w' or (open_mode != 'r' and not os.path.isfile(path))
 
         try:
             with open(path, open_mode) as f:
                 pass
         except (IOError, OSError) as error:
-            if error.errno != errno.ENXIO:
+            if not suppress_errors and error.errno != errno.ENXIO:
                 if error.errno == errno.EACCES:
                     self._exit('Permission denied to access file "%s" with open mode "%s"', path, open_mode)
 
@@ -386,3 +387,6 @@ class Settings(LoggingAware, object):
         else:
             if remove:
                 os.unlink(path)
+
+            return True
+        return False
