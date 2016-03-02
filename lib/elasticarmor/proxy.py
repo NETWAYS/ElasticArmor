@@ -25,9 +25,9 @@ CONNECTION_TIMEOUT = 5  # Seconds
 CONNECTION_REQUEST_LIMIT = 100
 CONTENT_BUFFER_SIZE = 2**16  # Bytes, 64KiB
 MAX_CHUNK_SIZE = 4096  # Bytes, used when transferring response payloads
-DENSE_ERROR_FORMAT = '{"error":"%(explain)s","status":%(code)d}'
+DENSE_ERROR_FORMAT = '{"error":"[%(app)s] %(explain)s","status":%(code)d}'
 PRETTY_ERROR_FORMAT = '''{
-  "error" : "%(explain)s",
+  "error" : "[%(app)s] %(explain)s",
   "status" : %(code)d
 }
 '''
@@ -236,7 +236,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             for name, value in headers.iteritems():
                 self.send_header(name, value)
 
-        content = self.error_message_format % {'code': code, 'message': message, 'explain': explain}
+        content = self.error_message_format % {'app': APP_NAME, 'code': code, 'message': message, 'explain': explain}
         self.send_header('Content-Type', self.error_content_type)
         self.send_header('Content-Length', len(content))
 
