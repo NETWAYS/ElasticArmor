@@ -101,6 +101,17 @@ class HttpHeaders(httplib.HTTPMessage):
     module requests.
     """
 
+    def __init__(self, fp=None, seekable=1):
+        empty = fp is None
+        if empty:
+            fp = cStringIO.StringIO(CRLF)
+
+        try:
+            httplib.HTTPMessage.__init__(self, fp, seekable)
+        finally:
+            if empty:
+                fp.close()
+
     def __getitem__(self, name):
         """Return the value of the given header or raise KeyError if the header does not exist.
         This returns only the last read header value in case multiple values exist."""
