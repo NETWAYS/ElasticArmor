@@ -6,7 +6,7 @@ import json
 from elasticarmor.util.http import HttpHeaders
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['ElasticRequest', 'DummyResponse', 'RequestError', 'PermissionError']
+__all__ = ['ElasticRequest', 'ElasticResponse', 'RequestError', 'PermissionError']
 
 
 class _RequestRegistry(type):
@@ -42,8 +42,8 @@ class PermissionError(RequestError):
         self.reason = reason
 
 
-class DummyResponse(object):
-    """Response dummy to mimic the basic behaviour of requests.Response.
+class ElasticResponse(object):
+    """Response object which may be provided by instances of ElasticRequest.
 
     Any instance of ElasticRequest might return this to indicate that
     Elasticsearch does not need to be contacted to provide a response
@@ -119,7 +119,7 @@ class ElasticRequest(LoggingAware, object):
         what is requested. Raising a instance of RequestError here immediately
         causes an error response being sent to the client.
 
-        Return a instance of DummyResponse to directly provide a response to the
+        Return a instance of ElasticResponse to directly provide a response to the
         client without contacting Elasticsearch.
 
         """
