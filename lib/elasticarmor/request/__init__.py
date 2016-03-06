@@ -1,5 +1,6 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
+import cStringIO
 import os
 import json
 
@@ -56,6 +57,43 @@ class ElasticResponse(object):
         self.content = None
         self.status_code = None
         self.headers = HttpHeaders()
+
+    @property
+    def raw(self):
+        # Helper required to make sure this is compatible to
+        # how requests.Response allows to stream its payload
+        return self
+
+    def _stream_string(self, chunk_size):
+        file_like = cStringIO.StringIO(self.content)
+        while True:
+            chunk = file_like.read(chunk_size)
+            if chunk:
+                yield chunk
+            else:
+                raise StopIteration()
+
+    def _stream_iterable(self, chunk_size):
+        rest = ''
+        for line in self.content:
+            rest += line
+            if len(rest) >= chunk_size:
+                yield rest[:chunk_size]
+                rest = rest[chunk_size:]
+
+        if rest:
+            yield rest
+
+        raise StopIteration()
+
+    def stream(self, chunk_size, decode_content):
+        """Return the payload as chunks of the given max-size."""
+        if callable(self.content):
+            return self.content(chunk_size)
+        elif isinstance(self.content, basestring):
+            return self._stream_string(chunk_size)
+        else:
+            return self._stream_iterable(chunk_size)
 
 
 class ElasticRequest(LoggingAware, object):
@@ -133,10 +171,7 @@ class ElasticRequest(LoggingAware, object):
         pass
 
     def transform(self, stream):
-        """Apply required transformations on the given response-body stream and return a new iterable.
-        The returned iterable should preferably be fed by a generator but can also be a simple sequence.
-
-        """
+        """Apply required transformations on the given response-body stream and return a new iterable."""
         return stream
 
 
