@@ -3,8 +3,7 @@
 import os
 import json
 
-from requests.structures import CaseInsensitiveDict
-
+from elasticarmor.util.http import HttpHeaders
 from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['ElasticRequest', 'DummyResponse', 'RequestError', 'PermissionError']
@@ -56,7 +55,7 @@ class DummyResponse(object):
         self.options = None
         self.content = None
         self.status_code = None
-        self.headers = CaseInsensitiveDict()
+        self.headers = HttpHeaders()
 
 
 class ElasticRequest(LoggingAware, object):
