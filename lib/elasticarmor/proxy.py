@@ -393,7 +393,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(502, explain='Bad or malicious message framing detected. Please contact an administrator.')
             return
 
-        transformation_reason = request.applies_transformation(response)
+        transformation_reason = request.prepare_transformation(response)
         if transformation_reason:
             response.status_code = 203
             response.headers['Warning'] = '214 {0} "{1}"'.format(self.server_version, transformation_reason)

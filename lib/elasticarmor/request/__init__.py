@@ -115,10 +115,6 @@ class ElasticRequest(LoggingAware, object):
         """Take a quick look at the request and return whether it can be handled or not."""
         raise NotImplementedError()
 
-    def applies_transformation(self, response):
-        """Return a reason for any transformations about to be applied on the given response."""
-        pass
-
     def inspect(self, client):
         """Take a deeper look at the request and check if the given client may do
         what is requested. Raising a instance of RequestError here immediately
@@ -129,6 +125,13 @@ class ElasticRequest(LoggingAware, object):
 
         """
         raise NotImplementedError()
+
+    def prepare_transformation(self, response):
+        """Prepare any required transformations for the given response and
+        return a reason if a transformation is about to be applied on it.
+
+        """
+        pass
 
     def transform(self, stream):
         """Apply required transformations on the given response-body stream and return a new iterable.
