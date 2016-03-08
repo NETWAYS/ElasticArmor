@@ -362,7 +362,7 @@ class QueryDslParser(object):
             raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(data))
 
         if not object_name:
-            raise ElasticSearchError('Missing start object')
+            raise ElasticSearchError('Missing start object in "{0!r}"'.format(data))
         elif not isinstance(data[object_name], dict):
             raise ElasticSearchError('Invalid start object "{0!r}"'.format(data[object_name]))
 
