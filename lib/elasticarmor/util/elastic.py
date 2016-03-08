@@ -357,7 +357,7 @@ class QueryDslParser(object):
     def _read_object(self, data):
         """Validate and return an object from the given data. Raises ElasticSearchError if the validation fails."""
         try:
-            object_name = next(data.iterkeys())
+            object_name = next(data.iterkeys(), None)
         except AttributeError:
             raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(data))
 
@@ -370,7 +370,7 @@ class QueryDslParser(object):
 
     def _read_field(self, obj, blacklist=None):
         """Identify and return the field name in the given object."""
-        return next(k for k in obj.iterkeys() if k[0] != '_' and (not blacklist or k not in blacklist))
+        return next((k for k in obj.iterkeys() if k[0] != '_' and (not blacklist or k not in blacklist)), None)
 
     def query(self, obj, index=None, document=None):
         """Recurse into the given query and parse its contents."""
