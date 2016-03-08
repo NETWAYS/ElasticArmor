@@ -96,6 +96,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         # These attributes will be set by parse_request(). They're initialized here
         # to prevent my IDE from complaining and to simplify error handling..
         self.raw_requestline = None
+        self.request_version = None
         self.requestline = None
         self.headers = None
         self.command = None
