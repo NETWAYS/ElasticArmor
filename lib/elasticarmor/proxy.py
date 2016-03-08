@@ -131,6 +131,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                            format_elasticsearch_error(error))
             self.send_error(502, explain='An error occurred while communicating with Elasticsearch.'
                                          ' Please contact an administrator.')
+        except socket.error as error:
+            self.log.error('Connection to client "%s" broke. An error occurred: %s', self.client, error)
         except Exception:
             exc_info = sys.exc_info()  # Fetch exception information now..
 
@@ -429,5 +431,10 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
     def finish(self):
         # TODO: http://tools.ietf.org/html/rfc7230#section-6.6 (The last three paragraphs)
-        BaseHTTPRequestHandler.finish(self)
+
+        try:
+            BaseHTTPRequestHandler.finish(self)
+        except socket.error as error:
+            self.log.error('Failed to gracefully shutdown connection to client "%s". An error occurred: %s', error)
+
         self.server.elasticsearch.check_reachability()
