@@ -384,6 +384,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                 self.send_error(504, explain='No response received from any of the configured Elasticsearch nodes.')
                 return
 
+            forwarded = True
             # Convert the response's header object so that we can use our own utilities. The original
             # object is overwritten to avoid a differentiation between it and the new one in the
             # context object. If this causes issues, feel free to refactor it.
@@ -391,6 +392,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             response.headers.extend_via_field(self.protocol_version, APP_NAME)
             response.options = response.headers.extract_connection_options()
         else:
+            forwarded = False
             # The response is ours so we have to add the Server and Date header..
             response.headers['Server'] = self.version_string()
             if 'Date' not in response.headers:  # ..if there isn't such a thing yet
@@ -426,8 +428,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             if chunked_content:
                 self.wfile.write(close_chunks())
 
-        self.log.info('Forwarded response from Elasticsearch for request "%s %s" to client "%s".',
-                      self.command, self.path, self.client)
+        action = 'Forwarded response from Elasticsearch' if forwarded else 'Successfully provided response'
+        self.log.info('%s for request "%s %s" to client "%s".', action, self.command, self.path, self.client)
 
     def finish(self):
         # TODO: http://tools.ietf.org/html/rfc7230#section-6.6 (The last three paragraphs)
