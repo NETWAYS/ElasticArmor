@@ -323,7 +323,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(417)
             return
 
-        self._context = HttpContext(self)
+        self._context = HttpContext(self.server, self)
         if not self._context.has_proper_framing():
             self.send_error(400, explain='Bad or malicious message framing detected.')
             return

@@ -229,11 +229,12 @@ class HttpHeaders(httplib.HTTPMessage):
 
 
 class HttpContext(object):
-    """HttpContext container for requests and responses.
+    """HttpContext container. It consists of the server, the request and an optional response.
 
     Provides some utilities to check a message's integrity, validity and state."""
 
-    def __init__(self, request, response=None):
+    def __init__(self, server, request, response=None):
+        self.server = server
         self.request = request
         self.response = response
 
