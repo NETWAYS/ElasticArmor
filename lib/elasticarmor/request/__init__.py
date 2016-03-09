@@ -107,25 +107,31 @@ class ElasticRequest(LoggingAware, object):
     # asked to process a request. If you're not competing with other handlers, leave the default
     priority = 0
 
-    def __init__(self, command, path, query, headers, body):
+    def __init__(self, context, **kwargs):
         super(ElasticRequest, self).__init__()
         self._json = None
 
-        self.path = path
-        self.body = body
-        self.query = query
-        self.command = command
-        self.headers = headers
-        self.options = None
+        self.context = context
+        for name, value in kwargs.iteritems():
+            setattr(self, name, value)
+
+    def __getattr__(self, name):
+        """Access the given attribute on the context's request and return its value.
+        Raises AttributeError if the attribute is not found.
+
+        """
+        value = getattr(self.context.request, name)
+        setattr(self, name, value)
+        return value
 
     @staticmethod
-    def create_request(command, path, query, headers, body):
+    def create_request(context, **kwargs):
         """Return a instance of the first matching request handler
         for the given request. Returns None if no handler matches.
 
         """
         for class_obj in _RequestRegistry.registry:
-            handler = class_obj(command, path, query, headers, body)
+            handler = class_obj(context, **kwargs)
             if handler.is_valid():
                 return handler
 

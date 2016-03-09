@@ -353,7 +353,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(403, explain='You\'re not permitted to access this realm.')
             return
 
-        request = ElasticRequest.create_request(self.command, path if path else '/', query, self.headers, self.body)
+        request = ElasticRequest.create_request(self._context, path=path if path else '/', query=query)
         if request is None:
             # TODO: Elasticsearch responds with text/plain, not application/json!
             self.send_error(400, explain='Unable to process this request. No request handler found.')
@@ -366,10 +366,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         request = self.fetch_request()
         if request is None:
             return
-
-        # Update the current context with the fetched request handler.
-        # Might be of use for some handler and does not hurt if not..
-        self._context.request = request
 
         try:
             response = request.inspect(self.client)
