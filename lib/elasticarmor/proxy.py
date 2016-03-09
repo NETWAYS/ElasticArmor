@@ -86,6 +86,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
     MessageClass = HttpHeaders
 
     def __init__(self, request, client_address, server):
+        self._continue_expected = None
         self._received_requests = 0
         self._context = None
         self._client = None
@@ -137,9 +138,13 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             exc_info = sys.exc_info()  # Fetch exception information now..
 
             try:
-                body = self.body
-            except Exception:  # ..as it may refer to a different one later on
                 body = None
+                if not self._continue_expected:
+                    # Fetching the body is only necessary if the client has already sent it which is only the case
+                    # if it didn't expect a 100-continue (None) or if we already answered the expectation (False)
+                    body = self.body
+            except Exception:  # ..as it may refer to a different one later on
+                pass
 
             self.log.error('Unhandled exception occurred while handling request "%s" from %s:'
                            '\nHeaders:\n%s\nBody:\n%s\n', self.requestline, client_address,
@@ -156,6 +161,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
     def body(self):
         if self._body is not None:
             return self._body
+
+        if self._continue_expected:
+            self.send_response(100)
+            self._continue_expected = False
+            self.log.debug('Answered to 100-continue expectation.')
 
         if self._context.has_chunked_payload():
             self.log.debug('Fetching streamed request payload...')
@@ -177,6 +187,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
                 self.log.debug('Request payload is either empty or it\'s a HEAD request.')
                 self._body = ''
 
+        # TODO: Request streaming (self.body -> <receive-generator> and request.body -> <forward-generator>)
+        # Will allow EL to simultaneously process requests already handled by us while we're still busy handling more!!1
         return self._body
 
     @property
@@ -227,7 +239,9 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             try:
                 # We need to fetch the request payload even if it's not necessary to handle
                 # the request as the remaining data will most likely cause misbehaviour
-                _ = self.body
+                if not self._continue_expected:
+                    # But that's not required if the client did not sent the payload yet (True)
+                    _ = self.body
             except Exception as error:  # Fetch the request payload no matter what..
                 self.log.debug('Failed to fetch the remaining request payload. An error occurred: %s', error)
                 self.close_connection = True  # ..but close the connection if it's not possible
@@ -300,6 +314,15 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         if self.options:
             self.log.debug('Extracted connection options: %s', self.options)
 
+        expectations = [v.lower() for v in self.headers.getheaders('Expect')]
+        if self.request_version >= 'HTTP/1.1' and '100-continue' in expectations:
+            expectations.remove('100-continue')
+            self._continue_expected = True
+            del self.headers['Expect']
+        if expectations:
+            self.send_error(417)
+            return
+
         self._context = HttpContext(self)
         if not self._context.has_proper_framing():
             self.send_error(400, explain='Bad or malicious message framing detected.')
@@ -330,17 +353,6 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(403, explain='You\'re not permitted to access this realm.')
             return
 
-        expectations = [v.lower() for v in self.headers.getheaders('Expect')]
-        if expectations and ('100-continue' not in expectations or len(expectations) > 1):
-            self.send_error(417)
-            return
-        elif self.request_version >= 'HTTP/1.1' and '100-continue' in expectations:
-            self.send_response(100)
-            del self.headers['Expect']
-            self.log.debug('Answered to 100-continue expectation.')
-
-        # TODO: Request streaming (self.body -> <receive-generator> and request.body -> <forward-generator>)
-        # Will allow EL to simultaneously process requests already handled by us while we're still busy handling more!!1
         request = ElasticRequest.create_request(self.command, path if path else '/', query, self.headers, self.body)
         if request is None:
             # TODO: Elasticsearch responds with text/plain, not application/json!
