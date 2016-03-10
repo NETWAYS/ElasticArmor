@@ -10,7 +10,8 @@ from elasticarmor.util import format_elasticsearch_error
 from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole', 'QueryDslParser']
+__all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole', 'QueryDslParser',
+           'AggregationParser']
 
 DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
@@ -232,6 +233,8 @@ class ElasticRole(ElasticObject):
         return cls.request('_search', method='GET', params=query_params, json=data)
 
 
+# TODO: Case sensitivity! Custom dict class for json objects??
+# TODO: Be more strict if it's about irrelevant top-level keywords!
 class QueryDslParser(object):
     """QueryDslParser object to parse Elasticsearch queries and filters.
 
@@ -1095,3 +1098,460 @@ class QueryDslParser(object):
             self.documents.append((index, obj['value']))
         except KeyError:
             raise ElasticSearchError('Missing type name in type filter "{0!r}"'.format(obj))
+
+
+# TODO: Case sensitivity! Custom dict class for json objects??
+class AggregationParser(object):
+    """AggregationParser object to parse Elasticsearch aggregations.
+
+    The most common usage is probably as follows:
+
+        parser = AggregationParser().aggregations(json_body['aggregations'])
+
+    But the parser is not limited to this single entry point.
+    Any other public method serves this purpose just as well:
+
+        AggregationParser().avg_agg(json_object['avg'])
+        AggregationParser().histogram_agg(json_object['histogram'])
+
+    Once the parser has finished, all collected permissions, indices, documents
+    and their fields can be accessed using the respective instance attributes:
+
+        parser.permissions -> ['<permission-name>']
+        parser.indices -> ['<index-name>']
+        parser.documents -> [('<index-name>' | None, '<document-name>')]
+        parser.fields -> [('<index-name>' | None, '<document-name>' | None, '<field-name>')]
+
+    Any occurrence of 'None' indicates that no particular index or document is desired instead of the default ones.
+    """
+
+    def __init__(self):
+        self.permissions = []
+        self.indices = []
+        self.documents = []
+        self.fields = []
+
+        self._parsers = {
+            'aggregations': self.aggregations,
+            'aggs': self.aggregations,
+            'min': self.min_agg,
+            'max': self.max_agg,
+            'sum': self.sum_agg,
+            'avg': self.avg_agg,
+            'stats': self.stats_agg,
+            'extended_stats': self.extended_stats_agg,
+            'value_count': self.value_count_agg,
+            'percentiles': self.percentiles_agg,
+            'percentile_ranks': self.percentile_ranks_agg,
+            'cardinality': self.cardinality_agg,
+            'geo_bounds': self.geo_bounds_agg,
+            'top_hits': self.top_hits_agg,
+            'scripted_metric': self.scripted_metric_agg,
+            'global': self.global_agg,
+            'filter': self.filter_agg,
+            'filters': self.filters_agg,
+            'missing': self.missing_agg,
+            'nested': self.nested_agg,
+            'reverse_nested': self.reverse_nested_agg,
+            'children': self.children_agg,
+            'terms': self.terms_agg,
+            'significant_terms': self.significant_terms_agg,
+            'range': self.range_agg,
+            'date_range': self.date_range_agg,
+            'ip_range': self.ip_range_agg,
+            'histogram': self.histogram_agg,
+            'date_histogram': self.date_histogram_agg,
+            'geo_distance': self.geo_distance_agg,
+            'geohash_grid': self.geohash_grid_agg
+        }
+
+    def _parse_aggregation(self, name, obj, index=None, document=None, field=None):
+        """Parse the given aggregation. Raises ElasticSearchError if it is unknown."""
+        try:
+            return self._parsers[name](obj, index, document, field)
+        except KeyError:
+            raise ElasticSearchError('Unknown aggregation "{0}"'.format(name))
+
+    def _read_aggregation(self, obj):
+        """Validate and return an aggregation from the given object.
+        Raises ElasticSearchError if the validation fails.
+
+        """
+        try:
+            iterator = (k for k in obj.iterkeys() if k.lower() not in ['aggs', 'aggregations'])
+        except AttributeError:
+            raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj))
+
+        agg_name = next(iterator, None)
+        if not agg_name:
+            raise ElasticSearchError('Missing start object in "{0!r}"'.format(obj))
+        elif next(iterator, None) is not None:
+            raise ElasticSearchError('Multiple aggregations in "{0!r}"'.format(obj))
+        elif not isinstance(obj[agg_name], dict) and (agg_name != 'filters' or not isinstance(obj[agg_name], list)):
+            raise ElasticSearchError('Invalid start object "{0!r}"'.format(obj[agg_name]))
+
+        return agg_name, obj[agg_name]
+
+    def _validate_keywords(self, name, obj, known_keywords):
+        """Check whether the given aggregation contains any unknown keywords and raise ElasticSearchError if so."""
+        unknown_keyword = next((k for k in obj.iterkeys() if k.lower() not in known_keywords), None)
+        if unknown_keyword is not None:
+            raise ElasticSearchError('Unknown keyword "{0}" in {1} aggregation "{2!r}"'
+                                     ''.format(unknown_keyword, name, obj))
+
+    def _default_parser(self, name, obj, index=None, document=None, field=None):
+        """Parse the given aggregation in a generic manner. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords(name, obj, ['field', 'script', 'script_id', 'script_file',
+                                            'lang', 'params', 'script_values_sorted'])
+
+        try:
+            field = obj['field']
+        except KeyError:
+            pass
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in {0} aggregation "{1!r}"'.format(name, obj))
+
+            self.fields.append((index, document, field))
+
+        if 'script' in obj or 'script_id' in obj or 'script_path' in obj:
+            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+
+        return index, document, field
+
+    def aggregations(self, obj, index=None, document=None, field=None):
+        """Recurse into the given aggregations and parse their contents.
+        Raises ElasticSearchError in case they are malformed.
+
+        """
+        if not isinstance(obj, dict):
+            raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj))
+
+        current_context = (index, document, field)
+        for agg_body in obj.itervalues():
+            new_context = self._parse_aggregation(*self._read_aggregation(agg_body),
+                                                  index=index, document=document, field=field)
+
+            if 'aggs' in agg_body or 'aggregations' in agg_body:
+                self.aggregations(agg_body.get('aggs', agg_body.get('aggregations')), *(new_context or current_context))
+
+    def min_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given min aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('min', obj, index, document, field)
+
+    def max_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given max aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('max', obj, index, document, field)
+
+    def sum_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given sum aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('sum', obj, index, document, field)
+
+    def avg_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given avg aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('avg', obj, index, document, field)
+
+    def stats_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given stats aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('stats', obj, index, document, field)
+
+    def extended_stats_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given extended_stats aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('extended_stats', obj, index, document, field)
+
+    def value_count_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given value_count aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('value_count', obj, index, document, field)
+
+    def percentiles_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given percentiles aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('percentiles', obj, index, document, field)
+
+    def percentile_ranks_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given percentile_ranks aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('percentile_ranks', obj, index, document, field)
+
+    def cardinality_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given cardinality aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('cardinality', obj, index, document, field)
+
+    def geo_bounds_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given geo_bounds aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('geo_bounds', obj, index, document, field)
+
+    def top_hits_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given top_hits aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('top_hits', obj, ['sort', '_source', 'highlight', 'explain', 'script_fields',
+                                                  'fielddata_fields', 'size', 'from'])
+
+        if '_source' in obj:
+            # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-source-filtering.html
+            raise NotImplementedError()
+
+        if 'highlight' in obj:
+            # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-highlighting.html
+            raise NotImplementedError()
+
+        if 'explain' in obj:
+            self.permissions.append('<explain-permission>')  # TODO: Use a proper permission name
+
+        if 'script_fields' in obj:
+            # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-script-fields.html
+            raise NotImplementedError()
+
+        if 'fielddata_fields' in obj:
+            # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-fielddata-fields.html
+            raise NotImplementedError()
+
+        if 'sort' in obj:
+            try:
+                for field in obj['sort'].iterkeys():
+                    if field:
+                        self.fields.append((index, document, field))
+            except AttributeError:
+                raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj['sort']))
+
+    def scripted_metric_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given scripted_metric aggregation."""
+        self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+
+    def global_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given global aggregation. Raises ElasticSearchError in case it is malformed."""
+        if obj:
+            raise ElasticSearchError('Aggregations of type global have usually an empty body, wouldn\'t they?')
+
+    def filter_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given filter aggregation. Raises ElasticSearchError in case it is malformed."""
+        parser = QueryDslParser()
+        parser.filter(obj, index, document)
+        self.permissions.extend(parser.permissions)
+        self.indices.extend(parser.indices)
+        self.documents.extend(parser.documents)
+        self.fields.extend(parser.fields)
+
+    def filters_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given filters aggregation. Raises ElasticSearchError in case it is malformed."""
+        if isinstance(obj, list):
+            iterator = obj
+        else:
+            try:
+                iterator = obj.itervalues
+            except AttributeError:
+                raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj))
+
+        for filter in iterator:
+            parser = QueryDslParser()
+            parser.filter(filter, index, document)
+            self.permissions.extend(parser.permissions)
+            self.indices.extend(parser.indices)
+            self.documents.extend(parser.documents)
+            self.fields.extend(parser.fields)
+
+    def missing_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given missing aggregation. Raises ElasticSearchError in case it is malformed."""
+        return self._default_parser('missing', obj, index, document, field)
+
+    def nested_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given nested aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('nested', obj, ['path'])
+
+        try:
+            path = obj['path']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "path" in nested aggregation "{0!r}"'.format(obj))
+        else:
+            if not path:
+                raise ElasticSearchError('Empty field path in nested aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, path))
+            return index, document, path
+
+    def reverse_nested_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given reverse_nested aggregation."""
+        self._validate_keywords('reverse_nested', obj, ['path'])
+
+        try:
+            path = obj['path']
+        except KeyError:
+            if field is None:
+                raise ElasticSearchError('No field path found in the parser\'s current context. Make sure that the'
+                                         ' reverse_nested aggregation "{0!r}" is part of a nested aggregation!'
+                                         ''.format(obj))
+
+            path = field.split('.', 1)[0]
+        else:
+            if not path:
+                raise ElasticSearchError('Empty field path in reverse_nested aggregation "{0!r}"'.format(obj))
+
+        self.fields.append((index, document, path))
+        return index, document, path
+
+    def children_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given children aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('children', obj, ['type'])
+
+        try:
+            document = obj['type']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "type" in children aggregation "{0!r}"'.format(obj))
+        else:
+            if not document:
+                raise ElasticSearchError('Empty type name in children aggregation "{0!r}"'.format(obj))
+
+            self.documents.append((index, document))
+            return index, document, field
+
+    def terms_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given terms aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('terms', obj, ['field', 'size', 'shard_size', 'show_term_doc_count_error', 'order',
+                                               'min_doc_count', 'shard_min_doc_count', 'script', 'script_id',
+                                               'script_file', 'params', 'include', 'exclude', 'collect_mode',
+                                               'execution_hint'])
+        try:
+            field = obj['field']
+        except KeyError:
+            pass
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in terms aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
+
+        if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
+            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+
+        return index, document, field
+
+    def significant_terms_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given significant_terms aggregation."""
+        self.permissions.append('<significant-terms-agg>')  # TODO: Use a proper permission name
+
+    def range_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given range aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords(
+            'range', obj, ['field', 'ranges', 'keyed', 'script', 'script_id', 'script_file', 'params'])
+
+        try:
+            field = obj['field']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "field" in range aggregation "{0!r}"'.format(obj))
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in range aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
+
+        if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
+            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+
+        return index, document, field
+
+    def date_range_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given date_range aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords(
+            'date_range', obj, ['field', 'format', 'ranges', 'script', 'script_id', 'script_file', 'params'])
+
+        try:
+            field = obj['field']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "field" in date_range aggregation "{0!r}"'.format(obj))
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in date_range aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
+
+        if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
+            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+
+        return index, document, field
+
+    def ip_range_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given ip_range aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('ip_range', obj, ['field', 'ranges', 'script', 'script_id', 'script_file', 'params'])
+
+        try:
+            field = obj['field']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "field" in ip_range aggregation "{0!r}"'.format(obj))
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in ip_range aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
+
+        if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
+            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+
+        return index, document, field
+
+    def histogram_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given histogram aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('histogram', obj, ['field', 'interval', 'min_doc_count', 'extended_bounds',
+                                                   'order', 'script', 'script_id', 'script_file', 'params'])
+
+        try:
+            field = obj['field']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "field" in histogram aggregation "{0!r}"'.format(obj))
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in histogram aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
+
+        if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
+            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+
+        return index, document, field
+
+    def date_histogram_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given date_histogram aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('date_histogram', obj, ['field', 'interval', 'pre_zone', 'post_zone', 'time_zone',
+                                                        'pre_zone_adjust_large_interval', 'pre_offset', 'post_offset',
+                                                        'offset', 'format', 'min_doc_count', 'extended_bounds',
+                                                        'order', 'script', 'script_id', 'script_file', 'params'])
+        try:
+            field = obj['field']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "field" in date_histogram aggregation "{0!r}"'.format(obj))
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in date_histogram aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
+
+        if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
+            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+
+        return index, document, field
+
+    def geo_distance_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given geo_distance aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('geo_distance', obj, ['field', 'origin', 'ranges', 'unit', 'distance_type'])
+
+        try:
+            field = obj['field']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "field" in geo_distance aggregation "{0!r}"'.format(obj))
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in geo_distance aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
+            return index, document, field
+
+    def geohash_grid_agg(self, obj, index=None, document=None, field=None):
+        """Parse the given geohash_grid aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('geohash_grid', obj, ['field', 'precision', 'size', 'shard_size'])
+
+        try:
+            field = obj['field']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "field" in geohash_grid aggregation "{0!r}"'.format(obj))
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in geohash_grid aggregation "{0!r}"'.format(obj))
+
+            self.fields.append((index, document, field))
+            return index, document, field
