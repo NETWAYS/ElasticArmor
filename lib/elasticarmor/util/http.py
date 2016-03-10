@@ -166,14 +166,15 @@ class HttpHeaders(httplib.HTTPMessage):
 
         Header fields being handled:
         - Connection
-        - TE
+        - Host
         - Trailer
         - Transfer-Encoding
         - Proxy-Authenticate
         - Proxy-Authorization
 
-        Keep-Alive is returned as dictionary and all others as list in case of multiple values."""
+        Keep-Alive is returned as dictionary and all others as list or None.
 
+        """
         options = CaseInsensitiveDict()
         for option in self.getheaders('Connection'):
             if option in self:
@@ -181,7 +182,7 @@ class HttpHeaders(httplib.HTTPMessage):
                     options[option] = dict(tuple(v.strip() for v in value.split('='))
                                            for value in self.getheaders(option))
                 else:
-                    options[option] = self[option].strip().lower()
+                    options[option] = [v.strip().lower() for v in self.getheaders(option)]
 
                 del self[option]
             elif option.lower() == 'keep-alive':
@@ -192,12 +193,10 @@ class HttpHeaders(httplib.HTTPMessage):
         if options:
             del self['Connection']
 
-        headers = ['Host', 'TE', 'Trailer', 'Transfer-Encoding', 'Proxy-Authenticate', 'Proxy-Authorization']
+        headers = ['Host', 'Trailer', 'Transfer-Encoding', 'Proxy-Authenticate', 'Proxy-Authorization']
         for header_name in (h for h in headers if h in self):
-            if header_name in options:
-                options[header_name].extend(v.strip().lower() for v in self[header_name].split(', '))
-            else:
-                options[header_name] = [self[header_name]]
+            options[header_name] = [v.strip().lower() for v in self.getheaders(header_name)]
+            del self[header_name]
 
         return options
 
