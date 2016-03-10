@@ -399,7 +399,7 @@ class ElasticsearchRoleBackend(LoggingAware, object):
 
         response = self.connection.process(request)
         if response is None:
-            return
+            return []
 
         response.raise_for_status()
         result = response.json()
