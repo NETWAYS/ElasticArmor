@@ -149,8 +149,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.log.error('Unhandled exception occurred while handling request "%s" from %s:'
                            '\nHeaders:\n%s\nBody:\n%s\n', self.requestline, client_address,
                            self.headers, body, exc_info=exc_info)
-            self.send_error(
-                500, explain='An error occurred while processing this request. Please contact an administrator.')
+            try:
+                self.send_error(
+                    500, explain='An error occurred while processing this request. Please contact an administrator.')
+            except socket.error as error:
+                self.log.debug('Failed to send error response to "%s". An error occurred: %s', client_address, error)
         finally:
             try:
                 self.finish()
@@ -445,6 +448,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         try:
             BaseHTTPRequestHandler.finish(self)
         except socket.error as error:
-            self.log.error('Failed to gracefully shutdown connection to client "%s". An error occurred: %s', error)
+            self.log.error('Failed to gracefully shutdown connection to client "%s". An error occurred: %s',
+                           self.client, error)
 
         self.server.elasticsearch.check_reachability()
