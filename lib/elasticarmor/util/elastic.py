@@ -1123,6 +1123,13 @@ class AggregationParser(object):
         parser.fields -> [('<index-name>' | None, '<document-name>' | None, '<field-name>')]
 
     Any occurrence of 'None' indicates that no particular index or document is desired instead of the default ones.
+
+    In contrast to other parsers, this will also populate an attribute called "source_requests" which possibly
+    contains aggregation objects that will cause document sources to be returned in the response:
+
+        parser.source_requests -> [('<index-name>' | None, '<document-name>' | None, dict)]
+
+    Occurrences of 'None' have the same meaning as previously noted.
     """
 
     def __init__(self):
@@ -1130,6 +1137,7 @@ class AggregationParser(object):
         self.indices = []
         self.documents = []
         self.fields = []
+        self.source_requests = []
 
         self._parsers = {
             'aggregations': self.aggregations,
@@ -1284,9 +1292,12 @@ class AggregationParser(object):
         self._validate_keywords('top_hits', obj, ['sort', '_source', 'highlight', 'explain', 'script_fields',
                                                   'fielddata_fields', 'size', 'from'])
 
-        if '_source' in obj:
-            # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-source-filtering.html
-            raise NotImplementedError()
+        self.source_requests.append((index, document, obj))
+        if obj.get('_source'):
+            try:
+                self.fields.extend((index, document, f) for f in parse_source_filter(obj['_source']))
+            except ValueError as error:
+                raise ElasticSearchError('Invalid source filter in top_hits aggregation "{0!r}" ({1})', obj, error)
 
         if 'highlight' in obj:
             # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-highlighting.html
