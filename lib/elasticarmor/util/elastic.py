@@ -1307,8 +1307,7 @@ class AggregationParser(object):
             self.permissions.append('<explain-permission>')  # TODO: Use a proper permission name
 
         if 'script_fields' in obj:
-            # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-script-fields.html
-            raise NotImplementedError()
+            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
 
         if 'fielddata_fields' in obj:
             # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-fielddata-fields.html
