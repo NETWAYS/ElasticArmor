@@ -402,6 +402,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             response.headers = HttpHeaders.from_http_header_dict(response.headers)
             response.headers.extend_via_field(self.protocol_version, APP_NAME)
             response.options = response.headers.extract_connection_options()
+            if response.options:
+                self.log.debug('Extracted connection options: %s', response.options)
         else:
             forwarded = False
             # The response is ours so we have to add the Server and Date header..
