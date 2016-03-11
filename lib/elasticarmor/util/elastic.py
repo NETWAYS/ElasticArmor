@@ -1310,8 +1310,11 @@ class AggregationParser(object):
             self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
 
         if 'fielddata_fields' in obj:
-            # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-fielddata-fields.html
-            raise NotImplementedError()
+            if isinstance(obj['fielddata_fields'], list):
+                self.fields.extend((index, document, f) for f in obj['fielddata_fields'])
+            else:
+                raise ElasticSearchError(
+                    'Invalid fielddata_fields definition in top_hits aggregation "{0!r}"'.format(obj))
 
         if 'sort' in obj:
             try:
