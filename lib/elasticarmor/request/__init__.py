@@ -107,6 +107,10 @@ class ElasticRequest(LoggingAware, object):
     # asked to process a request. If you're not competing with other handlers, leave the default
     priority = 0
 
+    # The base url a request handler is responsible for. The base implementation
+    # of is_valid() checks whether a request's path starts with this url
+    base_url = None
+
     def __init__(self, context, **kwargs):
         super(ElasticRequest, self).__init__()
         self._json = None
@@ -156,7 +160,7 @@ class ElasticRequest(LoggingAware, object):
 
     def is_valid(self):
         """Take a quick look at the request and return whether it can be handled or not."""
-        raise NotImplementedError()
+        return self.base_url is not None and self.path.startswith(self.base_url)
 
     def inspect(self, client):
         """Take a deeper look at the request and check if the given client may do
