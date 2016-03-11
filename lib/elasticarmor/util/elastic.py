@@ -11,7 +11,7 @@ from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole', 'QueryDslParser',
-           'AggregationParser']
+           'AggregationParser', 'parse_source_filter']
 
 DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
@@ -1555,3 +1555,28 @@ class AggregationParser(object):
 
             self.fields.append((index, document, field))
             return index, document, field
+
+
+def parse_source_filter(data):
+    """Parse the given source filter and return all requested field names, if any.
+    Raises ValueError in case the filter is malformed.
+
+    """
+    assert data, 'Empty source filter given'
+
+    seq = []
+    if isinstance(data, basestring):
+        seq = [data]
+    elif isinstance(data, list):
+        seq = data
+    else:
+        try:
+            unknown = next((k for k in data.iterkeys() if k not in ['include', 'exclude']), None)
+            if unknown is not None:
+                raise ValueError('Unknown keyword "{0}"'.format(unknown))
+
+            seq = data.get('include', [])
+        except AttributeError:
+            raise ValueError('Invalid JSON object "{0!r}"'.format(data))
+
+    return seq
