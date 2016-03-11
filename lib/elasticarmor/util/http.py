@@ -8,7 +8,7 @@ from requests.structures import CaseInsensitiveDict
 
 __all__ = ['is_false', 'parse_query', 'prepare_chunk', 'close_chunks', 'trailer_chunks',
            'read_chunked_content', 'ChunkParserError', 'RequestEntityTooLarge',
-           'HttpHeaders', 'HttpContext']
+           'HttpHeaders', 'HttpContext', 'WsgiErrorLog']
 
 CRLF = '\r\n'
 
@@ -230,12 +230,37 @@ class HttpHeaders(httplib.HTTPMessage):
 class HttpContext(object):
     """HttpContext container. It consists of the server, the request and an optional response.
 
-    Provides some utilities to check a message's integrity, validity and state."""
+    Provides also some utilities to e.g. check a message's integrity, validity and state."""
 
     def __init__(self, server, request, response=None):
         self.server = server
         self.request = request
         self.response = response
+
+    def create_wsgi_environ(self):
+        """Create and return a WSGI compliant environment."""
+        environ = self.server.wsgi_environ.copy()
+        environ['REQUEST_METHOD'] = self.request.command
+        environ['SCRIPT_NAME'] = ''
+        path, _, query = self.request.path.partition('?')
+        environ['PATH_INFO'] = path
+        environ['QUERY_STRING'] = query
+        environ['SERVER_PROTOCOL'] = self.request.request_version
+        environ['REMOTE_ADDR'] = self.request.client_address[0]
+        environ['REMOTE_HOST'] = self.request.client_address[0]
+        environ['REMOTE_PORT'] = self.request.client_address[1]
+        environ['wsgi.input'] = cStringIO.StringIO(self.request.body)  # TODO: Adjust this once body is a generator
+        environ.update(('HTTP_' + name.upper().replace('-', '_'), value)
+                       for name, value in self.request.headers.items())
+
+        if self.request.client.username:
+            environ['REMOTE_USER'] = self.request.client.username
+        if 'Content-Type' in self.request.headers:
+            environ['CONTENT_TYPE'] = self.request.headers.getheader('Content-Type')
+        if 'Content-Length' in self.request.headers:
+            environ['CONTENT_LENGTH'] = self.request.headers.getheader('Content-Length')
+
+        return environ
 
     def has_proper_framing(self):
         """Return whether a message's framing is valid.
@@ -281,3 +306,27 @@ class HttpContext(object):
                    self.response.options.get('Transfer-Encoding', [None])[-1] == 'chunked'
 
         return False
+
+
+class WsgiErrorLog(object):
+    """WsgiErrorLog is a file-like object compliant to PEP 333 that
+    may be used as error log passed to a WSGI application object."""
+
+    def __init__(self, logger):
+        self.logger = logger
+
+    def flush(self):
+        """Flush the internal buffer. This is a no-op."""
+        pass
+
+    def write(self, message):
+        """Write a error message to the log. There is no return value."""
+        self.logger.error(message.rstrip())
+
+    def writelines(self, messages):
+        """Write a sequence of error messages to the log. The sequence can be any iterable
+        object producing strings, typically a list of strings. There is no return value.
+
+        """
+        for message in messages:
+            self.write(message)

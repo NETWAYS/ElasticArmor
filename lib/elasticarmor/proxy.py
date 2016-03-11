@@ -1,6 +1,7 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
 import base64
+import os
 import socket
 import ssl
 import sys
@@ -39,11 +40,26 @@ class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
         self.auth = Auth(settings)
         self.elasticsearch = settings.elasticsearch
 
-        HTTPServer.__init__(self, (settings.listen_address, settings.listen_port),
-                            ElasticRequestHandler, bind_and_activate=False)
+        listen_address = settings.listen_address
+        listen_port = settings.listen_port
+        url_scheme = 'http'
+
+        HTTPServer.__init__(self, (listen_address, listen_port), ElasticRequestHandler, bind_and_activate=False)
         if settings.secure_connection:
+            url_scheme = 'https'
             self.socket = ssl.wrap_socket(self.socket, settings.private_key, settings.certificate,
                                           server_side=True, ssl_version=ssl.PROTOCOL_TLSv1)
+
+        self.wsgi_environ = os.environ.copy()
+        self.wsgi_environ['SERVER_SOFTWARE'] = APP_NAME + ' ' + VERSION
+        self.wsgi_environ['SERVER_NAME'] = listen_address
+        self.wsgi_environ['SERVER_PORT'] = listen_port
+        self.wsgi_environ['wsgi.errors'] = WsgiErrorLog(self.log)
+        self.wsgi_environ['wsgi.url_scheme'] = url_scheme
+        self.wsgi_environ['wsgi.multiprocess'] = False
+        self.wsgi_environ['wsgi.multithread'] = True
+        self.wsgi_environ['wsgi.run_once'] = False
+        self.wsgi_environ['wsgi.version'] = (1, 0)
 
     def launch(self):
         self.server_bind()
@@ -421,6 +437,20 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             response.status_code = 203
             response.headers['Warning'] = '214 {0} "{1}"'.format(self.server_version, transformation_reason)
 
+        stream = request.transform(response.raw.stream(MAX_CHUNK_SIZE, decode_content=False))
+        data = next(stream, None)
+        if data and ('Content-Length' not in response.headers or int(response.headers['Content-Length']) == 0):
+            chunked_content = self.request_version >= 'HTTP/1.1'
+            if chunked_content:
+                response.headers['Transfer-Encoding'] = 'chunked'
+            else:
+                self.close_connection = True
+
+            if 'Content-Length' in response.headers:
+                del response.headers['Content-Length']
+        else:
+            chunked_content = False
+
         self.send_response(response.status_code, response.reason)
         for name, value in response.headers.items():
             self.send_header(name, value)
@@ -433,13 +463,21 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
         self.end_headers()
 
-        self.log.debug('Transferring response payload...')
-        chunked_content = self._context.has_chunked_payload()
-        for data in request.transform(response.raw.stream(MAX_CHUNK_SIZE, decode_content=False)):
-            self.wfile.write(prepare_chunk(data) if chunked_content else data)
-        else:
-            if chunked_content:
-                self.wfile.write(close_chunks())
+        if data:
+            self.log.debug('Transferring response payload...')
+
+            try:
+                self.wfile.write(prepare_chunk(data) if chunked_content else data)
+                for data in stream:
+                    self.wfile.write(prepare_chunk(data) if chunked_content else data)
+
+                if chunked_content:
+                    self.wfile.write(close_chunks())
+            finally:
+                try:
+                    stream.close()  # Required to be compliant with PEP 333
+                except AttributeError:
+                    pass
 
         action = 'Forwarded response from Elasticsearch' if forwarded else 'Successfully provided response'
         self.log.info('%s for request "%s %s" to client "%s".', action, self.command, self.path, self.client)

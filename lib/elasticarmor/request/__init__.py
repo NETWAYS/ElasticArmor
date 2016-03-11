@@ -1,6 +1,5 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
-import cStringIO
 import os
 import json
 
@@ -52,6 +51,8 @@ class ElasticResponse(object):
     """
 
     def __init__(self):
+        self._streaming = False
+
         self.reason = None
         self.options = None
         self.content = None
@@ -64,36 +65,46 @@ class ElasticResponse(object):
         # how requests.Response allows to stream its payload
         return self
 
-    def _stream_string(self, chunk_size):
-        file_like = cStringIO.StringIO(self.content)
-        while True:
-            chunk = file_like.read(chunk_size)
-            if chunk:
-                yield chunk
-            else:
-                raise StopIteration()
+    def wsgi_response(self, status_line, headers, exc_info=None):
+        """Populate this response by parsing the given status line and headers.
+        This method solely exists to be passed to a WSGI application object.
 
-    def _stream_iterable(self, chunk_size):
-        rest = ''
-        for line in self.content:
-            rest += line
-            if len(rest) >= chunk_size:
-                yield rest[:chunk_size]
-                rest = rest[chunk_size:]
+        """
+        if exc_info is not None:
+            try:
+                if self._streaming:
+                    raise exc_info[0], exc_info[1], exc_info[2]
+            finally:
+                exc_info = None
+        elif self.status_code is not None:
+            raise AssertionError('The response has already been populated')
 
-        if rest:
-            yield rest
+        status_code, reason = status_line.split(' ', 1)
+        self.status_code = int(status_code)
+        self.reason = reason
 
-        raise StopIteration()
+        self.headers = HttpHeaders()
+        for header_name, header_value in headers:
+            self.headers[header_name] = header_value
+
+        if self.headers.extract_connection_options():
+            raise AssertionError('Application supplied hop-by-hop headers')
 
     def stream(self, chunk_size, decode_content):
-        """Return the payload as chunks of the given max-size."""
+        """Return the payload as chunks by optionally respecting the given size-hint. Argument
+        decode_content is required to ensure compatibility with requests.Response and is ignored.
+
+        """
         if callable(self.content):
-            return self.content(chunk_size)
+            iterator = iter(self.content(chunk_size))
         elif isinstance(self.content, basestring):
-            return self._stream_string(chunk_size)
+            iterator = iter(self.content.splitlines(keepends=True))
         else:
-            return self._stream_iterable(chunk_size)
+            iterator = iter(self.content)
+
+        while True:
+            yield next(iterator)
+            self._streaming = True
 
 
 class ElasticRequest(LoggingAware, object):
@@ -150,6 +161,14 @@ class ElasticRequest(LoggingAware, object):
     def clear_cache(cls):
         """Clear any caches. Gets called once the user reloads the application."""
         pass
+
+    @property
+    def wsgi_environ(self):
+        environ = self.context.create_wsgi_environ()
+        environ['SCRIPT_NAME'] = self.base_url
+        environ['SCRIPT_FILENAME'] = self.path
+        environ['PATH_INFO'] = self.path[len(self.base_url):]
+        return environ
 
     @property
     def json(self):
