@@ -233,7 +233,6 @@ class ElasticRole(ElasticObject):
         return cls.request('_search', method='GET', params=query_params, json=data)
 
 
-# TODO: Case sensitivity! Custom dict class for json objects??
 # TODO: Be more strict if it's about irrelevant top-level keywords!
 class QueryDslParser(object):
     """QueryDslParser object to parse Elasticsearch queries and filters.
@@ -1100,7 +1099,6 @@ class QueryDslParser(object):
             raise ElasticSearchError('Missing type name in type filter "{0!r}"'.format(obj))
 
 
-# TODO: Case sensitivity! Custom dict class for json objects??
 class AggregationParser(object):
     """AggregationParser object to parse Elasticsearch aggregations.
 
@@ -1186,7 +1184,7 @@ class AggregationParser(object):
 
         """
         try:
-            iterator = (k for k in obj.iterkeys() if k.lower() not in ['aggs', 'aggregations'])
+            iterator = (k for k in obj.iterkeys() if k not in ['aggs', 'aggregations'])
         except AttributeError:
             raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj))
 
@@ -1202,7 +1200,7 @@ class AggregationParser(object):
 
     def _validate_keywords(self, name, obj, known_keywords):
         """Check whether the given aggregation contains any unknown keywords and raise ElasticSearchError if so."""
-        unknown_keyword = next((k for k in obj.iterkeys() if k.lower() not in known_keywords), None)
+        unknown_keyword = next((k for k in obj.iterkeys() if k not in known_keywords), None)
         if unknown_keyword is not None:
             raise ElasticSearchError('Unknown keyword "{0}" in {1} aggregation "{2!r}"'
                                      ''.format(unknown_keyword, name, obj))
