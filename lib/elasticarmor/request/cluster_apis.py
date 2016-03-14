@@ -3,6 +3,14 @@
 from elasticarmor.request import *
 
 
+class ClusterInfoApiRequest(ElasticRequest):
+    def is_valid(self):
+        return self.path == '/'
+
+    def inspect(self, client):
+        pass
+
+
 class ClusterHealthApiRequest(ElasticRequest):
     locations = {
         'GET': [
