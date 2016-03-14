@@ -487,7 +487,7 @@ class QueryDslParser(object):
     def _parse_score_function(self, obj, index, document):
         """Parse the given score function and return whether it was a success."""
         if 'script_score' in obj:
-            self.permissions.append('<scripted_query_dsl>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
         elif 'field_value_factor' in obj:
             try:
                 self.fields.append((index, document, obj['field_value_factor']['field']))
@@ -699,11 +699,11 @@ class QueryDslParser(object):
 
     def query_string_query(self, obj, index=None, document=None):
         """Parse the given query_string query."""
-        self.permissions.append('<query_string_permission>')  # TODO: Use a proper permission name
+        self.permissions.append('api/feature/queryString')
 
     def simple_query_string_query(self, obj, index=None, document=None):
         """Parse the given simple_query_string query."""
-        self.permissions.append('<query_string_permission>')  # TODO: Use a proper permission name
+        self.permissions.append('api/feature/queryString')
 
     def range_query(self, obj, index=None, document=None):
         """Parse the given range query. Raises ElasticSearchError in case the query is malformed."""
@@ -808,7 +808,7 @@ class QueryDslParser(object):
 
     def template_query(self, obj, index=None, document=None):
         """Parse the given template query."""
-        self.permissions.append('<search_template_permission>')  # TODO: Use a proper permission name
+        self.permissions.append('api/search/template')
 
     def filter(self, obj, index=None, document=None):
         """Recurse into the given filter and parse its contents."""
@@ -1062,7 +1062,7 @@ class QueryDslParser(object):
 
     def script_filter(self, obj, index=None, document=None):
         """Parse the given script filter."""
-        self.permissions.append('<scripted_query_dsl>')  # TODO: Use a proper permission name
+        self.permissions.append('api/feature/script')
 
     def term_filter(self, obj, index=None, document=None):
         """Parse the given term filter. Raises ElasticSearchError in case the filter is malformed."""
@@ -1222,7 +1222,7 @@ class AggregationParser(object):
             self.fields.append((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_path' in obj:
-            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
 
         return index, document, field
 
@@ -1307,10 +1307,10 @@ class AggregationParser(object):
             self.fields.extend(parser.fields)
 
         if 'explain' in obj:
-            self.permissions.append('<explain-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/search/explain')
 
         if 'script_fields' in obj:
-            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
 
         if 'fielddata_fields' in obj:
             if isinstance(obj['fielddata_fields'], list):
@@ -1329,7 +1329,7 @@ class AggregationParser(object):
 
     def scripted_metric_agg(self, obj, index=None, document=None, field=None):
         """Parse the given scripted_metric aggregation."""
-        self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+        self.permissions.append('api/feature/script')
 
     def global_agg(self, obj, index=None, document=None, field=None):
         """Parse the given global aggregation. Raises ElasticSearchError in case it is malformed."""
@@ -1434,13 +1434,13 @@ class AggregationParser(object):
             self.fields.append((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
 
         return index, document, field
 
     def significant_terms_agg(self, obj, index=None, document=None, field=None):
         """Parse the given significant_terms aggregation."""
-        self.permissions.append('<significant-terms-agg>')  # TODO: Use a proper permission name
+        self.permissions.append('api/feature/experimental')
 
     def range_agg(self, obj, index=None, document=None, field=None):
         """Parse the given range aggregation. Raises ElasticSearchError in case it is malformed."""
@@ -1458,7 +1458,7 @@ class AggregationParser(object):
             self.fields.append((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
 
         return index, document, field
 
@@ -1478,7 +1478,7 @@ class AggregationParser(object):
             self.fields.append((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
 
         return index, document, field
 
@@ -1497,7 +1497,7 @@ class AggregationParser(object):
             self.fields.append((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
 
         return index, document, field
 
@@ -1517,7 +1517,7 @@ class AggregationParser(object):
             self.fields.append((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
 
         return index, document, field
 
@@ -1538,7 +1538,7 @@ class AggregationParser(object):
             self.fields.append((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('<script-permission>')  # TODO: Use a proper permission name
+            self.permissions.append('api/feature/script')
 
         return index, document, field
 
