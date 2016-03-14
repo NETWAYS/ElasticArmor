@@ -8,6 +8,7 @@ import sys
 import threading
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from SocketServer import ThreadingMixIn
+from urllib import unquote
 from urlparse import urlparse
 
 from requests import RequestException
@@ -354,7 +355,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.close_connection = True
 
         url_parts = urlparse(self.path)
-        path = url_parts.path.rstrip(' /')
+        path = unquote(url_parts.path).rstrip(' /')
         query = parse_query(url_parts.query)
         if query.get('pretty', False):
             # TODO: Elasticsearch responds also with YAML if desired by the client (format=yaml)

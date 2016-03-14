@@ -1,6 +1,7 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
 import httplib
+import urllib
 import urlparse
 import cStringIO
 
@@ -20,8 +21,15 @@ def is_false(value):
 
 def parse_query(query):
     """Parse the given query string and return it as dictionary."""
-    return dict((name, [] if len(values) == 1 and is_false(values[0]) else values)
-                for name, values in urlparse.parse_qs(query, keep_blank_values=True).iteritems())
+    result = {}
+    for name, values in urlparse.parse_qs(query, keep_blank_values=True).iteritems():
+        values = [urllib.unquote(v) for v in values]
+        if len(values) != 1 or not is_false(values[0]):
+            result[name] = values
+        else:
+            result[name] = []
+
+    return result
 
 
 def prepare_chunk(data):
