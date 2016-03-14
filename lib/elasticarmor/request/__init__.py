@@ -2,11 +2,12 @@
 
 import os
 import json
+from functools import update_wrapper
 
 from elasticarmor.util.http import HttpHeaders
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['ElasticRequest', 'ElasticResponse', 'RequestError', 'PermissionError']
+__all__ = ['RequestError', 'PermissionError', 'Permission', 'Permissions', 'ElasticResponse', 'ElasticRequest']
 
 
 class _RequestRegistry(type):
@@ -40,6 +41,38 @@ class PermissionError(RequestError):
 
     def __init__(self, reason):
         self.reason = reason
+
+
+class Permission(object):
+    """Decorator for method inspect of class ElasticRequest to check a client's permission.
+
+    The basic usage is as follows:
+
+        @Permission('<permission-name>')
+        def inspect(self, client):
+            pass
+
+        @Permissions('<permission-name>', '<permission-name>')
+        def inspect(self, client):
+            pass
+
+    In case the client lacks a given permission, PermissionError is raised indicating the missing permissions.
+    """
+
+    def __init__(self, permission, *permissions):
+        self.permissions = list(permissions)
+        self.permissions.insert(0, permission)
+
+    def __call__(self, inspector):
+        def protector(request, client):
+            missing = [p for p in self.permissions if not client.can(p)]
+            if missing:
+                raise PermissionError('You are missing the following permissions: {0}'.format(', '.join(missing)))
+            else:
+                return inspector(request, client)
+
+        return update_wrapper(protector, inspector)
+Permissions = Permission
 
 
 class ElasticResponse(object):
