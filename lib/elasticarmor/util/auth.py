@@ -113,6 +113,10 @@ class Client(object):
 
         return '%s:%u' % (self.address, self.port)
 
+    def can(self, permission):
+        """Return whether this client has the given permission."""
+        return any(p == permission or p.startswith(permission) for r in self.roles for p in r.permissions)
+
     def can_read(self, index, document=None, field=None):
         """Return whether this client is permitted to read the given entities."""
         return any(restriction.permits_read(index, document, field)
