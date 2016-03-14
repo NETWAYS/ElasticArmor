@@ -115,7 +115,7 @@ class Client(object):
 
     def can(self, permission):
         """Return whether this client has the given permission."""
-        return any(p == permission or p.startswith(permission) for r in self.roles for p in r.permissions)
+        return any(permission.startswith(p) for r in self.roles for p in r.permissions)
 
     def can_read(self, index, document=None, field=None):
         """Return whether this client is permitted to read the given entities."""
