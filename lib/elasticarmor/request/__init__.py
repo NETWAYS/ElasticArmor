@@ -156,11 +156,11 @@ class ElasticRequest(LoggingAware, object):
     __metaclass__ = _RequestRegistry
 
     macros = {
-        'index': '(?P<index>[^,/?*]+)',
+        'index': '(?P<index>[^,/?*\-+]+)',
         'indices': '(?P<indices>[^/]+)',
-        'document': '(?P<document>[^,/?*]+)',
+        'document': '(?P<document>[^,/?*\-+]+)',
         'documents': '(?P<documents>[^/]+)',
-        'entity': '(?P<entity>[^,/?*]+)',
+        'entity': '(?P<entity>[^,/?*\-+]+)',
         'entities': '(?P<entities>[^/]+)',
         'keywords': '(?P<keywords>[^/]+)',
         'es': '(?:es)?',
