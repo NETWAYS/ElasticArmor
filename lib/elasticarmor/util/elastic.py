@@ -363,6 +363,7 @@ class QueryDslParser(object):
         except AttributeError:
             raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(data))
 
+        # TODO: Multiple objects? As in the AggregationParser?
         if not object_name:
             raise ElasticSearchError('Missing start object in "{0!r}"'.format(data))
         elif not isinstance(data[object_name], dict):
@@ -1298,8 +1299,12 @@ class AggregationParser(object):
                 raise ElasticSearchError('Invalid source filter in top_hits aggregation "{0!r}" ({1})', obj, error)
 
         if 'highlight' in obj:
-            # TODO: https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-request-highlighting.html
-            raise NotImplementedError()
+            parser = HighlightParser()
+            parser.parse(obj['highlight'])
+            self.permissions.extend(parser.permissions)
+            self.indices.extend(parser.indices)
+            self.documents.extend(parser.documents)
+            self.fields.extend(parser.fields)
 
         if 'explain' in obj:
             self.permissions.append('<explain-permission>')  # TODO: Use a proper permission name
@@ -1591,3 +1596,80 @@ def parse_source_filter(data):
             raise ValueError('Invalid JSON object "{0!r}"'.format(data))
 
     return seq
+
+
+class HighlightParser(object):
+    """HighlightParser object to parse Elasticsearch highlight definitions.
+
+    The usage is as follows:
+
+        parser = HighlightParser().parse(json_body['highlight'])
+
+    Once the parser has finished, all collected permissions, indices, documents
+    and their fields can be accessed using the respective instance attributes:
+
+        parser.permissions -> ['<permission-name>']
+        parser.indices -> ['<index-name>']
+        parser.documents -> [('<index-name>' | None, '<document-name>')]
+        parser.fields -> [('<index-name>' | None, '<document-name>' | None, '<field-name>')]
+
+    Any occurrence of 'None' indicates that no particular index or document is desired instead of the default ones.
+    """
+
+    _global_settings = [
+        'pre_tags',
+        'post_tags',
+        'tags_schema',
+        'fragment_size',
+        'number_of_fragments',
+        'no_match_size',
+        'encoder',
+        'order',
+        'require_field_match',
+        'boundary_chars',
+        'boundary_max_scan',
+        'matched_fields'
+    ]
+
+    def __init__(self):
+        self.permissions = []
+        self.indices = []
+        self.documents = []
+        self.fields = []
+
+    def _validate_keywords(self, obj, known_keywords):
+        """Check whether the given object contains any unknown keywords and raise ElasticSearchError if so."""
+        unknown_keyword = next((k for k in obj.iterkeys() if k not in known_keywords), None)
+        if unknown_keyword is not None:
+            raise ElasticSearchError('Unknown keyword "{0}" in highlight object "{1!r}"'.format(unknown_keyword, obj))
+
+    def parse(self, highlight, index=None, document=None):
+        """Parse the given highlight object. Raises ElasticSearchError in case it is malformed."""
+        if not isinstance(highlight, dict):
+            raise ElasticSearchError('Invalid highlight object "{0!r}"'.format(highlight))
+
+        self._validate_keywords(highlight, ['fields'] + self._global_settings)
+
+        try:
+            if isinstance(highlight['fields'], list):
+                fields = [t for d in highlight['fields'] for t in d.iteritems()]
+            else:
+                fields = highlight['fields'].iteritems()
+        except AttributeError:
+            raise ElasticSearchError('Invalid fields definition in highlight object "{0!r}"'.format(highlight))
+
+        field_settings = ['type', 'force_source', 'highlight_query'] + self._global_settings
+        for field, field_obj in fields:
+            self._validate_keywords(field_obj, field_settings)
+            if 'highlight_query' in field_obj:
+                parser = QueryDslParser()
+                parser.query(field_obj['highlight_query'], index, document)
+                self.permissions.extend(parser.permissions)
+                self.indices.extend(parser.indices)
+                self.documents.extend(parser.documents)
+                self.fields.extend(parser.fields)
+
+            if 'matched_fields' in field_obj:
+                self.fields.extend((index, document, f) for f in field_obj['matched_fields'])
+
+            self.fields.append((index, document, field))
