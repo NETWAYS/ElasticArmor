@@ -1,7 +1,8 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
-import os
 import json
+import os
+import re
 from functools import update_wrapper
 
 from elasticarmor.util.http import HttpHeaders
@@ -22,6 +23,13 @@ class _RequestRegistry(type):
         if class_name != 'ElasticRequest':
             mcs.registry.append(class_obj)
             mcs.registry = sorted(mcs.registry, key=lambda c: c.priority, reverse=True)
+
+            for command, locations in class_obj.locations.items():
+                if not isinstance(locations, list):
+                    locations = [locations]
+
+                class_obj.locations[command] = [re.compile('^' + location.format(**class_obj.macros) + '/?$')
+                                                for location in locations]
 
         return class_obj
 
@@ -147,16 +155,33 @@ class ElasticRequest(LoggingAware, object):
     """
     __metaclass__ = _RequestRegistry
 
+    macros = {
+        'index': '(?P<index>[^,/?*]+)',
+        'indices': '(?P<indices>[^/]+)',
+        'document': '(?P<document>[^,/?*]+)',
+        'documents': '(?P<documents>[^/]+)',
+        'entity': '(?P<entity>[^,/?*]+)',
+        'entities': '(?P<entities>[^/]+)',
+        'keywords': '(?P<keywords>[^/]+)',
+        'es': '(?:es)?',
+        's': 's?'
+    }
+
     # The priority of a request handler. The higher the value, the earlier a request handler is
     # asked to process a request. If you're not competing with other handlers, leave the default
     priority = 0
 
-    # The base url a request handler is responsible for. The base implementation
-    # of is_valid() checks whether a request's path starts with this url
-    base_url = None
+    # The locations grouped by commands a request handler is responsible for. Each key is a HTTP command such
+    # as 'GET' and holds a single regular expression or a list of multiple regular expressions of type string.
+    # Regular expressions may be automatically populated with certain macros. Please see the macros class
+    # attribute for a list of available macros. To utilize a macro, put {<macro>} into your expression. In
+    # case of a successful match the base implementation of is_valid sets the _match instance attribute with
+    # which you can access e.g. captured groups. Note that some macros are available as group using their name.
+    locations = {}
 
     def __init__(self, context, **kwargs):
         super(ElasticRequest, self).__init__()
+        self._match = None
         self._json = None
 
         self.context = context
@@ -212,7 +237,20 @@ class ElasticRequest(LoggingAware, object):
 
     def is_valid(self):
         """Take a quick look at the request and return whether it can be handled or not."""
-        return self.base_url is not None and self.path.startswith(self.base_url)
+        assert self.locations, 'Class {0} of module {1} neither defines any locations nor overwrites method is_valid' \
+                               ''.format(self.__class__.__name__, self.__class__.__module__)
+
+        try:
+            locations = self.locations[self.command]
+        except KeyError:
+            return False
+
+        match = next((p for p in (pattern.match(self.path) for pattern in locations) if p is not None), None)
+        if match is None:
+            return False
+
+        self._match = match
+        return True
 
     def inspect(self, client):
         """Take a deeper look at the request and check if the given client may do
@@ -223,7 +261,8 @@ class ElasticRequest(LoggingAware, object):
         client without contacting Elasticsearch.
 
         """
-        raise NotImplementedError()
+        raise NotImplementedError('Class {0} of module {1} does not overwrite method inspect'
+                                  ''.format(self.__class__.__name__, self.__class__.__module__))
 
     def prepare_transformation(self, response):
         """Prepare any required transformations for the given response and
