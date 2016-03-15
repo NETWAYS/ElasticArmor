@@ -122,14 +122,14 @@ class SearchExistsApiRequest(ElasticRequest):
 class ValidateApiRequest(ElasticRequest):
     locations = {
         'GET': [
-            '/_validate',
-            '/{indices}/_validate',
-            '{indices}/{documents}/_validate'
+            '/_validate/query',
+            '/{indices}/_validate/query',
+            '/{indices}/{documents}/_validate/query'
         ],
         'POST': [
-            '/_validate',
-            '/{indices}/_validate',
-            '{indices}/{documents}/_validate'
+            '/_validate/query',
+            '/{indices}/_validate/query',
+            '/{indices}/{documents}/_validate/query'
         ]
     }
 
