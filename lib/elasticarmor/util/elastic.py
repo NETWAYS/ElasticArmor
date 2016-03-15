@@ -1632,10 +1632,10 @@ class HighlightParser(object):
     ]
 
     def __init__(self):
-        self.permissions = []
-        self.indices = []
-        self.documents = []
-        self.fields = []
+        self.permissions = set()
+        self.indices = set()
+        self.documents = set()
+        self.fields = set()
 
     def _validate_keywords(self, obj, known_keywords):
         """Check whether the given object contains any unknown keywords and raise ElasticSearchError if so."""
@@ -1664,12 +1664,12 @@ class HighlightParser(object):
             if 'highlight_query' in field_obj:
                 parser = QueryDslParser()
                 parser.query(field_obj['highlight_query'], index, document)
-                self.permissions.extend(parser.permissions)
-                self.indices.extend(parser.indices)
-                self.documents.extend(parser.documents)
-                self.fields.extend(parser.fields)
+                self.permissions |= parser.permissions
+                self.indices |= parser.indices
+                self.documents |= parser.documents
+                self.fields |= parser.fields
 
             if 'matched_fields' in field_obj:
-                self.fields.extend((index, document, f) for f in field_obj['matched_fields'])
+                self.fields.update((index, document, f) for f in field_obj['matched_fields'])
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
