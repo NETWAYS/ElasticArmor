@@ -359,13 +359,15 @@ class QueryDslParser(object):
     def _read_object(self, data):
         """Validate and return an object from the given data. Raises ElasticSearchError if the validation fails."""
         try:
-            object_name = next(data.iterkeys(), None)
+            iterator = data.iterkeys()
         except AttributeError:
             raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(data))
 
-        # TODO: Multiple objects? As in the AggregationParser?
+        object_name = next(iterator, None)
         if not object_name:
             raise ElasticSearchError('Missing start object in "{0!r}"'.format(data))
+        elif next(iterator, None) is not None:
+            raise ElasticSearchError('Multiple objects in "{0!r}"'.format(data))
         elif not isinstance(data[object_name], dict):
             raise ElasticSearchError('Invalid start object "{0!r}"'.format(data[object_name]))
 
