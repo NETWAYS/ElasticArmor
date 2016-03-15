@@ -259,10 +259,10 @@ class QueryDslParser(object):
     """
 
     def __init__(self):
-        self.permissions = []
-        self.indices = []
-        self.documents = []
-        self.fields = []
+        self.permissions = set()
+        self.indices = set()
+        self.documents = set()
+        self.fields = set()
 
         self._query_parsers = {
             'query': self.query,
@@ -383,7 +383,7 @@ class QueryDslParser(object):
         """Parse the given match query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in match query "{0!r}"'.format(obj))
 
@@ -397,7 +397,7 @@ class QueryDslParser(object):
         if not fields:
             raise ElasticSearchError('No fields provided in multi_match query "{0!r}"'.format(obj))
 
-        self.fields.extend((index, document, field) for field in fields)
+        self.fields.update((index, document, field) for field in fields)
 
     def bool_query(self, obj, index=None, document=None):
         """Parse the given bool query. Raises ElasticSearchError in case the query is malformed."""
@@ -428,7 +428,7 @@ class QueryDslParser(object):
         """Parse the given common query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in common query "{0!r}"'.format(obj))
 
@@ -469,28 +469,28 @@ class QueryDslParser(object):
         try:
             fields = obj['fields']
         except KeyError:
-            self.fields.append((index, document, '_all'))
+            self.fields.add((index, document, '_all'))
         else:
             if not fields:
                 raise ElasticSearchError('No fields provided in fuzzy_like_this query "{0!r}"'.format(obj))
 
-            self.fields.extend((index, document, field) for field in fields)
+            self.fields.update((index, document, field) for field in fields)
 
     def fuzzy_like_this_field_query(self, obj, index=None, document=None):
         """Parse the given fuzzy_like_this_field query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in fuzzy_like_this_field query "{0!r}"'.format(obj))
 
     def _parse_score_function(self, obj, index, document):
         """Parse the given score function and return whether it was a success."""
         if 'script_score' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
         elif 'field_value_factor' in obj:
             try:
-                self.fields.append((index, document, obj['field_value_factor']['field']))
+                self.fields.add((index, document, obj['field_value_factor']['field']))
             except (TypeError, KeyError):
                 return False
 
@@ -504,7 +504,7 @@ class QueryDslParser(object):
             if not field_name:
                 return False
 
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         elif 'weight' in obj or 'random_score' in obj:
             pass  # These are not security relevant as of Elasticsearch v1.7
         else:
@@ -543,7 +543,7 @@ class QueryDslParser(object):
         """Parse the given fuzzy query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in fuzzy query "{0!r}"'.format(obj))
 
@@ -553,7 +553,7 @@ class QueryDslParser(object):
         if not field_name:
             raise ElasticSearchError('Missing field name in geo_shape query "{0!r}"'.format(obj))
 
-        self.fields.append((index, document, field_name))
+        self.fields.add((index, document, field_name))
 
         try:
             shape = obj[field_name]['indexed_shape']
@@ -567,7 +567,7 @@ class QueryDslParser(object):
             except KeyError:
                 raise ElasticSearchError('Invalid "indexed_shape" definition in geo_shape query "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
     def has_child_query(self, obj, index=None, document=None):
         """Parse the given has_child query. Raises ElasticSearchError in case the query is malformed."""
@@ -575,7 +575,7 @@ class QueryDslParser(object):
             raise ElasticSearchError('No query and filter given in has_child query "{0!r}"'.format(obj))
 
         try:
-            self.documents.append((index, obj['type']))
+            self.documents.add((index, obj['type']))
         except KeyError:
             raise ElasticSearchError('Missing document type in has_child query "{0!r}"'.format(obj))
 
@@ -590,7 +590,7 @@ class QueryDslParser(object):
             raise ElasticSearchError('No query and filter given in has_parent query "{0!r}"'.format(obj))
 
         try:
-            self.documents.append((index, obj['parent_type']))
+            self.documents.add((index, obj['parent_type']))
         except KeyError:
             raise ElasticSearchError('Missing document type in has_parent query "{0!r}"'.format(obj))
 
@@ -608,14 +608,14 @@ class QueryDslParser(object):
             # ..but since it may be embedded in a indices query/filter we
             # need to register the current context if none is provided
             if index:
-                self.documents.append((index, document))
+                self.documents.add((index, document))
         else:
             if not documents:
                 raise ElasticSearchError('Not any document types given in ids query "{0!r}"'.format(obj))
             elif isinstance(documents, basestring):
                 documents = [documents]
 
-            self.documents.extend((index, document) for document in documents)
+            self.documents.update((index, document) for document in documents)
 
     def indices_query(self, obj, index=None, document=None):
         """Parse the given indices query. Raises ElasticSearchError in case the query is malformed."""
@@ -664,7 +664,7 @@ class QueryDslParser(object):
         try:
             documents = obj['docs']
         except KeyError:
-            self.fields.extend((index, document, field) for field in fields)
+            self.fields.update((index, document, field) for field in fields)
         else:
             if not documents:
                 raise ElasticSearchError('No documents given in more_like_this query "{0!r}"'.format(obj))
@@ -677,7 +677,7 @@ class QueryDslParser(object):
 
                 # Artificial documents are intentionally ignored here because as with real documents we have
                 # no knowledge about a document's fields unless specifically mentioned by a restriction
-                self.fields.extend((index, document, field) for field in fields)
+                self.fields.update((index, document, field) for field in fields)
 
     def nested_query(self, obj, index=None, document=None):
         """Parse the given nested query. Raises ElasticSearchError in case the query is malformed."""
@@ -687,29 +687,29 @@ class QueryDslParser(object):
             raise ElasticSearchError('No query given in nested query "{0!r}"'.format(obj))
 
         self.query(obj['query'], index, document)
-        self.fields.append((index, document, obj['path']))
+        self.fields.add((index, document, obj['path']))
 
     def prefix_query(self, obj, index=None, document=None):
         """Parse the given prefix query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj, ['rewrite'])
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in prefix query "{0!r}"'.format(obj))
 
     def query_string_query(self, obj, index=None, document=None):
         """Parse the given query_string query."""
-        self.permissions.append('api/feature/queryString')
+        self.permissions.add('api/feature/queryString')
 
     def simple_query_string_query(self, obj, index=None, document=None):
         """Parse the given simple_query_string query."""
-        self.permissions.append('api/feature/queryString')
+        self.permissions.add('api/feature/queryString')
 
     def range_query(self, obj, index=None, document=None):
         """Parse the given range query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in range query "{0!r}"'.format(obj))
 
@@ -717,7 +717,7 @@ class QueryDslParser(object):
         """Parse the given regexp query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in regexp query "{0!r}"'.format(obj))
 
@@ -774,7 +774,7 @@ class QueryDslParser(object):
         """Parse the given span_term query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in span_term query "{0!r}"'.format(obj))
 
@@ -782,7 +782,7 @@ class QueryDslParser(object):
         """Parse the given term query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in term query "{0!r}"'.format(obj))
 
@@ -790,7 +790,7 @@ class QueryDslParser(object):
         """Parse the given terms query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj, ['minimum_should_match'])
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in terms query "{0!r}"'.format(obj))
 
@@ -802,13 +802,13 @@ class QueryDslParser(object):
         """Parse the given wildcard query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj, ['rewrite'])
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in wildcard query "{0!r}"'.format(obj))
 
     def template_query(self, obj, index=None, document=None):
         """Parse the given template query."""
-        self.permissions.append('api/search/template')
+        self.permissions.add('api/search/template')
 
     def filter(self, obj, index=None, document=None):
         """Recurse into the given filter and parse its contents."""
@@ -842,7 +842,7 @@ class QueryDslParser(object):
     def exists_filter(self, obj, index=None, document=None):
         """Parse the given exists filter. Raises ElasticSearchError in case the filter is malformed."""
         try:
-            self.fields.append((index, document, obj['field']))
+            self.fields.add((index, document, obj['field']))
         except KeyError:
             raise ElasticSearchError('Missing field name in exists filter "{0!r}"'.format(obj))
 
@@ -850,7 +850,7 @@ class QueryDslParser(object):
         """Parse the given geo_bounding_box filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj, ['type'])
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in geo_bounding_box filter "{0!r}"'.format(obj))
 
@@ -858,7 +858,7 @@ class QueryDslParser(object):
         """Parse the given geo_distance filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj, ['distance', 'distance_type', 'optimize_bbox'])
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in geo_distance_range filter "{0!r}"'.format(obj))
 
@@ -866,7 +866,7 @@ class QueryDslParser(object):
         """Parse the given geo_distance_range filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj, ['from', 'to'])
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in geo_distance_range filter "{0!r}"'.format(obj))
 
@@ -874,7 +874,7 @@ class QueryDslParser(object):
         """Parse the given geo_polygon filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in geo_polygon filter "{0!r}"'.format(obj))
 
@@ -884,7 +884,7 @@ class QueryDslParser(object):
         if not field_name:
             raise ElasticSearchError('Missing field name in geo_shape filter "{0!r}"'.format(obj))
 
-        self.fields.append((index, document, field_name))
+        self.fields.add((index, document, field_name))
 
         try:
             shape = obj[field_name]['indexed_shape']
@@ -898,13 +898,13 @@ class QueryDslParser(object):
             except KeyError:
                 raise ElasticSearchError('Invalid "indexed_shape" definition in geo_shape filter "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
     def geohash_cell_filter(self, obj, index=None, document=None):
         """Parse the given geohash_cell filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj, ['precision', 'neighbors'])
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in geohash_cell filter "{0!r}"'.format(obj))
 
@@ -914,7 +914,7 @@ class QueryDslParser(object):
             raise ElasticSearchError('No query and filter given in has_child filter "{0!r}"'.format(obj))
 
         try:
-            self.documents.append((index, obj['type']))
+            self.documents.add((index, obj['type']))
         except KeyError:
             raise ElasticSearchError('Missing document type in has_child filter "{0!r}"'.format(obj))
 
@@ -929,7 +929,7 @@ class QueryDslParser(object):
             raise ElasticSearchError('No query and filter given in has_parent filter "{0!r}"'.format(obj))
 
         try:
-            self.documents.append((index, obj['parent_type']))
+            self.documents.add((index, obj['parent_type']))
         except KeyError:
             raise ElasticSearchError('Missing document type in has_parent filter "{0!r}"'.format(obj))
 
@@ -947,14 +947,14 @@ class QueryDslParser(object):
             # ..but since it may be embedded in a indices query/filter we
             # need to register the current context if none is provided
             if index:
-                self.documents.append((index, document))
+                self.documents.add((index, document))
         else:
             if not documents:
                 raise ElasticSearchError('Not any document types given in ids query "{0!r}"'.format(obj))
             elif isinstance(documents, basestring):
                 documents = [documents]
 
-            self.documents.extend((index, document) for document in documents)
+            self.documents.update((index, document) for document in documents)
 
     def indices_filter(self, obj, index=None, document=None):
         """Parse the given indices filter. Raises ElasticSearchError in case the filter is malformed."""
@@ -995,7 +995,7 @@ class QueryDslParser(object):
     def missing_filter(self, obj, index=None, document=None):
         """Parse the given missing filter. Raises ElasticSearchError in case the filter is malformed."""
         try:
-            self.fields.append((index, document, obj['field']))
+            self.fields.add((index, document, obj['field']))
         except KeyError:
             raise ElasticSearchError('Missing field name in missing filter "{0!r}"'.format(obj))
 
@@ -1007,7 +1007,7 @@ class QueryDslParser(object):
             raise ElasticSearchError('No filter given in nested filter "{0!r}"'.format(obj))
 
         self.filter(obj['filter'], index, document)
-        self.fields.append((index, document, obj['path']))
+        self.fields.add((index, document, obj['path']))
 
     def not_filter(self, obj, index=None, document=None):
         """Parse the given not filter. Raises ElasticSearchError in case the filter is malformed."""
@@ -1033,7 +1033,7 @@ class QueryDslParser(object):
         """Parse the given prefix filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in prefix filter "{0!r}"'.format(obj))
 
@@ -1048,7 +1048,7 @@ class QueryDslParser(object):
         """Parse the given range filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj, ['execution'])
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in range filter "{0!r}"'.format(obj))
 
@@ -1056,19 +1056,19 @@ class QueryDslParser(object):
         """Parse the given regexp filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in regexp filter "{0!r}"'.format(obj))
 
     def script_filter(self, obj, index=None, document=None):
         """Parse the given script filter."""
-        self.permissions.append('api/feature/script')
+        self.permissions.add('api/feature/script')
 
     def term_filter(self, obj, index=None, document=None):
         """Parse the given term filter. Raises ElasticSearchError in case the filter is malformed."""
         field_name = self._read_field(obj)
         if field_name:
-            self.fields.append((index, document, field_name))
+            self.fields.add((index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in term filter "{0!r}"'.format(obj))
 
@@ -1078,24 +1078,24 @@ class QueryDslParser(object):
         if not field_name:
             raise ElasticSearchError('Missing field name in terms filter "{0!r}"'.format(obj))
 
-        self.fields.append((index, document, field_name))
+        self.fields.add((index, document, field_name))
         if isinstance(obj[field_name], list):
             if not obj[field_name] or not isinstance(obj[field_name][0], basestring):
                 raise ElasticSearchError('Invalid field value definition in terms filter "{0!r}"'.format(obj))
 
-            self.fields.extend((index, document, field) for field in obj[field_name])
+            self.fields.update((index, document, field) for field in obj[field_name])
         else:
             try:
                 index, document, field = obj[field_name]['index'], obj[field_name]['type'], obj[field_name]['path']
             except (TypeError, KeyError):
                 raise ElasticSearchError('Invalid lookup document in terms filter "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
     def type_filter(self, obj, index=None, document=None):
         """Parse the given type filter. Raises ElasticSearchError in case the filter is malformed."""
         try:
-            self.documents.append((index, obj['value']))
+            self.documents.add((index, obj['value']))
         except KeyError:
             raise ElasticSearchError('Missing type name in type filter "{0!r}"'.format(obj))
 
