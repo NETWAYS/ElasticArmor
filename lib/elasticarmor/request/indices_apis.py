@@ -28,6 +28,10 @@ class GetIndexApiRequest(ElasticRequest):
         'GET': [
             '/{indices}',
             '/{indices}/{keywords}'
+        ],
+        'HEAD': [
+            '/{indices}',
+            '/{indices}/{keywords}'
         ]
     }
 
