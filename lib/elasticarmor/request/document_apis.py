@@ -54,6 +54,11 @@ class MultiGetApiRequest(ElasticRequest):
             '/_mget',
             '/{index}/_mget',
             '/{index}/{document}/_mget'
+        ],
+        'POST': [
+            '/_mget',
+            '/{index}/_mget',
+            '/{index}/{document}/_mget'
         ]
     }
 
