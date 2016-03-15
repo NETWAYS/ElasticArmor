@@ -1132,10 +1132,10 @@ class AggregationParser(object):
     """
 
     def __init__(self):
-        self.permissions = []
-        self.indices = []
-        self.documents = []
-        self.fields = []
+        self.permissions = set()
+        self.indices = set()
+        self.documents = set()
+        self.fields = set()
         self.source_requests = []
 
         self._parsers = {
@@ -1219,10 +1219,10 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in {0} aggregation "{1!r}"'.format(name, obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_path' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
 
         return index, document, field
 
@@ -1294,27 +1294,27 @@ class AggregationParser(object):
         self.source_requests.append((index, document, obj))
         if obj.get('_source'):
             try:
-                self.fields.extend((index, document, f) for f in parse_source_filter(obj['_source']))
+                self.fields.update((index, document, f) for f in parse_source_filter(obj['_source']))
             except ValueError as error:
                 raise ElasticSearchError('Invalid source filter in top_hits aggregation "{0!r}" ({1})', obj, error)
 
         if 'highlight' in obj:
             parser = HighlightParser()
             parser.parse(obj['highlight'])
-            self.permissions.extend(parser.permissions)
-            self.indices.extend(parser.indices)
-            self.documents.extend(parser.documents)
-            self.fields.extend(parser.fields)
+            self.permissions |= parser.permissions
+            self.indices |= parser.indices
+            self.documents |= parser.documents
+            self.fields |= parser.fields
 
         if 'explain' in obj:
-            self.permissions.append('api/search/explain')
+            self.permissions.add('api/search/explain')
 
         if 'script_fields' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
 
         if 'fielddata_fields' in obj:
             if isinstance(obj['fielddata_fields'], list):
-                self.fields.extend((index, document, f) for f in obj['fielddata_fields'])
+                self.fields.update((index, document, f) for f in obj['fielddata_fields'])
             else:
                 raise ElasticSearchError(
                     'Invalid fielddata_fields definition in top_hits aggregation "{0!r}"'.format(obj))
@@ -1323,13 +1323,13 @@ class AggregationParser(object):
             try:
                 for field in obj['sort'].iterkeys():
                     if field:
-                        self.fields.append((index, document, field))
+                        self.fields.add((index, document, field))
             except AttributeError:
                 raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj['sort']))
 
     def scripted_metric_agg(self, obj, index=None, document=None, field=None):
         """Parse the given scripted_metric aggregation."""
-        self.permissions.append('api/feature/script')
+        self.permissions.add('api/feature/script')
 
     def global_agg(self, obj, index=None, document=None, field=None):
         """Parse the given global aggregation. Raises ElasticSearchError in case it is malformed."""
@@ -1340,10 +1340,10 @@ class AggregationParser(object):
         """Parse the given filter aggregation. Raises ElasticSearchError in case it is malformed."""
         parser = QueryDslParser()
         parser.filter(obj, index, document)
-        self.permissions.extend(parser.permissions)
-        self.indices.extend(parser.indices)
-        self.documents.extend(parser.documents)
-        self.fields.extend(parser.fields)
+        self.permissions |= parser.permissions
+        self.indices |= parser.indices
+        self.documents |= parser.documents
+        self.fields |= parser.fields
 
     def filters_agg(self, obj, index=None, document=None, field=None):
         """Parse the given filters aggregation. Raises ElasticSearchError in case it is malformed."""
@@ -1358,10 +1358,10 @@ class AggregationParser(object):
         for filter in iterator:
             parser = QueryDslParser()
             parser.filter(filter, index, document)
-            self.permissions.extend(parser.permissions)
-            self.indices.extend(parser.indices)
-            self.documents.extend(parser.documents)
-            self.fields.extend(parser.fields)
+            self.permissions |= parser.permissions
+            self.indices |= parser.indices
+            self.documents |= parser.documents
+            self.fields |= parser.fields
 
     def missing_agg(self, obj, index=None, document=None, field=None):
         """Parse the given missing aggregation. Raises ElasticSearchError in case it is malformed."""
@@ -1379,7 +1379,7 @@ class AggregationParser(object):
             if not path:
                 raise ElasticSearchError('Empty field path in nested aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, path))
+            self.fields.add((index, document, path))
             return index, document, path
 
     def reverse_nested_agg(self, obj, index=None, document=None, field=None):
@@ -1399,7 +1399,7 @@ class AggregationParser(object):
             if not path:
                 raise ElasticSearchError('Empty field path in reverse_nested aggregation "{0!r}"'.format(obj))
 
-        self.fields.append((index, document, path))
+        self.fields.add((index, document, path))
         return index, document, path
 
     def children_agg(self, obj, index=None, document=None, field=None):
@@ -1414,7 +1414,7 @@ class AggregationParser(object):
             if not document:
                 raise ElasticSearchError('Empty type name in children aggregation "{0!r}"'.format(obj))
 
-            self.documents.append((index, document))
+            self.documents.add((index, document))
             return index, document, field
 
     def terms_agg(self, obj, index=None, document=None, field=None):
@@ -1431,16 +1431,16 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in terms aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
 
         return index, document, field
 
     def significant_terms_agg(self, obj, index=None, document=None, field=None):
         """Parse the given significant_terms aggregation."""
-        self.permissions.append('api/feature/experimental')
+        self.permissions.add('api/feature/experimental')
 
     def range_agg(self, obj, index=None, document=None, field=None):
         """Parse the given range aggregation. Raises ElasticSearchError in case it is malformed."""
@@ -1455,10 +1455,10 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in range aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
 
         return index, document, field
 
@@ -1475,10 +1475,10 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in date_range aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
 
         return index, document, field
 
@@ -1494,10 +1494,10 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in ip_range aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
 
         return index, document, field
 
@@ -1514,10 +1514,10 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in histogram aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
 
         return index, document, field
 
@@ -1535,10 +1535,10 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in date_histogram aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.append('api/feature/script')
+            self.permissions.add('api/feature/script')
 
         return index, document, field
 
@@ -1554,7 +1554,7 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in geo_distance aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
             return index, document, field
 
     def geohash_grid_agg(self, obj, index=None, document=None, field=None):
@@ -1569,7 +1569,7 @@ class AggregationParser(object):
             if not field:
                 raise ElasticSearchError('Empty field name in geohash_grid aggregation "{0!r}"'.format(obj))
 
-            self.fields.append((index, document, field))
+            self.fields.add((index, document, field))
             return index, document, field
 
 
