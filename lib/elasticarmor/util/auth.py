@@ -322,6 +322,21 @@ class LdapBackend(object):
 
         return self.connection.search_s(base_dn, ldap.SCOPE_SUBTREE, search_string, attributes, attrsonly)
 
+    def fetch_dn(self, base_dn, filter):
+        """Fetch and return a single DN. Raises either ldap.NO_RESULTS_RETURNED
+        if no DN could be found or ldap.LDAPError if multiple DNs were found.
+
+        """
+        result = self.search(base_dn, filter, [])
+        if not result:
+            raise ldap.NO_RESULTS_RETURNED(
+                {'desc': 'No DN found with filter {0!r} in base DN {1}'.format(filter, base_dn)})
+        elif len(result) > 1:
+            raise ldap.LDAPError(
+                {'desc': 'Multiple DNs found with filter {0!r} in base DN {1}'.format(filter, base_dn)})
+
+        return result[0][0]
+
 
 class LdapUserBackend(LdapBackend):
     """LDAP backend class providing user account related operations."""
@@ -333,17 +348,6 @@ class LdapUserBackend(LdapBackend):
         self.user_object_class = settings.ldap_user_object_class
         self.user_name_attribute = settings.ldap_user_name_attribute
 
-    def fetch_user_dn(self, user):
-        """Fetch and return the DN of the given user.
-        Raises either ldap.NO_RESULTS_RETURNED if no DN could be found or ldap.LDAPError if multiple DNs were found."""
-        user_filter = {'objectClass': self.user_object_class, self.user_name_attribute: user}
-        result = self.search(self.user_base_dn, user_filter, [])
-        if not result:
-            raise ldap.NO_RESULTS_RETURNED({'desc': 'No DN found for user {0}'.format(user)})
-        elif len(result) > 1:
-            raise ldap.LDAPError({'desc': 'Multiple DNs found for user {0}'.format(user)})
-
-        return result[0][0]
 
 
 class LdapUsergroupBackend(LdapUserBackend):
@@ -375,8 +379,9 @@ class LdapUsergroupBackend(LdapUserBackend):
         else:
             with self._cache_lock.writeContext:
                 self.bind()
-                group_filter = {'objectClass': self.group_object_class,
-                                self.group_membership_attribute: self.fetch_user_dn(client.name)}
+                user_dn = self.fetch_dn(
+                    self.user_base_dn, {'objectClass': self.user_object_class, self.user_name_attribute: client.name})
+                group_filter = {'objectClass': self.group_object_class, self.group_membership_attribute: user_dn}
                 results = self.search(self.group_base_dn, group_filter, [self.group_name_attribute])
                 memberships = []
                 for result in (r for r in results if self.group_name_attribute in r[1]):
