@@ -32,8 +32,17 @@ class Settings(LoggingAware, object):
         'allow_from': 'localhost',
         'address': DEFAULT_ADDRESS,
         'port': DEFAULT_PORT,
-        'secured': 'false',
-        'backend': 'none'
+        'secured': 'false'
+    }
+
+    default_groups_config = {
+        'msldap': {
+            'user_object_class': 'user',
+            'group_object_class': 'group',
+            'user_name_attribute': 'sAMAccountName',
+            'group_name_attribute': 'sAMAccountName',
+            'group_membership_attribute': 'member:1.2.840.113556.1.4.1941:'
+        }
     }
 
     def __init__(self):
@@ -43,13 +52,6 @@ class Settings(LoggingAware, object):
         """Log the given message and exit."""
         self.log.critical(message, *format_args)
         sys.exit(2)
-
-    def _get_or_exit(self, section, option, message, *format_args):
-        """Return the given option in the given section or log the given message and exit."""
-        try:
-            return self.config.get(section, option)
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            self._exit(message, *format_args)
 
     @property
     def options(self):
@@ -82,6 +84,20 @@ class Settings(LoggingAware, object):
 
             Settings.__config = parser
             return Settings.__config
+
+    @property
+    def groups(self):
+        try:
+            return Settings.__groups
+        except AttributeError:
+            parser = Parser()
+            groups_ini = os.path.join(self.options.config, 'groups.ini')
+            if self._check_file_permissions(groups_ini, 'r', suppress_errors=True):
+                with open(groups_ini) as f:
+                    parser.readfp(f)
+
+            Settings.__groups = parser
+            return Settings.__groups
 
     @property
     def pidfile(self):
@@ -281,94 +297,37 @@ class Settings(LoggingAware, object):
         return nodes
 
     @property
-    def group_backend(self):
-        self._group_backend_type = self.config.get('group_backend', 'backend').lower()
-        if self._group_backend_type in ('ldap', 'msldap'):
-            return LdapUsergroupBackend(self)
-
-    @property
     def role_backend(self):
         return ElasticsearchRoleBackend(self)
 
     @property
-    def ldap_url(self):
-        return self._get_or_exit('ldap', 'url',
-                                 'It is mandatory to provide a proper URL pointing to the LDAP server to use.')
+    def group_backends(self):
+        backends = []
+        for section_name in self.groups.sections():
+            try:
+                backend_type_name = self.groups.get(section_name, 'backend').lower()
+            except ConfigParser.NoOptionError:
+                self._exit('Type declaration missing for group backend "%s".', section_name)
 
-    @property
-    def ldap_bind_dn(self):
-        return self._get_or_exit('ldap', 'bind_dn',
-                                 'It is mandatory to provide a DN with which to bind to the LDAP server.')
+            if backend_type_name in ('ldap', 'msldap'):
+                backend_type = LdapUsergroupBackend
+            else:
+                self._exit('Unknown type declaration in group backend "%s".', section_name)
 
-    @property
-    def ldap_bind_pw(self):
-        return self._get_or_exit('ldap', 'bind_pw',
-                                 'It is mandatory to provide a password with which to bind to the LDAP server.')
+            defaults = self.default_groups_config.get(backend_type_name, {})
 
-    @property
-    def ldap_root_dn(self):
-        return self._get_or_exit('ldap', 'root_dn',
-                                 'It is mandatory to provide the root DN of the LDAP server.')
+            def get_option(option_name):
+                try:
+                    return self.groups.get(section_name, option_name)
+                except ConfigParser.NoOptionError:
+                    if option_name in defaults:
+                        return defaults[option_name]
+                    else:
+                        self._exit('Missing "%s" option in group backend "%s".', option_name, section_name)
 
-    @property
-    def ldap_user_base_dn(self):
-        return self._get_or_exit('ldap', 'user_base_dn',
-                                 'It is mandatory to provide a DN where to locate users.')
+            backends.append(backend_type(section_name, get_option))
 
-    @property
-    def ldap_group_base_dn(self):
-        return self._get_or_exit('ldap', 'group_base_dn',
-                                 'It is mandatory to provide a DN where to locate groups.')
-
-    @property
-    def ldap_user_object_class(self):
-        try:
-            return self.config.get('ldap', 'user_object_class')
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            if self._group_backend_type == 'msldap':
-                return 'user'
-
-            self._exit('It is mandatory to provide a LDAP user\'s object class.')
-
-    @property
-    def ldap_group_object_class(self):
-        try:
-            return self.config.get('ldap', 'group_object_class')
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            if self._group_backend_type == 'msldap':
-                return 'group'
-
-            self._exit('It is mandatory to provide a LDAP group\'s object class.')
-
-    @property
-    def ldap_user_name_attribute(self):
-        try:
-            return self.config.get('ldap', 'user_name_attribute')
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            if self._group_backend_type == 'msldap':
-                return 'sAMAccountName'
-
-            self._exit('It is mandatory to provide an attribute where a user\'s name is stored.')
-
-    @property
-    def ldap_group_name_attribute(self):
-        try:
-            return self.config.get('ldap', 'group_name_attribute')
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            if self._group_backend_type == 'msldap':
-                return 'sAMAccountName'
-
-            self._exit('It is mandatory to provide an attribute where a group\'s name is stored.')
-
-    @property
-    def ldap_group_membership_attribute(self):
-        try:
-            return self.config.get('ldap', 'group_membership_attribute')
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            if self._group_backend_type == 'msldap':
-                return 'member:1.2.840.113556.1.4.1941:'
-
-            self._exit('It is mandatory to provide an attribute where a group\'s members are stored.')
+        return backends
 
     def _check_file_permissions(self, path, open_mode, suppress_errors=False):
         remove = open_mode[0] == 'w' or (open_mode != 'r' and not os.path.isfile(path))

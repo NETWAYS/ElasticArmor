@@ -29,7 +29,7 @@ class Auth(LoggingAware, object):
     def __init__(self, settings):
         self.allow_from = settings.allow_from
         self.role_backend = settings.role_backend
-        self.group_backend = settings.group_backend
+        self.group_backends = settings.group_backends
 
     def authenticate(self, client, populate=True):
         """Authenticate the given client and return whether it succeeded or not."""
@@ -61,15 +61,18 @@ class Auth(LoggingAware, object):
 
     def populate(self, client):
         """Populate the group and role memberships of the given client."""
-        if self.group_backend is not None and client.username is not None:
+        if self.group_backends and client.username is not None:
             self.log.debug('Fetching group memberships for client "%s"...', client)
 
             try:
-                client.groups = self.group_backend.get_group_memberships(client)
+                groups = []
+                for backend in self.group_backends:
+                    groups.extend(backend.get_group_memberships(client))
             except ldap.LDAPError as error:
-                self.log.error('Failed to fetch ldap group memberships for client "%s". %s.',
-                               client, format_ldap_error(error))
+                self.log.error('Failed to fetch ldap group memberships for client "%s" using backend "%s". %s.',
+                               client, backend.name, format_ldap_error(error))
             else:
+                client.groups = groups
                 self.log.debug('Client "%s" is a member of the following groups: %s',
                                client, ', '.join(client.groups) or 'None')
         else:
@@ -254,13 +257,14 @@ class LdapBackend(object):
     All connection related operations are thread-safe.
     """
 
-    def __init__(self, settings):
+    def __init__(self, name, get_option):
         self.__local = threading.local()
 
-        self.url = settings.ldap_url
-        self.bind_dn = settings.ldap_bind_dn
-        self.bind_pw = settings.ldap_bind_pw
-        self.root_dn = settings.ldap_root_dn
+        self.name = name
+        self.url = get_option('url')
+        self.bind_dn = get_option('bind_dn')
+        self.bind_pw = get_option('bind_pw')
+        self.root_dn = get_option('root_dn')
 
     @property
     def _local(self):
@@ -341,27 +345,27 @@ class LdapBackend(object):
 class LdapUserBackend(LdapBackend):
     """LDAP backend class providing user account related operations."""
 
-    def __init__(self, settings):
-        super(LdapUserBackend, self).__init__(settings)
+    def __init__(self, name, get_option):
+        super(LdapUserBackend, self).__init__(name, get_option)
 
-        self.user_base_dn = settings.ldap_user_base_dn
-        self.user_object_class = settings.ldap_user_object_class
-        self.user_name_attribute = settings.ldap_user_name_attribute
+        self.user_base_dn = get_option('user_base_dn')
+        self.user_object_class = get_option('user_object_class')
+        self.user_name_attribute = get_option('user_name_attribute')
 
 
 
 class LdapUsergroupBackend(LdapUserBackend):
     """LDAP backend class providing usergroup related operations."""
 
-    def __init__(self, settings):
-        super(LdapUsergroupBackend, self).__init__(settings)
+    def __init__(self, name, get_option):
+        super(LdapUsergroupBackend, self).__init__(name, get_option)
         self._group_cache = {}
         self._cache_lock = ReadWriteLock()
 
-        self.group_base_dn = settings.ldap_group_base_dn
-        self.group_object_class = settings.ldap_group_object_class
-        self.group_name_attribute = settings.ldap_group_name_attribute
-        self.group_membership_attribute = settings.ldap_group_membership_attribute
+        self.group_base_dn = get_option('group_base_dn')
+        self.group_object_class = get_option('group_object_class')
+        self.group_name_attribute = get_option('group_name_attribute')
+        self.group_membership_attribute = get_option('group_membership_attribute')
 
     def clear_cache(self):
         """Clear the internal group membership cache."""
