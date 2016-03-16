@@ -12,7 +12,7 @@ import requests
 
 from elasticarmor import *
 from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version, propertycache
-from elasticarmor.util.auth import LdapUsergroupBackend, ElasticsearchRoleBackend
+from elasticarmor.util.auth import LdapUserBackend, LdapUsergroupBackend, ElasticsearchRoleBackend
 from elasticarmor.util.config import Parser
 from elasticarmor.util.daemon import get_daemon_option_parser
 from elasticarmor.util.elastic import ElasticConnection
@@ -33,6 +33,13 @@ class Settings(LoggingAware, object):
         'address': DEFAULT_ADDRESS,
         'port': DEFAULT_PORT,
         'secured': 'false'
+    }
+
+    default_authentication_config = {
+        'msldap': {
+            'user_object_class': 'user',
+            'user_name_attribute': 'sAMAccountName'
+        }
     }
 
     default_groups_config = {
@@ -84,6 +91,20 @@ class Settings(LoggingAware, object):
 
             Settings.__config = parser
             return Settings.__config
+
+    @property
+    def authentication(self):
+        try:
+            return Settings.__authentication
+        except AttributeError:
+            parser = Parser()
+            authentication_ini = os.path.join(self.options.config, 'authentication.ini')
+            if self._check_file_permissions(authentication_ini, 'r', suppress_errors=True):
+                with open(authentication_ini) as f:
+                    parser.readfp(f)
+
+            Settings.__authentication = parser
+            return Settings.__authentication
 
     @property
     def groups(self):
@@ -299,6 +320,35 @@ class Settings(LoggingAware, object):
     @property
     def role_backend(self):
         return ElasticsearchRoleBackend(self)
+
+    @property
+    def auth_backends(self):
+        backends = []
+        for section_name in self.authentication.sections():
+            try:
+                backend_type_name = self.authentication.get(section_name, 'backend').lower()
+            except ConfigParser.NoOptionError:
+                self._exit('Type declaration missing for authentication backend "%s".', section_name)
+
+            if backend_type_name in ('ldap', 'msldap'):
+                backend_type = LdapUserBackend
+            else:
+                self._exit('Unknown type declaration in authentication backend "%s".', section_name)
+
+            defaults = self.default_authentication_config.get(backend_type_name, {})
+
+            def get_option(option_name):
+                try:
+                    return self.authentication.get(section_name, option_name)
+                except ConfigParser.NoOptionError:
+                    if option_name in defaults:
+                        return defaults[option_name]
+                    else:
+                        self._exit('Missing "%s" option in authentication backend "%s".', option_name, section_name)
+
+            backends.append(backend_type(section_name, get_option))
+
+        return backends
 
     @property
     def group_backends(self):

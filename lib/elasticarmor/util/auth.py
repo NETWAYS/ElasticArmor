@@ -29,6 +29,7 @@ class Auth(LoggingAware, object):
     def __init__(self, settings):
         self.allow_from = settings.allow_from
         self.role_backend = settings.role_backend
+        self.auth_backends = settings.auth_backends
         self.group_backends = settings.group_backends
 
     def authenticate(self, client, populate=True):
@@ -50,14 +51,25 @@ class Auth(LoggingAware, object):
                     socket.setdefaulttimeout(default_timeout)
 
                 client.name = hostname if allowed_ports is None else '%s:%u' % (hostname, client.port)
+                client.authenticated = True
         else:
             client.name = client.username
+            if self.auth_backends:
+                for backend in self.auth_backends:
+                    try:
+                        if backend.authenticate(client):
+                            client.authenticated = True
+                            break
+                    except ldap.LDAPError as error:
+                        self.log.error('Failed to authenticate client "%s" using backend "%s". %s.',
+                                       client, backend.name, format_ldap_error(error))
+            else:
+                client.authenticated = True
 
-        if populate:
+        if client.authenticated and populate:
             self.populate(client)
 
-        client.authenticated = True
-        return True
+        return client.authenticated
 
     def populate(self, client):
         """Populate the group and role memberships of the given client."""
