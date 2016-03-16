@@ -352,9 +352,24 @@ class LdapUserBackend(LdapBackend):
         self.user_object_class = get_option('user_object_class')
         self.user_name_attribute = get_option('user_name_attribute')
 
+    def authenticate(self, client):
+        """Authenticate the given client and return whether it succeeded or not."""
+        try:
+            self.bind()
+            user_dn = self.fetch_dn(self.user_base_dn, {'objectClass': self.user_object_class,
+                                                        self.user_name_attribute: client.name})
+            try:
+                self.unbind()
+                self.bind(user_dn, client.password)
+            except ldap.LDAPError:
+                return False
+            else:
+                return True
+        finally:
+            self.unbind()
 
 
-class LdapUsergroupBackend(LdapUserBackend):
+class LdapUsergroupBackend(LdapBackend):
     """LDAP backend class providing usergroup related operations."""
 
     def __init__(self, name, get_option):
@@ -362,6 +377,9 @@ class LdapUsergroupBackend(LdapUserBackend):
         self._group_cache = {}
         self._cache_lock = ReadWriteLock()
 
+        self.user_base_dn = get_option('user_base_dn')
+        self.user_object_class = get_option('user_object_class')
+        self.user_name_attribute = get_option('user_name_attribute')
         self.group_base_dn = get_option('group_base_dn')
         self.group_object_class = get_option('group_object_class')
         self.group_name_attribute = get_option('group_name_attribute')
