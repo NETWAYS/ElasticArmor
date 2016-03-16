@@ -76,14 +76,15 @@ class Auth(LoggingAware, object):
         if self.group_backends and client.username is not None:
             self.log.debug('Fetching group memberships for client "%s"...', client)
 
-            try:
-                groups = []
-                for backend in self.group_backends:
+            groups, error = [], None
+            for backend in self.group_backends:
+                try:
                     groups.extend(backend.get_group_memberships(client))
-            except ldap.LDAPError as error:
-                self.log.error('Failed to fetch ldap group memberships for client "%s" using backend "%s". %s.',
-                               client, backend.name, format_ldap_error(error))
-            else:
+                except ldap.LDAPError as error:
+                    self.log.error('Failed to fetch ldap group memberships for client "%s" using backend "%s". %s.',
+                                   client, backend.name, format_ldap_error(error))
+
+            if groups or error is None:
                 client.groups = groups
                 self.log.debug('Client "%s" is a member of the following groups: %s',
                                client, ', '.join(client.groups) or 'None')
