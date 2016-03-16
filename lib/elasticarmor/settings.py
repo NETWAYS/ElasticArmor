@@ -57,8 +57,8 @@ class Settings(LoggingAware, object):
             return Settings.__options
         except AttributeError:
             parser = get_daemon_option_parser(VERSION, prog=APP_NAME)
-            parser.add_option('--config', dest='config', metavar='FILE', default=DEFAULT_CONFIG,
-                              help='config FILE [default: %default]')
+            parser.add_option('--config', dest='config', metavar='PATH', default=DEFAULT_CONFIG_DIR,
+                              help='config PATH [default: %default]')
             Settings.__options, Settings.__arguments = parser.parse_args()
             return Settings.__options
 
@@ -75,8 +75,9 @@ class Settings(LoggingAware, object):
             return Settings.__config
         except AttributeError:
             parser = Parser(self.default_configuration)
-            if self._check_file_permissions(self.options.config, 'r', suppress_errors=True):
-                with open(self.options.config) as f:
+            config_ini = os.path.join(self.options.config, 'config.ini')
+            if self._check_file_permissions(config_ini, 'r', suppress_errors=True):
+                with open(config_ini) as f:
                     parser.readfp(f)
 
             Settings.__config = parser
