@@ -28,6 +28,16 @@ class GetApiRequest(ElasticRequest):
         pass
 
 
+class GetSourceApiRequest(ElasticRequest):
+    locations = {
+        'GET': '/{index}/{document}/{entity}/_source'
+    }
+
+    @Permission('api/document/get')
+    def inspect(self, client):
+        pass
+
+
 class DeleteApiRequest(ElasticRequest):
     locations = {
         'DELETE': '/{index}/{document}/{entity}'
