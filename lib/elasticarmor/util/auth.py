@@ -7,7 +7,7 @@ import threading
 import ldap
 import requests
 
-from elasticarmor.util import format_ldap_error, format_elasticsearch_error, pattern_match
+from elasticarmor.util import format_ldap_error, format_elasticsearch_error, pattern_match, pattern_compare
 from elasticarmor.util.elastic import ElasticSearchError, ElasticRole
 from elasticarmor.util.mixins import LoggingAware
 from elasticarmor.util.rwlock import ReadWriteLock, Protector
@@ -148,6 +148,78 @@ class Client(object):
         return any(restriction.permits_write(index, document, field)
                    for role in self.roles
                    for restriction in role.restrictions)
+
+    def _collect_restrictions(self, index=None, document=None):
+        """Collect and return the includes and excludes from all restrictions which cover the given context.
+        The return value is a tuple of two lists or None two times, if no restriction covers the context.
+
+        In case of overlapping rules, only those that give the client the broadest access are returned.
+        """
+        includes, excludes, restriction_found = {}, {}, False
+        for i, restriction in enumerate(rr for r in self.roles for rr in r.restrictions):
+            if index is None:
+                restriction_found = True
+                excludes[i] = restriction.index_excludes
+                for pattern in restriction.index_includes:
+                    includes.setdefault(pattern, []).append(i)
+            elif document is None:
+                if restriction.permits_read(index):
+                    restriction_found = True
+                    excludes[i] = restriction.document_excludes
+                    for pattern in restriction.document_includes:
+                        includes.setdefault(pattern, []).append(i)
+            elif restriction.permits_read(index, document):
+                restriction_found = True
+                excludes[i] = restriction.field_excludes
+                for pattern in restriction.field_includes:
+                    includes.setdefault(pattern, []).append(i)
+
+        if not restriction_found:
+            return None, None
+
+        # Remove the most restrictive includes
+        negligible = []
+        for pattern in includes.keys():
+            superior = reduce(lambda a, b: a if pattern_compare(a, b, 1) > 0 else b,
+                              includes.iterkeys(), pattern)
+            if superior != pattern:
+                del includes[pattern]
+                negligible.append(pattern)
+
+        # Identify which excludes are required based on the remaining includes
+        required_excludes = set()
+        for groups in includes.itervalues():
+            if len(groups) == 1:
+                candidates = excludes[groups[0]]
+            else:
+                candidates = []
+                available_excludes = set(p for group in groups for p in excludes[group])
+                for pattern in available_excludes:
+                    # If there are excludes from different restrictions, use the least restrictive ones
+                    inferior = reduce(lambda a, b: a if pattern_compare(a, b, -1) < 0 else b,
+                                      available_excludes, pattern)
+                    if inferior == pattern:
+                        candidates.append(pattern)
+
+            # Just because we've removed the most restrictive includes doesn't mean that the client
+            # has no access to the entities covered by them. So let's try to neutralize some excludes
+            #
+            # TODO: This is in fact true, BUT the include that neutralizes another include's exclude
+            #       may have excludes as well, which may then replace the exclude just neutralized.
+            #       If you get what I mean, spin this a bit further and you'll realize that this is
+            #       recursive as long as an exclude can be neutralized. That's why it's commented out
+            #
+            #       Example: r1 (a/b/c*,-cd*), r2 (a/b/cd*,-cde*)
+            #                - c* overlaps with cd*, so cd* is ignored
+            #                - Because c* is used, -cd* is registered but not -cde*
+            #                - cd* neutralizes -cd*, but is linked with -cde*
+            #                The final result should therefore be: a/b/c*,-cde*
+            #
+            # required_excludes.update(
+            #     filter(lambda p1: not any(pattern_compare(p2, p1, -1) >= 0 for p2 in negligible), candidates))
+            required_excludes.update(candidates)
+
+        return includes.keys(), list(required_excludes)
 
 
 class RestrictionError(AuthorizationError):
