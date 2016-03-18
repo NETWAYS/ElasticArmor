@@ -177,7 +177,7 @@ class Restriction(object):
             return
 
         parts = self.raw_restriction.split('/')
-        if not 1 > len(parts) <= 4:
+        if not 1 < len(parts) <= 4:
             raise RestrictionError('Invalid restriction "{0}"'.format(self.raw_restriction))
 
         for index_pattern in (v.strip() for v in parts[1].split(',')):
