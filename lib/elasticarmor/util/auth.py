@@ -8,7 +8,7 @@ import ldap
 import requests
 
 from elasticarmor.util import format_ldap_error, format_elasticsearch_error, pattern_match, pattern_compare
-from elasticarmor.util.elastic import ElasticSearchError, ElasticRole
+from elasticarmor.util.elastic import ElasticSearchError, ElasticRole, SourceFilter
 from elasticarmor.util.mixins import LoggingAware
 from elasticarmor.util.rwlock import ReadWriteLock, Protector
 
@@ -148,6 +148,55 @@ class Client(object):
         return any(restriction.permits_write(index, document, field)
                    for role in self.roles
                    for restriction in role.restrictions)
+
+    def create_source_filter(self, index, document, source_filter=None):
+        """Create and return a source filter based on what this client is permitted or is requesting to access. May
+        return a empty filter if the client is not restricted at all and None if the client can't access anything.
+
+        """
+        if not self.is_restricted():
+            return source_filter or SourceFilter()  # Bail out early if the client is not restricted at all
+
+        includes, excludes = self._collect_restrictions(index, document)
+        if includes is None and excludes is None:
+            return  # None of the client's restrictions permit access to the given index or document
+
+        if not source_filter:
+            # The client does not provide a source filter so we can simply return our own
+            source_filter = SourceFilter()
+            source_filter.includes = includes
+            source_filter.excludes = excludes
+            return source_filter
+        elif source_filter.disabled or source_filter.excludes == ['*']:
+            # The client does not want any source fields so we shouldn't provide them either
+            return source_filter
+
+        # The client does indeed provide a source filter so let's take a look what exactly it is
+        for pattern in source_filter.includes[:]:
+            # As long as the client is not further restricted than requested we can keep the pattern as is
+            candidates, match_found = [], False
+            for permit in includes:
+                try:
+                    if pattern_compare(permit, pattern) < 0:
+                        candidates.append(permit)  # permit is more restrictive than pattern
+                    else:
+                        break  # permit is equally or less restrictive than pattern
+                except ValueError:
+                    pass
+                else:
+                    match_found = True
+            else:
+                source_filter.includes.remove(pattern)
+                if match_found:
+                    # In case there is not even a single compatible restriction, just remove it without substitution
+                    # as this means what the client requests is not permitted and cannot be alternatively fulfilled
+                    source_filter.includes.extend(candidates)
+
+        if not source_filter.includes:
+            return  # Nothing what the client requested remained
+
+        source_filter.excludes.extend(excludes)
+        return source_filter
 
     def _collect_restrictions(self, index=None, document=None):
         """Collect and return the includes and excludes from all restrictions which cover the given context.
