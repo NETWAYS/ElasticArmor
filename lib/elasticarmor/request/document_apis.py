@@ -1,6 +1,7 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
 from elasticarmor.request import *
+from elasticarmor.util.elastic import SourceFilter
 
 
 class IndexApiRequest(ElasticRequest):
@@ -25,7 +26,12 @@ class GetApiRequest(ElasticRequest):
 
     @Permission('api/document/get')
     def inspect(self, client):
-        pass
+        source_filter = client.create_source_filter(self.index, self.document, SourceFilter.from_query(self.query))
+        if source_filter is None:
+            raise PermissionError('You\'re not permitted to access the requested document.')
+        elif source_filter:
+            self.query.discard('_source', '_source_include', '_source_exclude')
+            self.query.update(source_filter.as_query())
 
 
 class GetSourceApiRequest(ElasticRequest):
