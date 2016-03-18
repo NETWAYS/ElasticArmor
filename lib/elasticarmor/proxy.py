@@ -356,8 +356,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
 
         url_parts = urlparse(self.path)
         path = unquote(url_parts.path).rstrip(' /')
-        query = parse_query(url_parts.query)
-        if query.get('pretty', False):
+        query = Query.from_query_string(url_parts.query)
+        if not query.is_false('pretty', True):
             # TODO: Elasticsearch responds also with YAML if desired by the client (format=yaml)
             self.error_message_format = PRETTY_ERROR_FORMAT
 

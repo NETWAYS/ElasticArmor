@@ -5,31 +5,19 @@ import urllib
 import urlparse
 import cStringIO
 
+try:
+    # Python 2.7+
+    from collections import OrderedDict
+except ImportError:
+    # Python 2.6
+    from ordereddict import OrderedDict
+
 from requests.structures import CaseInsensitiveDict
 
-__all__ = ['is_false', 'parse_query', 'prepare_chunk', 'close_chunks', 'trailer_chunks',
-           'read_chunked_content', 'ChunkParserError', 'RequestEntityTooLarge',
-           'HttpHeaders', 'HttpContext', 'WsgiErrorLog']
+__all__ = ['prepare_chunk', 'close_chunks', 'trailer_chunks', 'read_chunked_content', 'ChunkParserError',
+           'RequestEntityTooLarge', 'HttpHeaders', 'HttpContext', 'WsgiErrorLog', 'Query']
 
 CRLF = '\r\n'
-
-
-def is_false(value):
-    """Return whether the given value represents a false query parameter."""
-    return value.strip().lower() in ['false', '0', 'no', 'off']
-
-
-def parse_query(query):
-    """Parse the given query string and return it as dictionary."""
-    result = {}
-    for name, values in urlparse.parse_qs(query, keep_blank_values=True).iteritems():
-        values = [urllib.unquote(v) for v in values]
-        if len(values) != 1 or not is_false(values[0]):
-            result[name] = values
-        else:
-            result[name] = []
-
-    return result
 
 
 def prepare_chunk(data):
@@ -338,3 +326,33 @@ class WsgiErrorLog(object):
         """
         for message in messages:
             self.write(message)
+
+
+class Query(OrderedDict):
+    def discard(self, *params):
+        """Discard the given parameters from this query, if present."""
+        for param in params:
+            try:
+                del self[param]
+            except KeyError:
+                pass
+
+    def is_false(self, param, default=False):
+        """Return whether the given parameter represents a false
+        value, or the default if the parameter does not exist.
+
+        """
+        try:
+            return self[param][-1].strip().lower() in ['false', '0', 'no', 'off']
+        except KeyError:
+            return default
+
+    @classmethod
+    def from_query_string(cls, query_string):
+        """Parse the given query string and return a new instance of Query."""
+        query = cls()
+        for name, value in ((n, urllib.unquote(v))
+                            for n, v in urlparse.parse_qsl(query_string, keep_blank_values=True)):
+            query.setdefault(name, []).append(value)
+
+        return query
