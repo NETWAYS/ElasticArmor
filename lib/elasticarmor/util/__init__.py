@@ -1,10 +1,13 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
+import re
 from distutils.version import StrictVersion
-from fnmatch import fnmatchcase
 
 __all__ = ['format_ldap_error', 'format_elasticsearch_error', 'compare_major_and_minor_version',
-           'pattern_match', 'classproperty', 'propertycache']
+           'pattern_match', 'pattern_compare', 'classproperty', 'propertycache']
+
+CACHE_MAX_SIZE = 1000
+_pattern_cache = {}
 
 
 def format_ldap_error(error):
@@ -37,52 +40,107 @@ def compare_major_and_minor_version(version_to_compare, version_to_compare_with)
 
     This will only compare the major and minor part of a version. Patch level and
     build number will be ignored, if present.
-    """
 
+    """
     list_to_compare = version_to_compare.split('.')
     list_to_compare_with = version_to_compare_with.split('.')
     return cmp(StrictVersion('.'.join(list_to_compare[:2])), StrictVersion('.'.join(list_to_compare_with[:2])))
 
 
+def _apply_pattern(pattern, subject):
+    """Return whether the given subject matches the given pattern."""
+    if pattern not in _pattern_cache:
+        if len(_pattern_cache) >= CACHE_MAX_SIZE:
+            _pattern_cache.clear()
+
+        _pattern_cache[pattern] = re.compile(re.escape(pattern).replace('\\*', '.*'))
+    return _pattern_cache[pattern].match(subject) is not None
+
+
 def _locate_wildcards(pattern):
-    """Locate on which side (left and right) the given pattern contains wildcards."""
-    left = right = False
-    stripped = pattern.rstrip('*?')
-    if '*' not in stripped and '?' not in stripped:
+    """Locate where (left, center and right) the given pattern contains wildcards."""
+    left = center = right = False
+    right_stripped = pattern.rstrip('*')
+    if '*' not in right_stripped:
         right = True
     else:
-        if stripped != pattern:
+        if right_stripped != pattern:
             right = True
 
-        left = stripped.lstrip('*?') != stripped
+        left_stripped = right_stripped.lstrip('*')
+        if '*' not in left_stripped:
+            left = True
+        else:
+            center = True
+            if left_stripped != right_stripped:
+                left = True
 
-    return left, right
+    return left, center, right
 
 
 def pattern_match(wild, tame):
-    """Return whether the given strings match.
-    Tries to produce a match even if both strings contain wildcards.
-    """
-
+    """Return whether the given strings match. Tries hard to produce a match even if both strings contain wildcards."""
     if wild == '*' or tame == wild:
-        return True  # Bail out early if it's clear that a match is possible
+        return True  # Bail out early if it's clear that a match is inevitable
 
-    if '*' not in tame and '?' not in tame:
-        if '*' not in wild and '?' not in wild:
+    if '*' not in tame:
+        if '*' not in wild:
             return False  # Neither of the strings contains wildcards so there is no chance they will ever match
 
-        return fnmatchcase(tame, wild)  # It's a usual literal == pattern comparison
-    elif '*' not in wild and '?' not in wild:
+        return _apply_pattern(wild, tame)  # It's a usual literal == pattern comparison
+    elif '*' not in wild:
         return False  # The tame string is wild but the wild one isn't thus a match is impossible
 
-    tame_left, tame_right = _locate_wildcards(tame)
-    wild_left, wild_right = _locate_wildcards(wild)
-    if tame_left and not wild_left or tame_right and not wild_right:
+    tame_left, tame_center, tame_right = _locate_wildcards(tame)
+    wild_left, wild_center, wild_right = _locate_wildcards(wild)
+    if tame_left and not wild_left or tame_center and not wild_center or tame_right and not wild_right:
         return False  # The tame string contains wildcards where the wild one doesn't thus a match is impossible
+    elif not tame_center:
+        # In case the tame string does not contain any wildcards in its center we can still perform a simple match
+        # as any wildcard in the tame string has an equal counterpart in the wild one, so it's safe to ignore them
+        return _apply_pattern(wild, tame)
 
-    # Now the chances are good that we're able to produce a match but we must strip all asterisk wildcards from
-    # the tame string as they may cause false positives if question mark wildcards are present in the wild one
-    return fnmatchcase(tame.replace('*', ''), wild)
+    # We'll need the wild string without any wildcards on its left
+    # or right a few times now, so pre-process it to save some time
+    stripped_wild = wild.strip('*')
+
+    # Now it gets difficult. Both strings have wildcards in its center. This
+    # is difficult because of the nature how wildcards behave: They're greedy
+    if stripped_wild.count('*') == 1:
+        # But this is also an opportunity for us, as if the wild string does
+        # only contain a single wildcard this makes our task a LOT easier
+        left, _, right = stripped_wild.partition('*')
+        if wild_left:
+            left = re.compile('.*' + left)  # Note that the leading ^ is omitted here because of using re.match
+        elif not tame.startswith(left):
+            return False
+
+        if wild_right:
+            right = re.compile(right + '.*$')
+        elif not tame.endswith(right):
+            return False
+
+        return (not wild_left or left.match(tame) is not None) and (not wild_right or right.search(tame) is not None)
+
+    # But if there are multiple wildcards in the center of wild.. I'll now leave this as a task for the
+    # reader, or myself. But this is really an edge-case which I don't think anyone is needing at all
+    return False  # TODO: Raise an exception instead
+
+
+def pattern_compare(pattern, other, default=None):
+    """Return whether the given pattern is greater than, less than or equal to the given other pattern.
+    Raises ValueError in case the given patterns are incompatible to each other and no default is given.
+
+    """
+    if pattern_match(pattern, other):
+        return 0 if pattern == other else 1
+    elif pattern_match(other, pattern):
+        return -1
+    elif default is None:
+        # TODO: Raise a more specific exception instead of ValueError
+        raise ValueError('Incompatible patterns given ({0}, {1})'.format(pattern, other))
+    else:
+        return default
 
 
 class classproperty(object):
@@ -97,7 +155,8 @@ class classproperty(object):
         assert Foo.bar is Foo
         assert Foo().bar is Foo
 
-    Original solution by Denis Ryzhkov @ http://stackoverflow.com/a/13624858."""
+    Original solution by Denis Ryzhkov @ http://stackoverflow.com/a/13624858.
+    """
 
     def __init__(self, func):
         self.func = func
