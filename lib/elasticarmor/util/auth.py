@@ -231,11 +231,9 @@ class Restriction(object):
         return any(pattern_match(pattern, subject) for pattern in includes)
 
     def _check_permission(self, index, document, field):
-        if field is None and self._field_patterns or document is None and self._type_patterns:
-            # If it's not a document or field request and this restriction covers those access must be denied
+        if field is not None and not self._field_patterns or document is not None and not self._type_patterns:
+            # If it's a document or field request and this restriction doesn't cover those access must be denied
             return False
-        elif field is not None and not self._field_patterns or document is not None and not self._type_patterns:
-            return False  # It's the same the other way round
 
         if not self._apply_restriction(index, self._index_patterns, self._index_includes, self._index_excludes):
             return False
