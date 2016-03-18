@@ -189,11 +189,18 @@ class ElasticRequest(LoggingAware, object):
             setattr(self, name, value)
 
     def __getattr__(self, name):
-        """Access the given attribute on the context's request and return its value.
-        Raises AttributeError if the attribute is not found.
+        """Access the given attribute on the context's request or the group of the matched
+        location and return its value. Raises AttributeError if the attribute is not found.
 
         """
-        value = getattr(self.context.request, name)
+        try:
+            value = getattr(self.context.request, name)
+        except AttributeError as error:
+            try:
+                value = self._match.groupdict()[name]
+            except (AttributeError, KeyError):
+                raise error
+
         setattr(self, name, value)
         return value
 
@@ -234,6 +241,10 @@ class ElasticRequest(LoggingAware, object):
             self._json = json.loads(self.body)
 
         return self._json
+
+    def get_match(self, name, default=None):
+        """Return the given group of the matched location or the default if no such group exists."""
+        return self._match.groupdict().get(name, default)
 
     def is_valid(self):
         """Take a quick look at the request and return whether it can be handled or not."""
