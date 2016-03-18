@@ -7,11 +7,12 @@ import threading
 import requests
 
 from elasticarmor.util import format_elasticsearch_error
+from elasticarmor.util.http import Query
 from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole', 'QueryDslParser',
-           'AggregationParser', 'parse_source_filter']
+           'AggregationParser', 'HighlightParser', 'SourceFilter']
 
 DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
@@ -1294,11 +1295,6 @@ class AggregationParser(object):
                                                   'fielddata_fields', 'size', 'from'])
 
         self.source_requests.append((index, document, obj))
-        if obj.get('_source'):
-            try:
-                self.fields.update((index, document, f) for f in parse_source_filter(obj['_source']))
-            except ValueError as error:
-                raise ElasticSearchError('Invalid source filter in top_hits aggregation "{0!r}" ({1})', obj, error)
 
         if 'highlight' in obj:
             parser = HighlightParser()
@@ -1575,31 +1571,6 @@ class AggregationParser(object):
             return index, document, field
 
 
-def parse_source_filter(data):
-    """Parse the given source filter and return all requested field names, if any.
-    Raises ValueError in case the filter is malformed.
-
-    """
-    assert data, 'Empty source filter given'
-
-    seq = []
-    if isinstance(data, basestring):
-        seq = [data]
-    elif isinstance(data, list):
-        seq = data
-    else:
-        try:
-            unknown = next((k for k in data.iterkeys() if k not in ['include', 'exclude']), None)
-            if unknown is not None:
-                raise ValueError('Unknown keyword "{0}"'.format(unknown))
-
-            seq = data.get('include', [])
-        except AttributeError:
-            raise ValueError('Invalid JSON object "{0!r}"'.format(data))
-
-    return seq
-
-
 class HighlightParser(object):
     """HighlightParser object to parse Elasticsearch highlight definitions.
 
@@ -1675,3 +1646,110 @@ class HighlightParser(object):
                 self.fields.update((index, document, f) for f in field_obj['matched_fields'])
 
             self.fields.add((index, document, field))
+
+
+class SourceFilter(object):
+    def __init__(self):
+        self.includes = []
+        self.excludes = []
+        self.disabled = False
+
+    def __nonzero__(self):
+        return self.disabled or bool(self.includes or self.excludes)
+
+    @classmethod
+    def from_query(cls, query):
+        """Create and return a new instance of SourceFilter using the given query."""
+        if not isinstance(query, Query):
+            # Why Query? Because it's an OrderedDict and the order of query parameters is crucial
+            raise ValueError('Expected query of type {0!r}. Got {1!r} instead'.format(Query, type(query)))
+
+        include_keyword = reduce(lambda a, b: b, (k for k in query if k in ['_source', '_source_include']), None)
+
+        source_filter = cls()
+        if query.is_false('_source'):
+            source_filter.disabled = True
+            return source_filter
+
+        if include_keyword is not None:
+            source_filter.includes = [s.strip() for s in query[include_keyword][-1].split(',')]
+        if '_source_exclude' in query:
+            source_filter.excludes = [s.strip() for s in query['_source_exclude'][-1].split(',')]
+
+        return source_filter
+
+    @classmethod
+    def from_json(cls, data):
+        """Create and return a new instance of SourceFilter using the given JSON data."""
+        source_filter = cls()
+        if data is False:
+            source_filter.disabled = True
+        elif not data:
+            pass
+        elif isinstance(data, basestring):
+            source_filter.includes = [s.strip() for s in data.split(',')]
+        elif isinstance(data, list):
+            source_filter.includes = [s.strip() for s in data]
+        else:
+            try:
+                unknown = next((k for k in data.iterkeys() if k not in ['include', 'exclude']), None)
+                if unknown is not None:
+                    raise ElasticSearchError('Unknown keyword "{0}" in source filter "{1!r}"'.format(unknown, data))
+            except AttributeError:
+                raise ElasticSearchError('Malformed source filter "{0!r}"'.format(data))
+
+            includes = data.get('include')
+            if includes is None:
+                pass
+            elif isinstance(includes, basestring):
+                source_filter.includes = [s.strip() for s in includes.split(',')]
+            elif isinstance(includes, list):
+                source_filter.includes = [s.strip() for s in includes]
+            else:
+                raise ElasticSearchError('Malformed source filter "{0!r}"'.format(data))
+
+            excludes = data.get('exclude')
+            if excludes is None:
+                pass
+            elif isinstance(excludes, basestring):
+                source_filter.excludes = [s.strip() for s in excludes.split(',')]
+            elif isinstance(excludes, list):
+                source_filter.excludes = [s.strip() for s in excludes]
+            else:
+                raise ElasticSearchError('Malformed source filter "{0!r}"'.format(data))
+
+        return source_filter
+
+    def as_query(self):
+        """Create and return a query for this source filter."""
+        query = Query()
+        if self.disabled:
+            query['_source'] = 'false'
+        else:
+            assert self, 'Cannot create a query from a empty source filter'
+
+            if not self.excludes:
+                query['_source'] = ','.join(self.includes)
+            else:
+                if self.includes:
+                    query['_source_include'] = ','.join(self.includes)
+
+                query['_source_exclude'] = ','.join(self.excludes)
+
+        return query
+
+    def as_json(self):
+        """Create and return a string, list or object for this source filter or False if it's disabled."""
+        if self.disabled:
+            return False
+
+        assert self, 'Cannot render an emtpy source filter as JSON'
+
+        if not self.excludes:
+            return self.includes if len(self.includes) > 1 else self.includes[0]
+
+        obj = {'exclude': self.excludes}
+        if self.includes:
+            obj['include'] = self.includes
+
+        return obj
