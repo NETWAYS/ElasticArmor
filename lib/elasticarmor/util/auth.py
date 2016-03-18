@@ -129,6 +129,10 @@ class Client(object):
 
         return '%s:%u' % (self.address, self.port)
 
+    def is_restricted(self):
+        """Return whether this client is restricted."""
+        return any(role.restrictions for role in self.roles)
+
     def can(self, permission):
         """Return whether this client has the given permission."""
         return any(permission.startswith(p) for r in self.roles for p in r.permissions)
