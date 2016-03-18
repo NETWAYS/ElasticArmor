@@ -173,6 +173,22 @@ class Restriction(object):
 
         self.raw_restriction = restriction
 
+    @property
+    def field_includes(self):
+        return self._field_patterns[:]
+
+    @property
+    def field_excludes(self):
+        if not self._field_includes:
+            return self._field_excludes[:]
+
+        excludes = []
+        for exclude in self._field_excludes:
+            if not any(pattern_compare(include, exclude, 0) < 0 for include in self._field_includes):
+                excludes.append(exclude)
+
+        return excludes
+
     def __str__(self):
         return self.raw_restriction
 
