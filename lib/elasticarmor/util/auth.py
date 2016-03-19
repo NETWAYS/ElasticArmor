@@ -1,5 +1,6 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
+import itertools
 import socket
 import time
 import threading
@@ -278,6 +279,51 @@ def _combine_includes(their_includes, our_includes):
                 result.extend(candidates)
 
     return result
+
+
+def _combine_filters(their_string, our_includes):
+    """Incorporate our includes into their filter string. And return the result."""
+    requested_includes, requested_excludes = [], []
+    for i, pattern in enumerate(s.strip() for s in their_string.split(',')):
+        # If you wonder why we're remembering a pattern's position here, take a look a the loop below
+        if pattern.startswith('-'):
+            requested_excludes.append((i, pattern[1:]))
+        else:
+            if pattern.startswith('+'):
+                pattern = pattern[1:]
+
+            requested_includes.append((i, pattern))
+            requested_excludes = filter(lambda t: pattern_compare(t[1], pattern, 1) > 0, requested_excludes)
+
+    new_includes = _combine_includes((t[1] for t in requested_includes), our_includes)
+    if not new_includes or not requested_excludes:
+        # If they don't define any excludes we can simply use the combined includes without any further processing
+        return new_includes
+
+    # We've identified which of their requested includes are valid and kept them as is or replaced them with our
+    # own alternatives. The crux, however, is that Elasticsearch considers the order in which includes are listed
+    # when applying listed excludes. It's now necessary to restore the old structure to not to accidentally bypass
+    # excludes defined by them
+    valid_includes, position, sort_key = [], 0, None
+    for include in new_includes:
+        if include == requested_includes[position][1]:
+            # It's one of their includes
+            valid_includes.append(requested_includes[position])
+            sort_key = None
+            position += 1
+        else:
+            # It's one of our alternatives, so remember the sort key and use it for all
+            # subsequent ones until their include on the next position is matched
+            if sort_key is None:
+                sort_key = requested_includes[position][0]
+                if position + 1 < len(requested_includes):
+                    position += 1
+
+            valid_includes.append((sort_key, include))
+
+    # It's now time to create the final result by combining the adjusted includes with their excludes
+    combined = itertools.chain(valid_includes, ((t[0], '-' + t[1]) for t in requested_excludes))
+    return [t[1] for t in sorted(combined, key=lambda t: t[0])]
 
 
 class RestrictionError(AuthorizationError):
