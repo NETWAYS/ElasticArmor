@@ -160,6 +160,9 @@ class Client(object):
         includes, excludes = self._collect_restrictions(index, document)
         if includes is None and excludes is None:
             return  # None of the client's restrictions permit access to the given index or document
+        elif not includes and not excludes:
+            # The client is not restricted and can access every field in the given document
+            return source_filter or SourceFilter()
 
         if not source_filter:
             # The client does not provide a source filter so we can simply return our own
