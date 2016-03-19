@@ -150,6 +150,43 @@ class Client(object):
                    for role in self.roles
                    for restriction in role.restrictions)
 
+    def create_filter_string(self, requested=None, index=None, single=False):
+        """Create and return a filter string based on what this client is permitted or is requesting to access.
+        May return the empty string if the client is not restricted at all and None if the client can't access
+        anything or if single is True and it is not possible to provide a single filter.
+
+        """
+        if not self.is_restricted():
+            return requested or ''  # Bail out early if the client is not restricted at all
+        elif requested.strip() == '-*':
+            return requested  # This may seem stupid at first, but Elasticsearch does indeed answer to such a request
+
+        includes, excludes = self._collect_restrictions(index)
+        if includes is None and excludes is None:
+            return  # None of the client's restrictions permit access to the given index
+        elif not includes and not excludes:
+            # The client is not restricted and can access every index or every document in the given index
+            return requested or ''
+
+        if requested:
+            # In case the client provides a filter it may be required to adjust
+            # it a little. We'd like to be smart after all, don't we? ;)
+            includes = _combine_filters(requested, includes)
+            if not includes:
+                return  # Nothing what the client requested remained
+
+        if single and len(includes) > 1:
+            # We can obviously only provide multiple filters and since it would be unsafe
+            # to make an assumption on what filter to return, we'll return none
+            return
+
+        if not excludes:
+            return ','.join(includes)
+        elif not includes:
+            return '-' + ',-'.join(excludes)
+
+        return '{0},-{1}'.format(','.join(includes), ',-'.join(excludes))
+
     def create_source_filter(self, index, document, source_filter=None):
         """Create and return a source filter based on what this client is permitted or is requesting to access. May
         return a empty filter if the client is not restricted at all and None if the client can't access anything.
