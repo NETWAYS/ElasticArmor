@@ -175,26 +175,7 @@ class Client(object):
             return source_filter
 
         # The client does indeed provide a source filter so let's take a look what exactly it is
-        for pattern in source_filter.includes[:]:
-            # As long as the client is not further restricted than requested we can keep the pattern as is
-            candidates, match_found = [], False
-            for permit in includes:
-                try:
-                    if pattern_compare(permit, pattern) < 0:
-                        candidates.append(permit)  # permit is more restrictive than pattern
-                    else:
-                        break  # permit is equally or less restrictive than pattern
-                except ValueError:
-                    pass
-                else:
-                    match_found = True
-            else:
-                source_filter.includes.remove(pattern)
-                if match_found:
-                    # In case there is not even a single compatible restriction, just remove it without substitution
-                    # as this means what the client requests is not permitted and cannot be alternatively fulfilled
-                    source_filter.includes.extend(candidates)
-
+        source_filter.includes = _combine_includes(source_filter.includes, includes)
         if not source_filter.includes:
             return  # Nothing what the client requested remained
 
@@ -272,6 +253,31 @@ class Client(object):
             required_excludes.update(candidates)
 
         return includes.keys(), list(required_excludes)
+
+
+def _combine_includes(their_includes, our_includes):
+    """Incorporate our includes into theirs and eliminate all unfulfillable ones. And return the result."""
+    result = []
+    for pattern in their_includes:
+        candidates = []
+        for permit in our_includes:
+            try:
+                if pattern_compare(permit, pattern) < 0:
+                    # Replace the pattern with each compatible and more restrictive permit
+                    candidates.append(permit)
+                else:
+                    # As long as they are not further restricted than requested we can keep the pattern as is
+                    result.append(pattern)
+                    break
+            except ValueError:
+                pass
+        else:
+            if candidates:
+                # In case there are no alternatives, the pattern is simply discarded without substitution
+                # as this means what is requested is not permitted and cannot be fulfilled
+                result.extend(candidates)
+
+    return result
 
 
 class RestrictionError(AuthorizationError):
