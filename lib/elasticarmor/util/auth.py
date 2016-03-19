@@ -298,11 +298,49 @@ class Restriction(object):
         self.raw_restriction = restriction
 
     @property
+    def index_includes(self):
+        self._parse_restriction()
+        return self._index_patterns[:]
+
+    @property
+    def index_excludes(self):
+        self._parse_restriction()
+        if not self._index_includes:
+            return self._index_excludes[:]
+
+        excludes = []
+        for exclude in self._index_excludes:
+            if not any(pattern_compare(include, exclude, 0) < 0 for include in self._index_includes):
+                excludes.append(exclude)
+
+        return excludes
+
+    @property
+    def document_includes(self):
+        self._parse_restriction()
+        return self._type_patterns[:]
+
+    @property
+    def document_excludes(self):
+        self._parse_restriction()
+        if not self._type_includes:
+            return self._type_excludes[:]
+
+        excludes = []
+        for exclude in self._type_excludes:
+            if not any(pattern_compare(include, exclude, 0) < 0 for include in self._type_includes):
+                excludes.append(exclude)
+
+        return excludes
+
+    @property
     def field_includes(self):
+        self._parse_restriction()
         return self._field_patterns[:]
 
     @property
     def field_excludes(self):
+        self._parse_restriction()
         if not self._field_includes:
             return self._field_excludes[:]
 
