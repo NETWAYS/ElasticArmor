@@ -65,7 +65,7 @@ class CreateMappingApiRequest(ElasticRequest):
         'PUT': '/{indices}/_mapping{s}/{document}'
     }
 
-    @Permission('api/indices/mapping/create')
+    @Permission('api/indices/mappings/create')
     def inspect(self, client):
         pass
 
@@ -81,7 +81,7 @@ class GetMappingApiRequest(ElasticRequest):
         'HEAD': '/{indices}/{documents}'
     }
 
-    @Permission('api/indices/mapping/get')
+    @Permission('api/indices/mappings/get')
     def inspect(self, client):
         pass
 
@@ -95,7 +95,7 @@ class GetFieldMappingApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/mapping/get')
+    @Permission('api/indices/mappings/get')
     def inspect(self, client):
         pass
 
@@ -109,7 +109,7 @@ class DeleteMappingApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/mapping/delete')
+    @Permission('api/indices/mappings/delete')
     def inspect(self, client):
         pass
 
@@ -120,7 +120,7 @@ class CreateAliasApiRequest(ElasticRequest):
         'PUT': '/{indices}/_alias{es}/{name}'
     }
 
-    @Permission('api/indices/alias/create')
+    @Permission('api/indices/aliases/create')
     def inspect(self, client):
         pass
 
@@ -130,7 +130,7 @@ class DeleteAliasApiRequest(ElasticRequest):
         'DELETE': '/{indices}/_alias{es}/{names}'
     }
 
-    @Permission('api/indices/alias/delete')
+    @Permission('api/indices/aliases/delete')
     def inspect(self, client):
         pass
 
@@ -145,7 +145,7 @@ class GetAliasApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/alias/get')
+    @Permission('api/indices/aliases/get')
     def inspect(self, client):
         pass
 
@@ -198,7 +198,7 @@ class CreateIndexTemplateApiRequest(ElasticRequest):
         'PUT': '/_template/{name}'
     }
 
-    @Permission('api/indices/template/create')
+    @Permission('api/indices/templates/create')
     def inspect(self, client):
         pass
 
@@ -208,7 +208,7 @@ class DeleteIndexTemplateApiRequest(ElasticRequest):
         'DELETE': '/_template/{name}'
     }
 
-    @Permission('api/indices/template/delete')
+    @Permission('api/indices/templates/delete')
     def inspect(self, client):
         pass
 
@@ -221,7 +221,7 @@ class GetIndexTemplateApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/template/get')
+    @Permission('api/indices/templates/get')
     def inspect(self, client):
         pass
 
@@ -235,7 +235,7 @@ class CreateIndexWarmerApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/warmer/create')
+    @Permission('api/indices/warmers/create')
     def inspect(self, client):
         pass
 
@@ -245,7 +245,7 @@ class DeleteIndexWarmerApiRequest(ElasticRequest):
         'DELETE': '/{indices}/_warmer{s}/{identifiers}'
     }
 
-    @Permission('api/indices/warmer/delete')
+    @Permission('api/indices/warmers/delete')
     def inspect(self, client):
         pass
 
@@ -258,7 +258,7 @@ class GetIndexWarmerApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/warmer/get')
+    @Permission('api/indices/warmers/get')
     def inspect(self, client):
         pass
 

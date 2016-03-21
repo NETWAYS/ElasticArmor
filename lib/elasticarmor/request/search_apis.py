@@ -35,7 +35,7 @@ class SearchTemplateApiRequest(ElasticRequest):
         'DELETE': '/_search/template/{identifier}'
     }
 
-    @Permission('api/search/template')
+    @Permission('api/search/templates')
     def inspect(self, client):
         pass
 

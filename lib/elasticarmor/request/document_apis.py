@@ -13,7 +13,7 @@ class IndexApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/document/index')
+    @Permission('api/documents/index')
     def inspect(self, client):
         pass
 
@@ -24,7 +24,7 @@ class GetApiRequest(ElasticRequest):
         'HEAD': '/{index}/{document}/{identifier}'
     }
 
-    @Permission('api/document/get')
+    @Permission('api/documents/get')
     def inspect(self, client):
         source_filter = client.create_source_filter(self.index, self.document, SourceFilter.from_query(self.query))
         if source_filter is None:
@@ -39,7 +39,7 @@ class GetSourceApiRequest(ElasticRequest):
         'GET': '/{index}/{document}/{identifier}/_source'
     }
 
-    @Permission('api/document/get')
+    @Permission('api/documents/get')
     def inspect(self, client):
         pass
 
@@ -49,7 +49,7 @@ class DeleteApiRequest(ElasticRequest):
         'DELETE': '/{index}/{document}/{identifier}'
     }
 
-    @Permission('api/document/delete')
+    @Permission('api/documents/delete')
     def inspect(self, client):
         pass
 
@@ -62,7 +62,7 @@ class UpdateApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/document/update')
+    @Permission('api/documents/update')
     def inspect(self, client):
         pass
 
@@ -81,7 +81,7 @@ class MultiGetApiRequest(ElasticRequest):
         ]
     }
 
-    @Permissions('api/bulk', 'api/document/get')
+    @Permissions('api/bulk', 'api/documents/get')
     def inspect(self, client):
         pass
 
@@ -122,7 +122,7 @@ class TermVectorApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/document/termVector')
+    @Permission('api/documents/termVector')
     def inspect(self, client):
         pass
 
@@ -136,6 +136,6 @@ class MultiTermVectorApiRequest(ElasticRequest):
         ]
     }
 
-    @Permissions('api/bulk', 'api/document/termVector')
+    @Permissions('api/bulk', 'api/documents/termVector')
     def inspect(self, client):
         pass
