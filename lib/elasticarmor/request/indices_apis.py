@@ -35,9 +35,32 @@ class GetIndexApiRequest(ElasticRequest):
         ]
     }
 
+    index_settings = {
+        '_settings': 'api/indices/settings/get',
+        '_mappings': 'api/indices/mappings/get',
+        '_warmers': 'api/indices/warmers/get',
+        '_aliases': 'api/indices/aliases/get'
+    }
+
     @Permission('api/indices/get')
     def inspect(self, client):
-        pass
+        keywords = [s.strip() for s in self.get_match('keywords', '').split(',') if s]
+        unknown = next((kw for kw in keywords if kw not in self.index_settings), None)
+        if unknown is not None:
+            raise PermissionError('Unknown index setting: {0}'.format(unknown))
+
+        permitted_settings, missing_permissions = [], []
+        for setting, permission in self.index_settings.iteritems():
+            if client.can(permission):
+                permitted_settings.append(setting)
+            elif setting in keywords:
+                missing_permissions.append(permission)
+
+        if missing_permissions:
+            raise PermissionError(
+                'You are missing the following permissions: {0}'.format(', '.join(missing_permissions)))
+        elif not keywords and len(permitted_settings) < len(self.index_settings):
+            self.path = '/'.join((self.path.rstrip('/'), ','.join(permitted_settings)))
 
 
 class OpenIndexApiRequest(ElasticRequest):
