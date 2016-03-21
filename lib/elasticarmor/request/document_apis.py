@@ -56,7 +56,10 @@ class DeleteApiRequest(ElasticRequest):
 
 class UpdateApiRequest(ElasticRequest):
     locations = {
-        'POST': '/{index}/{document}/{identifier}/_update'
+        'POST': [
+            '/{index}/{document}/{identifier}',
+            '/{index}/{document}/{identifier}/_update'
+        ]
     }
 
     @Permission('api/document/update')
