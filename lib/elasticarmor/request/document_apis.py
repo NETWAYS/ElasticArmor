@@ -116,7 +116,10 @@ class DeleteByQueryApiRequest(ElasticRequest):
 
 class TermVectorApiRequest(ElasticRequest):
     locations = {
-        'GET': '/{index}/{document}/{identifier}/_termvector'
+        'GET': [
+            '/{index}/{document}/_termvector',
+            '/{index}/{document}/{identifier}/_termvector'
+        ]
     }
 
     @Permission('api/document/termVector')
