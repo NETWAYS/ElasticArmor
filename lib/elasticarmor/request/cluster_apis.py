@@ -93,9 +93,9 @@ class NodesStatsApiRequest(ElasticRequest):
         'GET': [
             '/_nodes/stats',
             '/_stats/fielddata',
-            '/_nodes/{entities}/stats',
+            '/_nodes/{identifiers}/stats',
             '/_nodes/stats/{keywords}',
-            '/_nodes/{entities}/stats/{keywords}'
+            '/_nodes/{identifiers}/stats/{keywords}'
         ]
     }
 
@@ -108,10 +108,10 @@ class NodesInfoApiRequest(ElasticRequest):
     locations = {
         'GET': [
             '/_nodes',
-            '/_nodes/{entities}',
+            '/_nodes/{identifiers}',
             '/_nodes/{keywords}',
-            '/_nodes/{entities}/{keywords}',
-            '/_nodes/{entities}/info/{keywords}'
+            '/_nodes/{identifiers}/{keywords}',
+            '/_nodes/{identifiers}/info/{keywords}'
         ]
     }
 
@@ -124,7 +124,7 @@ class NodesHotThreadsApiRequest(ElasticRequest):
     locations = {
         'GET': [
             '/_nodes/hot_threads',
-            '/_nodes/{entities}/hot_threads'
+            '/_nodes/{identifiers}/hot_threads'
         ]
     }
 
@@ -137,7 +137,7 @@ class NodesShutdownRequest(ElasticRequest):
     locations = {
         'POST': [
             '/_cluster/nodes/_shutdown',
-            '/_cluster/nodes/{entities}/_shutdown'
+            '/_cluster/nodes/{identifiers}/_shutdown'
         ]
     }
 

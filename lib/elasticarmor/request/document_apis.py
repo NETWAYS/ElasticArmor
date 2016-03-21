@@ -8,8 +8,8 @@ class IndexApiRequest(ElasticRequest):
     locations = {
         'POST': '/{index}/{document}',
         'PUT': [
-            '/{index}/{document}/{entity}',
-            '/{index}/{document}/{entity}/_create'
+            '/{index}/{document}/{identifier}',
+            '/{index}/{document}/{identifier}/_create'
         ]
     }
 
@@ -20,8 +20,8 @@ class IndexApiRequest(ElasticRequest):
 
 class GetApiRequest(ElasticRequest):
     locations = {
-        'GET': '/{index}/{document}/{entity}',
-        'HEAD': '/{index}/{document}/{entity}'
+        'GET': '/{index}/{document}/{identifier}',
+        'HEAD': '/{index}/{document}/{identifier}'
     }
 
     @Permission('api/document/get')
@@ -36,7 +36,7 @@ class GetApiRequest(ElasticRequest):
 
 class GetSourceApiRequest(ElasticRequest):
     locations = {
-        'GET': '/{index}/{document}/{entity}/_source'
+        'GET': '/{index}/{document}/{identifier}/_source'
     }
 
     @Permission('api/document/get')
@@ -46,7 +46,7 @@ class GetSourceApiRequest(ElasticRequest):
 
 class DeleteApiRequest(ElasticRequest):
     locations = {
-        'DELETE': '/{index}/{document}/{entity}'
+        'DELETE': '/{index}/{document}/{identifier}'
     }
 
     @Permission('api/document/delete')
@@ -56,7 +56,7 @@ class DeleteApiRequest(ElasticRequest):
 
 class UpdateApiRequest(ElasticRequest):
     locations = {
-        'POST': '/{index}/{document}/{entity}/_update'
+        'POST': '/{index}/{document}/{identifier}/_update'
     }
 
     @Permission('api/document/update')
@@ -113,7 +113,7 @@ class DeleteByQueryApiRequest(ElasticRequest):
 
 class TermVectorApiRequest(ElasticRequest):
     locations = {
-        'GET': '/{index}/{document}/{entity}/_termvector'
+        'GET': '/{index}/{document}/{identifier}/_termvector'
     }
 
     @Permission('api/document/termVector')

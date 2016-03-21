@@ -160,9 +160,14 @@ class ElasticRequest(LoggingAware, object):
         'indices': '(?P<indices>(?!_)[^/]+|_all)',
         'document': '(?P<document>(?!_|-|\+)[^*,/]+)',
         'documents': '(?P<documents>(?!_)[^/]+|_all)',
-        'entity': '(?P<entity>(?!_|-|\+)[^*,/]+)',
-        'entities': '(?P<entities>(?!_)[^/]+|_all)',
+        'identifier': '(?P<identifier>(?!-|\+)[^,/]+)',
+        'identifiers': '(?P<identifiers>[^/]+)',
+        'name': '(?P<name>(?!_|-|\+)[^*,/]+)',
+        'names': '(?P<names>(?!_)[^/]+)',
+        'keyword': '(?P<keyword>(?!-|\+)[^*,/]+)',
         'keywords': '(?P<keywords>[^/]+)',
+        'field': '(?P<field>(?!-|\+)[^*,/]+)',
+        'fields': '(?P<fields>[^/]+)',
         'es': '(?:es)?',
         's': 's?'
     }

@@ -89,9 +89,9 @@ class GetMappingApiRequest(ElasticRequest):
 class GetFieldMappingApiRequest(ElasticRequest):
     locations = {
         'GET': [
-            '/{indices}/_mapping{s}/field/{entities}',
-            '/{indices}/{documents}/_mapping{s}/field/{entities}',
-            '/{indices}/_mapping{s}/{documents}/field/{entities}'
+            '/{indices}/_mapping{s}/field/{fields}',
+            '/{indices}/{documents}/_mapping{s}/field/{fields}',
+            '/{indices}/_mapping{s}/{documents}/field/{fields}'
         ]
     }
 
@@ -117,7 +117,7 @@ class DeleteMappingApiRequest(ElasticRequest):
 class CreateAliasApiRequest(ElasticRequest):
     locations = {
         'POST': '/_aliases',
-        'PUT': '/{indices}/_alias{es}/{entity}'
+        'PUT': '/{indices}/_alias{es}/{name}'
     }
 
     @Permission('api/indices/alias/create')
@@ -127,7 +127,7 @@ class CreateAliasApiRequest(ElasticRequest):
 
 class DeleteAliasApiRequest(ElasticRequest):
     locations = {
-        'DELETE': '/{indices}/_alias{es}/{entities}'
+        'DELETE': '/{indices}/_alias{es}/{names}'
     }
 
     @Permission('api/indices/alias/delete')
@@ -139,9 +139,9 @@ class GetAliasApiRequest(ElasticRequest):
     locations = {
         'GET': [
             '/_alias',
-            '/_alias/{entity}',
+            '/_alias/{name}',
             '/{indices}/_alias',
-            '/{indices}/_alias/{entity}'
+            '/{indices}/_alias/{name}'
         ]
     }
 
@@ -195,7 +195,7 @@ class AnalyzeApiRequest(ElasticRequest):
 
 class CreateIndexTemplateApiRequest(ElasticRequest):
     locations = {
-        'PUT': '/_template/{entity}'
+        'PUT': '/_template/{name}'
     }
 
     @Permission('api/indices/template/create')
@@ -205,7 +205,7 @@ class CreateIndexTemplateApiRequest(ElasticRequest):
 
 class DeleteIndexTemplateApiRequest(ElasticRequest):
     locations = {
-        'DELETE': '/_template/{entity}'
+        'DELETE': '/_template/{name}'
     }
 
     @Permission('api/indices/template/delete')
@@ -217,7 +217,7 @@ class GetIndexTemplateApiRequest(ElasticRequest):
     locations = {
         'GET': [
             '/_template',
-            '/_template/{entities}'
+            '/_template/{names}'
         ]
     }
 
@@ -229,9 +229,9 @@ class GetIndexTemplateApiRequest(ElasticRequest):
 class CreateIndexWarmerApiRequest(ElasticRequest):
     locations = {
         'PUT': [
-            '/_warmer{s}/{entity}',
-            '/{indices}/_warmer{s}/{entity}',
-            '/{indices}/{documents}/_warmer{s}/{entity}'
+            '/_warmer{s}/{identifier}',
+            '/{indices}/_warmer{s}/{identifier}',
+            '/{indices}/{documents}/_warmer{s}/{identifier}'
         ]
     }
 
@@ -242,7 +242,7 @@ class CreateIndexWarmerApiRequest(ElasticRequest):
 
 class DeleteIndexWarmerApiRequest(ElasticRequest):
     locations = {
-        'DELETE': '/{indices}/_warmer{s}/{entities}'
+        'DELETE': '/{indices}/_warmer{s}/{identifiers}'
     }
 
     @Permission('api/indices/warmer/delete')
@@ -253,8 +253,8 @@ class DeleteIndexWarmerApiRequest(ElasticRequest):
 class GetIndexWarmerApiRequest(ElasticRequest):
     locations = {
         'GET': [
-            '/_warmer{s}/{entities}',
-            '/{indices}/_warmer{s}/{entities}'
+            '/_warmer{s}/{identifiers}',
+            '/{indices}/_warmer{s}/{identifiers}'
         ]
     }
 

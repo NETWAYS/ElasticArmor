@@ -26,13 +26,13 @@ class SearchTemplateApiRequest(ElasticRequest):
     locations = {
         'GET': [
             '/_search/template',
-            '/_search/template/{entity}'
+            '/_search/template/{identifier}'
         ],
         'POST': [
             '/_search/template',
-            '/_search/template/{entity}'
+            '/_search/template/{identifier}'
         ],
-        'DELETE': '/_search/template/{entity}'
+        'DELETE': '/_search/template/{identifier}'
     }
 
     @Permission('api/search/template')
@@ -140,8 +140,8 @@ class ValidateApiRequest(ElasticRequest):
 
 class ExplainApiRequest(ElasticRequest):
     locations = {
-        'GET': '/{index}/{document}/{entity}/_explain',
-        'POST': '/{index}/{document}/{entity}/_explain'
+        'GET': '/{index}/{document}/{identifier}/_explain',
+        'POST': '/{index}/{document}/{identifier}/_explain'
     }
 
     @Permission('api/search/explain')
@@ -153,11 +153,11 @@ class PercolateApiRequest(ElasticRequest):
     locations = {
         'GET': [
             '/{index}/{document}/_percolate',
-            '/{index}/{document}/{entity}/_percolate'
+            '/{index}/{document}/{identifier}/_percolate'
         ],
         'POST': [
             '/{index}/{document}/_percolate',
-            '/{index}/{document}/{entity}/_percolate'
+            '/{index}/{document}/{identifier}/_percolate'
         ]
     }
 
@@ -187,7 +187,7 @@ class MultiPercolateApiRequest(ElasticRequest):
 
 class MoreLikeThisApiRequest(ElasticRequest):
     locations = {
-        'GET': '/{index}/{document}/{entity}/_mlt'
+        'GET': '/{index}/{document}/{identifier}/_mlt'
     }
 
     @Permissions('api/feature/deprecated', 'api/search/moreLikeThis')
