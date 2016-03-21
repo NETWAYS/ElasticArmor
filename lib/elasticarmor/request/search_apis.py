@@ -129,7 +129,8 @@ class ValidateApiRequest(ElasticRequest):
         'POST': [
             '/_validate/query',
             '/{indices}/_validate/query',
-            '/{indices}/{documents}/_validate/query'
+            '/{indices}/{documents}/_validate/query',
+            '/.kibana/__kibanaQueryValidator/_validate/query'
         ]
     }
 
