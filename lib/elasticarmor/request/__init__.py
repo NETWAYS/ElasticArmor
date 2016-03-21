@@ -176,6 +176,10 @@ class ElasticRequest(LoggingAware, object):
     # asked to process a request. If you're not competing with other handlers, leave the default
     priority = 0
 
+    # The base url a request handler is responsible for. If this is not None, the base
+    # implementation of is_valid() checks whether a request's path starts with this url
+    base_url = None
+
     # The locations grouped by commands a request handler is responsible for. Each key is a HTTP command such
     # as 'GET' and holds a single regular expression or a list of multiple regular expressions of type string.
     # Regular expressions may be automatically populated with certain macros. Please see the macros class
@@ -234,6 +238,9 @@ class ElasticRequest(LoggingAware, object):
 
     @property
     def wsgi_environ(self):
+        assert self.base_url is not None, 'Class {0} of module {1} does not define a base url' \
+                                           ''.format(self.__class__.__name__, self.__class__.__module__)
+
         environ = self.context.create_wsgi_environ()
         environ['SCRIPT_NAME'] = self.base_url
         environ['SCRIPT_FILENAME'] = self.path
@@ -253,8 +260,11 @@ class ElasticRequest(LoggingAware, object):
 
     def is_valid(self):
         """Take a quick look at the request and return whether it can be handled or not."""
-        assert self.locations, 'Class {0} of module {1} neither defines any locations nor overwrites method is_valid' \
-                               ''.format(self.__class__.__name__, self.__class__.__module__)
+        if self.base_url is not None:
+            return self.path.startswith(self.base_url)
+
+        assert self.locations, 'Class {0} of module {1} neither defines a base url nor any locations and does not' \
+                               ' override method is_valid'.format(self.__class__.__name__, self.__class__.__module__)
 
         try:
             locations = self.locations[self.command]
