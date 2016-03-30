@@ -146,11 +146,11 @@ class GetMappingApiRequest(ElasticRequest):
         if index_filter:
             if type_filter:
                 if self.command == 'HEAD':
-                    self.path = '/'.join(('', str(index_filter), str(type_filter)))
+                    self.path = '/{0}/{1}'.format(index_filter, type_filter)
                 else:
-                    self.path = '/'.join(('', str(index_filter), '_mappings', str(type_filter)))
+                    self.path = '/{0}/_mappings/{1}'.format(index_filter, type_filter)
             else:
-                self.path = '/'.join(('', str(index_filter), '_mappings'))
+                self.path = '/{0}/_mappings'.format(index_filter)
 
 
 class GetFieldMappingApiRequest(ElasticRequest):
@@ -222,7 +222,7 @@ class GetAliasApiRequest(ElasticRequest):
         if index_filter is None:
             raise PermissionError('You are not permitted to access aliases of the given indices.')
         elif index_filter:
-            self.path = '/'.join(('', str(index_filter), '_alias', self.get_match('name', '')))
+            self.path = '/{0}/_alias/{1}'.format(index_filter, self.get_match('name', ''))
 
 
 class UpdateIndexSettingsApiRequest(ElasticRequest):
@@ -253,7 +253,7 @@ class GetIndexSettingsApiRequest(ElasticRequest):
             raise PermissionError(
                 'You are not permitted to access the general settings of the given index or indices.')
         elif index_filter:
-            self.path = '/'.join(('', str(index_filter), '_settings'))
+            self.path = '/{0}/_settings'.format(index_filter)
 
 
 class AnalyzeApiRequest(ElasticRequest):
@@ -344,7 +344,7 @@ class GetIndexWarmerApiRequest(ElasticRequest):
         if index_filter is None:
             raise PermissionError('You are not permitted to access warmers of the given indices.')
         elif index_filter:
-            self.path = '/'.join(('', str(index_filter), '_warmers', self.identifiers))
+            self.path = '/{0}/_warmers/{1}'.format(index_filter, self.identifiers)
 
 
 class IndexStatsApiRequest(ElasticRequest):
@@ -428,7 +428,7 @@ class IndexRefreshApiRequest(ElasticRequest):
         if index_filter is None:
             raise PermissionError('You are not permitted to refresh the given indices.')
         elif index_filter:
-            self.path = '/'.join(('', str(index_filter), '_refresh'))
+            self.path = '/{0}/_refresh'.format(index_filter)
 
 
 class IndexOptimizeApiRequest(ElasticRequest):
