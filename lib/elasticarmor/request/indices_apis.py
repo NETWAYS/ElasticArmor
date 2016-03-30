@@ -1,5 +1,6 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
+from elasticarmor.auth import MultipleIncludesError
 from elasticarmor.request import *
 from elasticarmor.util.elastic import FilterString
 
@@ -102,6 +103,7 @@ class CreateMappingApiRequest(ElasticRequest):
         pass
 
 
+# TODO: Competes with GetIndexApiRequest
 class GetMappingApiRequest(ElasticRequest):
     locations = {
         'GET': [
@@ -113,9 +115,39 @@ class GetMappingApiRequest(ElasticRequest):
         'HEAD': '/{indices}/{documents}'
     }
 
-    @Permission('api/indices/get/mappings')
     def inspect(self, client):
-        pass
+        restricted_types = client.is_restricted('types')
+        requested_indices = FilterString.from_string(self.get_match('indices', ''))
+
+        try:
+            index_filter = client.create_filter_string('api/indices/get/mappings', requested_indices,
+                                                       single=restricted_types)
+        except MultipleIncludesError as error:
+            raise PermissionError(
+                'You are restricted to specific types or fields. To retrieve type mappings, please '
+                'pick a single index from the following list: {0}'.format(', '.join(error.includes)))
+        else:
+            if index_filter is None:
+                raise PermissionError('You are not permitted to access the mappings of the given indices.')
+
+        if restricted_types:
+            requested_types = FilterString.from_string(self.get_match('documents', ''))
+            requested_index = index_filter.combined[0] if index_filter.combined else index_filter[0]
+            type_filter = client.create_filter_string('api/indices/get/mappings', requested_types,
+                                                      str(requested_index))
+            if type_filter is None:
+                raise PermissionError('You are not permitted to access the mappings of the given types.')
+        else:
+            type_filter = self.get_match('documents')
+
+        if index_filter:
+            if type_filter:
+                if self.command == 'HEAD':
+                    self.path = '/'.join(('', str(index_filter), str(type_filter)))
+                else:
+                    self.path = '/'.join(('', str(index_filter), '_mappings', str(type_filter)))
+            else:
+                self.path = '/'.join(('', str(index_filter), '_mappings'))
 
 
 class GetFieldMappingApiRequest(ElasticRequest):
