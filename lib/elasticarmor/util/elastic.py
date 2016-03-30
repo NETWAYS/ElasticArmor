@@ -1653,6 +1653,9 @@ class SourceFilter(object):
         self.combined = []
         self.disabled = False
 
+    def __repr__(self):
+        return repr(self.as_json())
+
     def __nonzero__(self):
         return self.disabled or bool(self.includes or self.excludes)
 
