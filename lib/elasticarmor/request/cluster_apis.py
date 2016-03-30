@@ -141,6 +141,6 @@ class NodesShutdownRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/feature/deprecated')
+    @Permissions('api/feature/deprecated', 'api/cluster/nodes/shutdown')
     def inspect(self, client):
         pass
