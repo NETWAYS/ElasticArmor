@@ -1663,17 +1663,19 @@ class SourceFilter(object):
             # Why Query? Because it's an OrderedDict and the order of query parameters is crucial
             raise ValueError('Expected query of type {0!r}. Got {1!r} instead'.format(Query, type(query)))
 
-        include_keyword = reduce(lambda a, b: b, (k for k in query if k in ['_source', '_source_include']), None)
-
         source_filter = cls()
         if query.is_false('_source'):
             source_filter.disabled = True
             return source_filter
 
+        include_keyword = reduce(lambda a, b: b, (k for k in query if k in ['_source', '_source_include']), None)
         if include_keyword is not None:
             source_filter.includes = [s.strip() for s in query[include_keyword][-1].split(',')]
         if '_source_exclude' in query:
             source_filter.excludes = [s.strip() for s in query['_source_exclude'][-1].split(',')]
+
+        if include_keyword is None and '_source_exclude' not in query:
+            source_filter.disabled = 'fields' in query and (not query['fields'][-1] or query.is_false('fields'))
 
         return source_filter
 
