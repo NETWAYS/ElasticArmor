@@ -1,6 +1,7 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
 from elasticarmor.request import *
+from elasticarmor.util.elastic import FilterString
 
 
 class CreateIndexApiRequest(ElasticRequest):
@@ -42,23 +43,31 @@ class GetIndexApiRequest(ElasticRequest):
         '_aliases': 'api/indices/get/aliases'
     }
 
-    @Permission('api/indices/get/*')
     def inspect(self, client):
+        index_filter = client.create_filter_string('api/indices/get/*', FilterString.from_string(self.indices))
+        if index_filter is None:
+            raise PermissionError('You are not permitted to access any settings of the given index or indices.')
+        elif index_filter:
+            self.path = self.path.replace(self.indices, str(index_filter))
+
         keywords = [s.strip() for s in self.get_match('keywords', '').split(',') if s]
         unknown = next((kw for kw in keywords if kw not in self.index_settings), None)
         if unknown is not None:
             raise PermissionError('Unknown index setting: {0}'.format(unknown))
 
-        permitted_settings, missing_permissions = [], []
+        permitted_settings, missing_permissions = [], {}
         for setting, permission in self.index_settings.iteritems():
-            if client.can(permission):
-                permitted_settings.append(setting)
-            elif setting in keywords:
-                missing_permissions.append(permission)
+            if not keywords or setting in keywords:
+                for index in index_filter.iter_patterns():
+                    if client.can(permission, str(index)):
+                        permitted_settings.append(setting)
+                    else:
+                        missing_permissions.setdefault(permission, []).append(str(index))
 
         if missing_permissions:
-            raise PermissionError(
-                'You are missing the following permissions: {0}'.format(', '.join(missing_permissions)))
+            permission_hint = ', '.join('{0} ({1})'.format(permission, ', '.join(indices))
+                                        for permission, indices in missing_permissions.iteritems())
+            raise PermissionError('You are missing the following permissions: {0}'.format(permission_hint))
         elif not keywords and len(permitted_settings) < len(self.index_settings):
             self.path = '/'.join((self.path.rstrip('/'), ','.join(permitted_settings)))
 
