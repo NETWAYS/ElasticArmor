@@ -24,9 +24,9 @@ class GetApiRequest(ElasticRequest):
         'HEAD': '/{index}/{document}/{identifier}'
     }
 
-    @Permission('api/documents/get')
     def inspect(self, client):
-        source_filter = client.create_source_filter(self.index, self.document, SourceFilter.from_query(self.query))
+        source_filter = client.create_source_filter('api/documents/get', self.index, self.document,
+                                                    SourceFilter.from_query(self.query))
         if source_filter is None:
             raise PermissionError('You are not permitted to access the requested document.')
         elif source_filter:
