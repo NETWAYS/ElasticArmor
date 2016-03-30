@@ -92,9 +92,9 @@ class ElasticConnection(LoggingAware, object):
         """Send the given request to Elasticsearch and return its response.
         Returns None if it was not possible to receive a response."""
         try:  # It's either a ElasticRequestHandler, a ElasticRequest ..
-            request_path = request.path
+            request_path = urllib.quote_plus(request.path, '/')
         except AttributeError:  # .. or a requests.Request
-            request_path = request.url
+            request_path = urllib.quote_plus(request.url, '/')
             encoded_query = urllib.urlencode(request.params, True)
             prepared_request = requests.PreparedRequest()
             prepared_request.prepare_method(request.method)
