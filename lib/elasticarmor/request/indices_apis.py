@@ -95,7 +95,10 @@ class CloseIndexApiRequest(ElasticRequest):
 
 class CreateMappingApiRequest(ElasticRequest):
     locations = {
-        'PUT': '/{indices}/_mapping{s}/{document}'
+        'PUT': [
+            '/_mapping{s}/{document}',
+            '/{indices}/_mapping{s}/{document}'
+        ]
     }
 
     @Permission('api/indices/create/mappings')
