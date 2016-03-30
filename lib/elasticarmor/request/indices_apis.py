@@ -207,9 +207,14 @@ class GetIndexSettingsApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/get/settings')
     def inspect(self, client):
-        pass
+        requested_indices = FilterString.from_string(self.get_match('indices', ''))
+        index_filter = client.create_filter_string('api/indices/get/settings', requested_indices)
+        if index_filter is None:
+            raise PermissionError(
+                'You are not permitted to access the general settings of the given index or indices.')
+        elif index_filter:
+            self.path = '/'.join(('', str(index_filter), '_settings'))
 
 
 class AnalyzeApiRequest(ElasticRequest):
