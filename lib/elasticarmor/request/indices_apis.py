@@ -106,8 +106,9 @@ class CreateMappingApiRequest(ElasticRequest):
         pass
 
 
-# TODO: Competes with GetIndexApiRequest
 class GetMappingApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
+
     locations = {
         'GET': [
             '/_mapping{s}',
@@ -239,6 +240,8 @@ class UpdateIndexSettingsApiRequest(ElasticRequest):
 
 
 class GetIndexSettingsApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
+
     locations = {
         'GET': [
             '/_settings',
@@ -331,6 +334,8 @@ class DeleteIndexWarmerApiRequest(ElasticRequest):
 
 
 class GetIndexWarmerApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
+
     locations = {
         'GET': [
             '/_warmer{s}/{identifiers}',
