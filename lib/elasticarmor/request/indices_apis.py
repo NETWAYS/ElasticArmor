@@ -374,9 +374,13 @@ class IndexRefreshApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/refresh')
     def inspect(self, client):
-        pass
+        requested_indices = FilterString.from_string(self.get_match('indices', ''))
+        index_filter = client.create_filter_string('api/indices/refresh', requested_indices)
+        if index_filter is None:
+            raise PermissionError('You are not permitted to refresh the given indices.')
+        elif index_filter:
+            self.path = '/'.join(('', str(index_filter), '_refresh'))
 
 
 class IndexOptimizeApiRequest(ElasticRequest):
