@@ -14,10 +14,10 @@ from urlparse import urlparse
 from requests import RequestException
 
 from elasticarmor import *
+from elasticarmor.auth import AuthorizationError, Auth, Client
 from elasticarmor.request import ElasticRequest, RequestError
 from elasticarmor.settings import Settings
 from elasticarmor.util import format_elasticsearch_error
-from elasticarmor.util.auth import AuthorizationError, Auth, Client
 from elasticarmor.util.elastic import ElasticSearchError
 from elasticarmor.util.http import *
 from elasticarmor.util.mixins import LoggingAware

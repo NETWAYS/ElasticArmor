@@ -186,13 +186,11 @@ class ElasticRole(ElasticObject):
     """ElasticRole object representing a client's role."""
     document_type = 'role'
 
-    def __init__(self, id, name, permissions, restrictions):
+    def __init__(self, id, privileges):
         super(ElasticRole, self).__init__(id)
-        self.name = name
         self.users = None
         self.groups = None
-        self.permissions = permissions
-        self.restrictions = restrictions
+        self.privileges = privileges
 
     @classmethod
     def search(cls, user=None, groups=None):
@@ -228,7 +226,7 @@ class ElasticRole(ElasticObject):
 
         query_params = {
             'filter_path': 'hits.hits._id,hits.hits._source',
-            '_source': 'name,permissions,restrictions'
+            '_source': 'privileges'
         }
 
         return cls.request('_search', method='GET', params=query_params, json=data)
@@ -1767,12 +1765,12 @@ class SourceFilter(object):
             assert self, 'Cannot create a query from a empty source filter'
 
             if not self.excludes:
-                query['_source'] = ','.join(self.includes)
+                query['_source'] = ','.join(str(p) for p in self.includes)
             else:
                 if self.includes:
-                    query['_source_include'] = ','.join(self.includes)
+                    query['_source_include'] = ','.join(str(p) for p in self.includes)
 
-                query['_source_exclude'] = ','.join(self.excludes)
+                query['_source_exclude'] = ','.join(str(p) for p in self.excludes)
 
         return query
 

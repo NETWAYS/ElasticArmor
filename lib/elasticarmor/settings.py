@@ -11,8 +11,9 @@ from logging.handlers import SysLogHandler
 import requests
 
 from elasticarmor import *
+from elasticarmor.auth.elasticsearch_backend import ElasticsearchRoleBackend
+from elasticarmor.auth.ldap_backend import LdapUserBackend, LdapUsergroupBackend
 from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version, propertycache
-from elasticarmor.util.auth import LdapUserBackend, LdapUsergroupBackend, ElasticsearchRoleBackend
 from elasticarmor.util.config import Parser
 from elasticarmor.util.daemon import get_daemon_option_parser
 from elasticarmor.util.elastic import ElasticConnection
