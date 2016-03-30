@@ -156,9 +156,9 @@ class GetMappingApiRequest(ElasticRequest):
 class GetFieldMappingApiRequest(ElasticRequest):
     locations = {
         'GET': [
-            '/{indices}/_mapping{s}/field/{fields}',
-            '/{indices}/{documents}/_mapping{s}/field/{fields}',
-            '/{indices}/_mapping{s}/{documents}/field/{fields}'
+            '/{indices}/_mapping/field/{fields}',
+            '/{indices}/{documents}/_mapping/field/{fields}',
+            '/{indices}/_mapping/{documents}/field/{fields}'
         ]
     }
 
