@@ -1652,6 +1652,7 @@ class SourceFilter(object):
     def __init__(self):
         self.includes = []
         self.excludes = []
+        self.combined = []
         self.disabled = False
 
     def __nonzero__(self):
@@ -1719,6 +1720,43 @@ class SourceFilter(object):
                 raise ElasticSearchError('Malformed source filter "{0!r}"'.format(data))
 
         return source_filter
+
+    def combine(self, source_filter):
+        """Combine this source filter with the given one and return whether it was successful."""
+        new_includes, combined, match_found = [], set(), False
+        for existing_include in self.includes:
+            candidates = []
+            for new_include in source_filter.includes:
+                if new_include < existing_include:
+                    # Replace any existing include which is less restrictive
+                    candidates.append(new_include)
+                    combined.add(new_include)
+                    match_found = True
+                # The >= comparison MUST NOT be removed! In case both patterns are
+                # incompatible to each other this will evaluate to False as well
+                elif new_include >= existing_include and \
+                        not any(exclude >= existing_include for exclude in source_filter.excludes):
+                    # Existing includes which are equally or more restrictive are kept as is but there is a good chance
+                    # that it's possible to negate them using the new excludes which causes them to be discarded
+                    candidates.append(existing_include)
+                    combined.add(new_include)
+                    match_found = True
+
+            new_includes.extend(candidates)
+
+        if not self.includes:
+            # In case there are not any existing includes, take the new includes as is
+            self.includes = source_filter.includes
+            self.excludes.extend(source_filter.excludes)
+        elif not match_found:
+            return False
+        else:
+            self.combined = combined
+            self.includes = new_includes
+            # Now merge the excludes but only if a compatible include exists, as some may have been dropped
+            self.excludes.extend(e for e in source_filter.excludes if any(e < p for p in new_includes))
+
+        return True
 
     def as_query(self):
         """Create and return a query for this source filter."""
