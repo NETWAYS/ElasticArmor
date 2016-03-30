@@ -139,7 +139,7 @@ class ElasticResponse(object):
         if callable(self.content):
             iterator = iter(self.content(chunk_size))
         elif isinstance(self.content, basestring):
-            iterator = iter(self.content.splitlines(keepends=True))
+            iterator = iter(self.content.splitlines(True))  # keepends=True
         else:
             iterator = iter(self.content)
 
