@@ -181,9 +181,13 @@ class GetAliasApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/get/aliases')
     def inspect(self, client):
-        pass
+        requested_indices = FilterString.from_string(self.get_match('indices', ''))
+        index_filter = client.create_filter_string('api/indices/get/aliases', requested_indices)
+        if index_filter is None:
+            raise PermissionError('You are not permitted to access aliases of the given indices.')
+        elif index_filter:
+            self.path = '/'.join(('', str(index_filter), '_alias', self.get_match('name', '')))
 
 
 class UpdateIndexSettingsApiRequest(ElasticRequest):
