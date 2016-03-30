@@ -28,7 +28,7 @@ class GetApiRequest(ElasticRequest):
         source_filter = client.create_source_filter('api/documents/get', self.index, self.document,
                                                     SourceFilter.from_query(self.query))
         if source_filter is None:
-            raise PermissionError('You are not permitted to access the requested document.')
+            raise PermissionError('You are not permitted to access the requested document and/or fields.')
         elif source_filter:
             self.query.discard('_source', '_source_include', '_source_exclude')
             self.query.update(source_filter.as_query())
