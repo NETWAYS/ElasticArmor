@@ -174,6 +174,10 @@ class GetAliasApiRequest(ElasticRequest):
             '/_alias/{name}',
             '/{indices}/_alias',
             '/{indices}/_alias/{name}'
+        ],
+        'HEAD': [
+            '/_alias/{name}',
+            '/{indices}/_alias/{name}'
         ]
     }
 
