@@ -73,7 +73,7 @@ class GetClusterSettingsApiRequest(ElasticRequest):
         'GET': '/_cluster/settings'
     }
 
-    @Permission('api/cluster/settings/get')
+    @Permission('api/cluster/get/settings')
     def inspect(self, client):
         pass
 
@@ -83,7 +83,7 @@ class UpdateClusterSettingsApiRequest(ElasticRequest):
         'PUT': '/_cluster/settings'
     }
 
-    @Permission('api/cluster/settings/update')
+    @Permission('api/cluster/update/settings')
     def inspect(self, client):
         pass
 
