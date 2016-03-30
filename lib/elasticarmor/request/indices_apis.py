@@ -128,8 +128,8 @@ class GetMappingApiRequest(ElasticRequest):
                                                        single=restricted_types)
         except MultipleIncludesError as error:
             raise PermissionError(
-                'You are restricted to specific types or fields. To retrieve type mappings, please '
-                'pick a single index from the following list: {0}'.format(', '.join(error.includes)))
+                'You are restricted to specific types. To retrieve type mappings, please pick a'
+                ' single index from the following list: {0}'.format(', '.join(error.includes)))
         else:
             if index_filter is None:
                 raise PermissionError('You are not permitted to access the mappings of the given indices.')
