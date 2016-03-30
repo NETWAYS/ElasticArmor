@@ -28,9 +28,13 @@ class ElasticArmor(UnixDaemon):
     def handle_reload(self):
         self.log.info('Reloading request handler caches...')
         ElasticRequest.clear_caches()
-        if self._proxy.group_backend is not None:
+        if self._proxy.auth.group_backends:
             self.log.info('Reloading group membership cache...')
-            self._proxy.group_backend.clear_cache()
+            for backend in self._proxy.auth.group_backends:
+                try:
+                    backend.clear_cache()
+                except AttributeError:
+                    pass
 
     def run(self):
         self.log.info('Launching reverse proxy...')
