@@ -12,17 +12,16 @@ __all__ = ['RequestError', 'PermissionError', 'Permission', 'Permissions', 'Elas
 
 
 class _RequestRegistry(type):
-    """
-    A metaclass to register every class derived from ElasticRequest.
+    """Metaclass to register every class derived from ElasticRequest."""
 
-    """
     registry = []
+    type_map = {}
 
     def __new__(mcs, class_name, base_classes, namespace):
         class_obj = super(_RequestRegistry, mcs).__new__(mcs, class_name, base_classes, namespace)
         if class_name != 'ElasticRequest':
             mcs.registry.append(class_obj)
-            mcs.registry = sorted(mcs.registry, key=lambda c: c.priority, reverse=True)
+            mcs.type_map[class_obj.__name__] = class_obj
 
             for command, locations in class_obj.locations.items():
                 if not isinstance(locations, list):
@@ -32,6 +31,29 @@ class _RequestRegistry(type):
                                                 for location in locations]
 
         return class_obj
+
+    @classmethod
+    def sort(cls):
+        """Sort the handler registry."""
+        cls.registry.sort(key=cls._get_priority, reverse=True)
+        cls.type_map.clear()  # Free some memory, the registry is only sorted once
+
+    @classmethod
+    def _get_priority(cls, handler):
+        """Return and set the given handler's priority."""
+        if handler.priority is None:
+            try:
+                if handler.before is not None:
+                    handler.priority = cls._get_priority(cls.type_map[handler.before]) + 1
+                elif handler.after is not None:
+                    handler.priority = cls._get_priority(cls.type_map[handler.after]) - 1
+                else:
+                    handler.priority = 0
+            except KeyError:
+                raise AssertionError('Request handler {0} of module {1} defines an invalid dependency: {2}'
+                                     ''.format(handler.__name__, handler.__module__, handler.before or handler.after))
+
+        return handler.priority
 
 
 class RequestError(Exception):
@@ -172,9 +194,14 @@ class ElasticRequest(LoggingAware, object):
         's': 's?'
     }
 
-    # The priority of a request handler. The higher the value, the earlier a request handler is
-    # asked to process a request. If you're not competing with other handlers, leave the default
-    priority = 0
+    # The priority of a request handler. The higher the value, the earlier a request handler is asked to process a
+    # request. If you're not competing with other handlers or a dynamic dependency is sufficient, leave the default
+    priority = None
+
+    # Set one of the following to the name of the class your handler should be processed
+    # before or after. This will not have any effect in case a priority is already set
+    before = None
+    after = None
 
     # The base url a request handler is responsible for. If this is not None, the base
     # implementation of is_valid() checks whether a request's path starts with this url
@@ -307,3 +334,7 @@ class ElasticRequest(LoggingAware, object):
 for module in os.listdir(os.path.dirname(__file__)):
     if module != '__init__.py' and module.endswith('.py'):
         __import__('elasticarmor.request.' + module[:-3])
+
+# Once all handlers are registered, sort them based on their priority. This needs
+# to be done at the very end to resolve dynamic dependencies between handlers
+_RequestRegistry.sort()
