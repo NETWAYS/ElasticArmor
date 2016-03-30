@@ -12,7 +12,7 @@ from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole', 'QueryDslParser',
-           'AggregationParser', 'HighlightParser', 'SourceFilter']
+           'AggregationParser', 'HighlightParser', 'SourceFilter', 'FilterString']
 
 DEFAULT_TIMEOUT = 5  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
@@ -1753,3 +1753,164 @@ class SourceFilter(object):
             obj['include'] = self.includes
 
         return obj
+
+
+class FilterString(LoggingAware, object):
+    """FilterString object which is aware of how Elasticsearch handles filter strings."""
+
+    exclude_step = 1
+    addition_step = 2
+
+    def __init__(self, parts=None):
+        self._parts = parts or []
+        self._update_order = None
+        self._max_position = None
+
+        self.combined = []
+
+    def __iter__(self):
+        return iter(self._sorted)
+
+    def __getitem__(self, item):
+        return self._sorted[item]
+
+    def __str__(self):
+        return ','.join(str(p) for p in self._sorted)
+
+    def __repr__(self):
+        return 'FilterString({0!r})'.format(self._parts)
+
+    def __nonzero__(self):
+        return bool(self._parts)
+
+    @classmethod
+    def from_string(cls, buf):
+        """Create and return a new instance of FilterString using the given string."""
+        filter_string = cls()
+        for pattern in (s.strip() for s in buf.split(',')):
+            if pattern.startswith('+'):
+                filter_string.append_addition(pattern[1:])
+            elif pattern.startswith('-'):
+                filter_string.append_exclude(pattern[1:])
+            elif pattern:
+                filter_string.append_include(pattern)
+
+        return filter_string
+
+    @property
+    def _sorted(self):
+        if self._update_order or self._update_order is None:
+            self._parts = sorted(self._parts, key=lambda p: p.order)
+            self._update_order = False
+
+        return self._parts
+
+    @property
+    def _last_position(self):
+        if self._max_position is None:
+            if not self._parts:
+                self._max_position = 0
+            else:
+                self._max_position = max(p.order for p in reversed(self._parts) if p.is_include())
+
+        return self._max_position
+
+    @property
+    def _next_position(self):
+        if self._max_position is None:
+            return self._last_position
+
+        self._max_position = self._max_position + self.exclude_step + self.addition_step
+        return self._max_position
+
+    def append_include(self, pattern):
+        """Append a new include pattern to this filter string."""
+        self._parts.append(_Part('include', pattern, self._next_position))
+
+    def append_exclude(self, pattern):
+        """Append a new exclude pattern to this filter string."""
+        self._parts.append(_Part('exclude', pattern, self._last_position + self.exclude_step))
+
+    def append_addition(self, pattern):
+        """Append a new addition pattern to this filter string."""
+        self._parts.append(_Part('addition', pattern, self._last_position + self.addition_step))
+
+    def iter_patterns(self, skip_excludes=True):
+        """Return a iterator for the patterns that are part of this filter string."""
+        return iter(p.pattern for p in self._sorted if not skip_excludes or not p.is_exclude())
+
+    def combine(self, filter_string):
+        """Combine this filter string with the given one and return whether it was successful."""
+        new_parts, combined, match_found = [], set(), False
+        for existing_part in self._parts:
+            if existing_part.is_exclude():
+                new_parts.append(existing_part)
+            else:
+                candidates = []
+                register_excludes = exit_after_excludes = False
+                for new_part in filter_string:
+                    # TODO: Take new_part.order into consideration to achieve some sort of stability
+                    if new_part.is_exclude():
+                        if register_excludes:
+                            if existing_part.pattern <= new_part.pattern:
+                                break
+
+                            if existing_part.is_include():
+                                new_part.order = existing_part.order + self.exclude_step
+                            else:
+                                new_part.order = existing_part.order - self.addition_step + self.exclude_step
+
+                            candidates.append(new_part)
+                    elif exit_after_excludes:
+                        break
+                    elif new_part.pattern < existing_part.pattern:
+                        combined.add(new_part.pattern)
+                        new_part.type = existing_part.type
+                        new_part.order = existing_part.order
+                        candidates.append(new_part)
+                        register_excludes = True
+                    elif new_part.pattern >= existing_part.pattern:
+                        combined.add(new_part.pattern)
+                        candidates.append(existing_part)
+                        register_excludes = exit_after_excludes = True
+                    else:
+                        register_excludes = False
+                else:
+                    if candidates:
+                        match_found = True
+                        new_parts.extend(candidates)
+
+        if not match_found:
+            return False
+
+        self._parts = new_parts
+        self._update_order = True
+        self.combined = list(combined)
+        return True
+
+
+class _Part(object):
+    def __init__(self, pattern_type, pattern, order=0):
+        self.type = pattern_type
+        self.pattern = pattern
+        self.order = order
+
+    def __str__(self):
+        if self.is_addition():
+            return ''.join(('+', str(self.pattern)))
+        elif self.is_exclude():
+            return ''.join(('-', str(self.pattern)))
+        else:
+            return str(self.pattern)
+
+    def __repr__(self):
+        return '_Part({0!r}, {1!r}, {2!r})'.format(self.type, self.pattern, self.order)
+
+    def is_include(self):
+        return self.type == 'include'
+
+    def is_exclude(self):
+        return self.type == 'exclude'
+
+    def is_addition(self):
+        return self.type == 'addition'
