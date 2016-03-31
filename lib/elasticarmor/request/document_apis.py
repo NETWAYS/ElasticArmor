@@ -26,8 +26,14 @@ class IndexApiRequest(ElasticRequest):
 
 class GetApiRequest(ElasticRequest):
     locations = {
-        'GET': '/{index}/{document}/{identifier}',
-        'HEAD': '/{index}/{document}/{identifier}'
+        'GET': [
+            '/{index}/{document}/{identifier}',
+            '/{index}/{document}/{identifier}/_source'
+        ],
+        'HEAD': [
+            '/{index}/{document}/{identifier}',
+            '/{index}/{document}/{identifier}/_source'
+        ]
     }
 
     def inspect(self, client):
@@ -38,16 +44,6 @@ class GetApiRequest(ElasticRequest):
         elif source_filter:
             self.query.discard('_source', '_source_include', '_source_exclude')
             self.query.update(source_filter.as_query())
-
-
-class GetSourceApiRequest(ElasticRequest):
-    locations = {
-        'GET': '/{index}/{document}/{identifier}/_source'
-    }
-
-    @Permission('api/documents/get')
-    def inspect(self, client):
-        pass
 
 
 class DeleteApiRequest(ElasticRequest):
