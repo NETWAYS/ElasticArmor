@@ -45,6 +45,18 @@ class GetApiRequest(ElasticRequest):
             self.query.discard('_source', '_source_include', '_source_exclude')
             self.query.update(source_filter.as_query())
 
+        if not source_filter.disabled and 'fields' in self.query:
+            forbidden_fields = []
+            for field in (field.strip() for v in self.query['fields'] for field in v.split(',')):
+                if field and not client.can('api/documents/get', self.index, self.document, field):
+                    forbidden_fields.append(field)
+
+            if forbidden_fields:
+                # The fields parameter is not rewritten since it does not support
+                # wildcards and therefore contains only explicit values
+                raise PermissionError('You are not permitted to access the following fields: {0}'
+                                      ''.format(', '.join(forbidden_fields)))
+
 
 class DeleteApiRequest(ElasticRequest):
     locations = {
