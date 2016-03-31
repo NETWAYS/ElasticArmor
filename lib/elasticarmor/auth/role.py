@@ -47,8 +47,8 @@ class Role(ElasticRole):
             self.__privileges = privileges
             return self.__privileges
 
-    def get_restrictions(self, permission, index=None, document_type=None):
-        """Return all restrictions for the given context which grant the given permission.
+    def get_restrictions(self, index=None, document_type=None, permission=None, invert=False):
+        """Return all restrictions for the given context which do or do not grant the given permission.
         Climbs up the entire privilege hierarchy in case a restriction inherits permissions
         until a partially matching parent is found that grants the permission.
 
@@ -58,12 +58,18 @@ class Role(ElasticRole):
             pattern = TypePattern(index, document_type)
             for restriction, permissions in self._privileges.get('fields', {}).iteritems():
                 if restriction.matches(pattern):
-                    if not permissions:
+                    if permission is None:
+                        # If there is no permission it's the restriction itself we're interested in
+                        restrictions.append(restriction)
+                    elif not permissions:
                         # Restrictions without any permissions are considered inheriting
                         candidates.append(restriction)
-                    elif any(self._match_permissions(permission, p) for p in permissions):
-                        # Whereas restrictions with at least one permission are required
-                        # to match and if not, are ignored
+                    elif not invert and any(self._match_permissions(permission, p) for p in permissions):
+                        # Whereas restrictions with at least one permission
+                        # are required to match and if not, are ignored...
+                        restrictions.append(restriction)
+                    elif invert and not any(self._match_permissions(permission, p) for p in permissions):
+                        # ...unless we're inverting the match, of course
                         restrictions.append(restriction)
 
         if index is not None and (not restrictions or candidates):
@@ -78,10 +84,12 @@ class Role(ElasticRole):
 
             for restriction, permissions in self._privileges.get('types', {}).iteritems():
                 if restriction.matches(pattern):
-                    if not permissions:
+                    if permission is None:
+                        restrictions.append(restriction)
+                    elif not permissions:
                         if register_candidates:
                             candidates.append(restriction)
-                    elif any(self._match_permissions(permission, p) for p in permissions):
+                    elif not invert and any(self._match_permissions(permission, p) for p in permissions):
                         if register_candidates:
                             # Avoid touching the restrictions as well, since we're
                             # interested in the remaining candidates only
@@ -89,6 +97,20 @@ class Role(ElasticRole):
                         elif candidates:
                             # Any matching parent allows to include the remaining
                             # candidates in the final result, at once
+                            restrictions.extend(candidates)
+                            return restrictions
+                    elif invert:
+                        if any(self._match_permissions(permission, p) for p in permissions):
+                            if not register_candidates and candidates:
+                                # The restriction obviously grants the permission and since that's not
+                                # what we're out for in case the match is inverted it means that all
+                                # remaining candidates now have it as well and as such are obsolete
+                                return restrictions
+                        elif register_candidates:
+                            restrictions.append(restriction)
+                        elif candidates:
+                            # In case of a failed inverted match and remaining candidates
+                            # we'll stop at the first parent that is not inheriting as well
                             restrictions.extend(candidates)
                             return restrictions
 
@@ -102,19 +124,35 @@ class Role(ElasticRole):
 
             for restriction, permissions in self._privileges.get('indices', {}).iteritems():
                 if pattern is None or restriction.matches(pattern):
-                    if not permissions:
+                    if permission is None:
+                        restrictions.append(restriction)
+                    elif not permissions:
                         if register_candidates:
-                            candidates.append(restriction)
-                    elif any(self._match_permissions(permission, p) for p in permissions):
+                            restrictions.append(restriction)
+                    elif not invert and any(self._match_permissions(permission, p) for p in permissions):
                         if register_candidates:
                             restrictions.append(restriction)
                         elif candidates:
                             restrictions.extend(candidates)
                             return restrictions
+                    elif invert:
+                        if any(self._match_permissions(permission, p) for p in permissions):
+                            if not register_candidates and candidates:
+                                return restrictions
+                        elif register_candidates:
+                            restrictions.append(restriction)
+                        elif candidates:
+                            restrictions.extend(candidates)
+                            return restrictions
 
-        if candidates and any(self._match_permissions(permission, p) for p in self._privileges.get('cluster', [])):
-            restrictions.extend(candidates)
+        if candidates:
+            if not invert:
+                if any(self._match_permissions(permission, p) for p in self._privileges.get('cluster', [])):
+                    restrictions.extend(candidates)
+            elif not any(self._match_permissions(permission, p) for p in self._privileges.get('cluster', [])):
+                restrictions.extend(candidates)
 
+        # TODO: Return a generator instead
         return restrictions
 
     def permits(self, permission, index=None, document_type=None, field=None):

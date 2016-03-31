@@ -261,7 +261,7 @@ class Client(LoggingAware, object):
         """
         filters = {}
         for role in self.roles:
-            for restriction in role.get_restrictions(permission, index, document_type):
+            for restriction in role.get_restrictions(index, document_type, permission):
                 for include in restriction.includes:
                     filters.setdefault(include, []).extend(e for e in restriction.excludes)
 
