@@ -183,6 +183,20 @@ class Client(LoggingAware, object):
         assert field is None or isinstance(field, basestring), 'You are required to pass strings, yet'
         return any(role.permits(permission, index, document_type, field) for role in self.roles)
 
+    def has_restriction(self, index, document_type=None, without_permission=None):
+        """Return whether this client is restricted within the given context.
+        The optional permission allows to check only for restrictions that do
+        not grant the permission in the given context.
+
+        """
+        if self.is_restricted('types' if document_type is None else 'fields'):
+            for role in self.roles:
+                if any(role.get_restrictions(index, document_type, without_permission,
+                                             invert=without_permission is not None)):
+                    return True
+
+        return False
+
     def create_filter_string(self, permission, filter_string=None, index=None, single=False):
         """Create and return a filter string based on what this client is permitted or is requesting to access.
         May return a empty filter if the client is not restricted at all and None if the client can't access
