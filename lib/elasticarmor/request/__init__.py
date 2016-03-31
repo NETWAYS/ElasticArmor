@@ -277,7 +277,11 @@ class ElasticRequest(LoggingAware, object):
     @property
     def json(self):
         if self._json is None:
-            self._json = json.loads(self.body)
+            data = self.body
+            if not data and 'source' in self.query:
+                data = self.query['source'][-1]
+
+            self._json = json.loads(data)
 
         return self._json
 
