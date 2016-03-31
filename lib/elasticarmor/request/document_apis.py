@@ -13,9 +13,15 @@ class IndexApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/documents/index')
     def inspect(self, client):
-        pass
+        # TODO: Check if it's required to validate a parent's id (Whether the client has access to the parent's type)
+        if not client.can('api/documents/index', self.index, self.document):
+            raise PermissionError('You are not permitted to index documents of this type in the given index.')
+        elif client.has_restriction(self.index, self.document):
+            raise PermissionError('You are restricted to specific fields of the given type.'
+                                  ' Please use the update api instead.')
+        elif not self.query.is_false('refresh') and not client.can('api/indices/refresh', self.index):
+            raise PermissionError('You are not permitted to refresh this index.')
 
 
 class GetApiRequest(ElasticRequest):
