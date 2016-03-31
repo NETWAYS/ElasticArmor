@@ -18,24 +18,24 @@ class Role(ElasticRole):
         try:
             return self.__privileges
         except AttributeError:
-            if 'fields' in self.privileges and 'types' not in self.privileges:
+            if self.privileges.get('fields') and not self.privileges.get('types'):
                 raise RoleError('Role "{0}" defines field restrictions but not any type restrictions'.format(self.id))
-            elif 'types' in self.privileges and 'indices' not in self.privileges:
+            elif self.privileges.get('types') and not self.privileges.get('indices'):
                 raise RoleError('Role "{0}" defines type restrictions but not any index restrictions'.format(self.id))
 
             privileges = {}
-            if 'cluster' in self.privileges:
+            if self.privileges.get('cluster'):
                 privileges['cluster'] = self.privileges['cluster']
-            if 'indices' in self.privileges:
+            if self.privileges.get('indices'):
                 privileges['indices'] = dict(
                     (Restriction([k]), v)
                     for k, v in self.privileges['indices'].iteritems())
-            if 'types' in self.privileges:
+            if self.privileges.get('types'):
                 privileges['types'] = dict(
                     (Restriction([p.index, k]), v)
                     for k, v in self.privileges['types'].iteritems()
                     for p in (p for r in privileges['indices'] for p in r.includes))
-            if 'fields' in self.privileges:
+            if self.privileges.get('fields'):
                 privileges['fields'] = dict(
                     (Restriction([p.index, p.type, k]), v)
                     for k, v in self.privileges['fields'].iteritems()

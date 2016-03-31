@@ -147,12 +147,12 @@ class Client(LoggingAware, object):
         except AttributeError:
             scope = None
             for role in self.roles:
-                if 'fields' in role.privileges:
+                if role.privileges.get('fields'):
                     scope = 'fields'
                     break
-                elif 'types' in role.privileges:
+                elif role.privileges.get('types'):
                     scope = 'types'
-                elif scope is None and 'indices' in role.privileges:
+                elif scope is None and role.privileges.get('indices'):
                     scope = 'indices'
 
             self._restricted_scope = scope
