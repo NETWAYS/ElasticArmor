@@ -51,9 +51,14 @@ class DeleteApiRequest(ElasticRequest):
         'DELETE': '/{index}/{document}/{identifier}'
     }
 
-    @Permission('api/documents/delete')
     def inspect(self, client):
-        pass
+        # TODO: Check if it's required to validate a parent's id (Whether the client has access to the parent's type)
+        if not client.can('api/documents/delete', self.index, self.document):
+            raise PermissionError('You are not permitted to delete documents of this type in the given index.')
+        elif client.has_restriction(self.index, self.document):
+            raise PermissionError('You are restricted to specific fields of the given type.')
+        elif not self.query.is_false('refresh') and not client.can('api/indices/refresh', self.index):
+            raise PermissionError('You are not permitted to refresh this index.')
 
 
 class UpdateApiRequest(ElasticRequest):
