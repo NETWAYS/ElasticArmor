@@ -281,7 +281,10 @@ class ElasticRequest(LoggingAware, object):
             if not data and 'source' in self.query:
                 data = self.query['source'][-1]
 
-            self._json = json.loads(data)
+            try:
+                self._json = json.loads(data)
+            except ValueError as error:
+                raise RequestError(400, 'Failed to parse payload. An error occurred: {0}'.format(error))
 
         return self._json
 
