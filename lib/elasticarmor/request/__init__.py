@@ -1,9 +1,17 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
-import json
 import os
 import re
 from functools import update_wrapper
+
+try:
+    # Python 2.7+
+    from collections import OrderedDict
+    import json
+except ImportError:
+    # Python 2.6
+    from ordereddict import OrderedDict
+    import simplejson as json
 
 from elasticarmor.util.http import HttpHeaders
 from elasticarmor.util.mixins import LoggingAware
@@ -282,7 +290,7 @@ class ElasticRequest(LoggingAware, object):
                 data = self.query['source'][-1]
 
             try:
-                self._json = json.loads(data)
+                self._json = json.loads(data, object_pairs_hook=OrderedDict)
             except ValueError as error:
                 raise RequestError(400, 'Failed to parse payload. An error occurred: {0}'.format(error))
 
