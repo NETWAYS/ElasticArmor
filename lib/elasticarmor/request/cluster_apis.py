@@ -1,6 +1,7 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
 from elasticarmor.request import *
+from elasticarmor.util.elastic import FilterString
 
 
 class ClusterInfoApiRequest(ElasticRequest):
@@ -19,9 +20,13 @@ class ClusterHealthApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/cluster/health')
     def inspect(self, client):
-        pass
+        requested_indices = FilterString.from_string(self.get_match('indices', ''))
+        index_filter = client.create_filter_string('api/cluster/health', requested_indices)
+        if index_filter is None:
+            raise PermissionError('You are not permitted to check the cluster health for the requested indices.')
+        elif index_filter:
+            self.path = '/_cluster/health/{0}'.format(index_filter)
 
 
 class ClusterStateApiRequest(ElasticRequest):
