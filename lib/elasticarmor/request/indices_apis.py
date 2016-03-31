@@ -101,9 +101,28 @@ class CreateMappingApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/create/mappings')
     def inspect(self, client):
-        pass
+        restricted_types = client.is_restricted('types')
+        requested_indices = FilterString.from_string(self.get_match('indices', ''))
+
+        try:
+            index_filter = client.create_filter_string('api/indices/create/mappings', requested_indices,
+                                                       single=restricted_types)
+        except MultipleIncludesError as error:
+            raise PermissionError(
+                'You are restricted to specific types. To create type mappings, please pick a'
+                ' single index from the following list: {0}'.format(', '.join(error.includes)))
+        else:
+            if index_filter is None:
+                raise PermissionError('You are not permitted to create mappings in the given indices.')
+
+        if restricted_types:
+            requested_index = index_filter.combined[0] if index_filter.combined else index_filter[0]
+            if not client.can('api/indices/create/mappings', str(requested_index), self.document):
+                raise PermissionError('You are not permitted to create a mapping for this document type.')
+
+        if index_filter:
+            self.path = '/{0}/_mappings/{1}'.format(index_filter, self.document)
 
 
 class GetMappingApiRequest(ElasticRequest):
