@@ -182,9 +182,35 @@ class GetFieldMappingApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/get/mappings')
     def inspect(self, client):
-        pass
+        restricted_types = client.is_restricted('types')
+        requested_indices = FilterString.from_string(self.indices)
+
+        try:
+            index_filter = client.create_filter_string('api/indices/get/mappings', requested_indices,
+                                                       single=restricted_types)
+        except MultipleIncludesError as error:
+            raise PermissionError(
+                'You are restricted to specific types. To retrieve field mappings, please pick a'
+                ' single index from the following list: {0}'.format(', '.join(error.includes)))
+        else:
+            if index_filter is None:
+                raise PermissionError('You are not permitted to access the mappings of the given indices.')
+
+        if restricted_types:
+            requested_types = FilterString.from_string(self.get_match('documents', ''))
+            requested_index = index_filter.combined[0] if index_filter.combined else index_filter[0]
+            type_filter = client.create_filter_string('api/indices/get/mappings', requested_types,
+                                                      str(requested_index))
+            if type_filter is None:
+                raise PermissionError('You are not permitted to access the mappings of the given types.')
+        else:
+            type_filter = self.get_match('documents')
+
+        if type_filter:
+            self.path = '/{0}/_mapping/{1}/field/{2}'.format(index_filter, type_filter, self.fields)
+        else:
+            self.path = '/{0}/_mapping/fields/{1}'.format(index_filter, self.fields)
 
 
 class DeleteMappingApiRequest(ElasticRequest):
