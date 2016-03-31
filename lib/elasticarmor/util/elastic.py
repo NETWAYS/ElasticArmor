@@ -1667,7 +1667,7 @@ class SourceFilter(object):
             raise ValueError('Expected query of type {0!r}. Got {1!r} instead'.format(Query, type(query)))
 
         source_filter = cls()
-        if query.is_false('_source'):
+        if query.is_false('_source', False):
             source_filter.disabled = True
             return source_filter
 
@@ -1678,7 +1678,7 @@ class SourceFilter(object):
             source_filter.excludes = [s.strip() for s in query['_source_exclude'][-1].split(',')]
 
         if include_keyword is None and '_source_exclude' not in query:
-            source_filter.disabled = 'fields' in query and (not query['fields'][-1] or query.is_false('fields'))
+            source_filter.disabled = 'fields' in query and (not query['fields'][-1] or query.is_false('fields', False))
 
         return source_filter
 

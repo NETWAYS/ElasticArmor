@@ -337,7 +337,7 @@ class Query(OrderedDict):
             except KeyError:
                 pass
 
-    def is_false(self, param, default=False):
+    def is_false(self, param, default=True):
         """Return whether the given parameter represents a false
         value, or the default if the parameter does not exist.
 
