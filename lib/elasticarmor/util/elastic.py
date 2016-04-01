@@ -1654,7 +1654,7 @@ class SourceFilter(object):
         self.disabled = False
 
     def __repr__(self):
-        return repr(self.as_json())
+        return repr(self.as_json()) if self else '{}'
 
     def __nonzero__(self):
         return self.disabled or bool(self.includes or self.excludes)
