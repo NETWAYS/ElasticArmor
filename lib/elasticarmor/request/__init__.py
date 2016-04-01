@@ -343,7 +343,7 @@ class ElasticRequest(LoggingAware, object):
         """
         pass
 
-    def transform(self, stream):
+    def transform(self, stream, chunk_size):
         """Apply required transformations on the given response-body stream and return a new iterable."""
         return stream
 

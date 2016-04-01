@@ -438,7 +438,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             response.status_code = 203
             response.headers['Warning'] = '214 {0} "{1}"'.format(self.server_version, transformation_reason)
 
-        stream = request.transform(response.raw.stream(MAX_CHUNK_SIZE, decode_content=False))
+        stream = request.transform(response.raw.stream(MAX_CHUNK_SIZE, decode_content=False), MAX_CHUNK_SIZE)
         data = next(stream, None)
         if data and ('Content-Length' not in response.headers or int(response.headers['Content-Length']) == 0):
             chunked_content = self.request_version >= 'HTTP/1.1'
