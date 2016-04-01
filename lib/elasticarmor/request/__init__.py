@@ -290,11 +290,15 @@ class ElasticRequest(LoggingAware, object):
                 data = self.query['source'][-1]
 
             try:
-                self._json = json.loads(data, object_pairs_hook=OrderedDict)
+                self._json = self.json_decode(data)
             except ValueError as error:
                 raise RequestError(400, 'Failed to parse payload. An error occurred: {0}'.format(error))
 
         return self._json
+
+    def json_decode(self, data):
+        """Decode the given JSON data and return the result."""
+        return json.loads(data, object_pairs_hook=OrderedDict)
 
     def json_encode(self, data, pretty=False):
         """Return the given data encoded to JSON."""
