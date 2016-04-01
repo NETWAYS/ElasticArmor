@@ -47,7 +47,7 @@ class GetApiRequest(ElasticRequest):
             self.query.discard('_source', '_source_include', '_source_exclude')
             self.query.update(source_filter.as_query())
 
-        if not source_filter.disabled and 'fields' in self.query:
+        if self.query.get('fields'):
             forbidden_fields = []
             for field in (field.strip() for v in self.query['fields'] for field in v.split(',')):
                 if field and not client.can('api/documents/get', self.index, self.document, field):
