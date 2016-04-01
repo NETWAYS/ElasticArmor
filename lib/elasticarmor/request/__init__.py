@@ -226,7 +226,7 @@ class ElasticRequest(LoggingAware, object):
     def __init__(self, context, **kwargs):
         super(ElasticRequest, self).__init__()
         self._match = None
-        self._json = None
+        self._json = False
 
         self.context = context
         for name, value in kwargs.iteritems():
@@ -284,15 +284,17 @@ class ElasticRequest(LoggingAware, object):
 
     @property
     def json(self):
-        if self._json is None:
+        if self._json is False:
+            self._json = None
             data = self.body
             if not data and 'source' in self.query:
                 data = self.query['source'][-1]
 
-            try:
-                self._json = self.json_decode(data)
-            except ValueError as error:
-                raise RequestError(400, 'Failed to parse payload. An error occurred: {0}'.format(error))
+            if data:
+                try:
+                    self._json = self.json_decode(data)
+                except ValueError as error:
+                    raise RequestError(400, 'Failed to parse payload. An error occurred: {0}'.format(error))
 
         return self._json
 
