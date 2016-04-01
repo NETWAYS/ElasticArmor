@@ -83,9 +83,58 @@ class UpdateApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/documents/update')
     def inspect(self, client):
-        pass
+        if not self.query.is_false('refresh') and not client.can('api/indices/refresh', self.index):
+            raise PermissionError('You are not permitted to refresh this index.')
+        elif 'script' in self.json:
+            if not client.can('api/documents/update', self.index, self.document):
+                raise PermissionError('You are not permitted to update this document.')
+            elif not client.can('api/feature/script', self.index, self.document):
+                raise PermissionError('You are not permitted to perform scripted updates of this document.')
+        elif self.json.get('doc'):
+            self._inspect_document(client, self.index, self.document, self.json['doc'])
+            if self.json.get('upsert'):
+                self._inspect_document(client, self.index, self.document, self.json['upsert'])
+        elif not client.can('api/documents/update', self.index, self.document):
+            raise PermissionError('You are not permitted to update this document.')
+
+        if self.query.get('fields'):
+            forbidden_fields = []
+            for field in (field.strip() for v in self.query['fields'] for field in v.split(',')):
+                if field == '_source' and client.has_restriction(self.index, self.document):
+                    raise PermissionError('"_source" is not available. You are restricted to specific fields.')
+                elif field and not client.can('api/documents/get', self.index, self.document, field):
+                    forbidden_fields.append(field)
+
+            if forbidden_fields:
+                raise PermissionError('You are not permitted to access the following fields: {0}'
+                                      ''.format(', '.join(forbidden_fields)))
+
+    def _inspect_document(self, client, index, document_type, document):
+        forbidden = []
+        for key, value in document.iteritems():
+            if isinstance(value, dict):
+                fields = self._aggregate_fields(value, key)
+            else:
+                fields = [key]
+
+            for field in fields:
+                if not client.can('api/documents/update', index, document_type, field):
+                    forbidden.append(field)
+
+        if forbidden:
+            raise PermissionError('You are not permitted to update the following fields: {0}'
+                                  ''.format(', '.join(forbidden)))
+
+    def _aggregate_fields(self, obj, path):
+        for key, value in obj.iteritems():
+            key_path = '.'.join((path, key))
+
+            try:
+                for key_path_extension in self._aggregate_fields(value, key_path):
+                    yield key_path_extension
+            except AttributeError:
+                yield key_path
 
 
 class MultiGetApiRequest(ElasticRequest):
