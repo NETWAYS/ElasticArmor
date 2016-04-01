@@ -1787,11 +1787,11 @@ class SourceFilter(object):
         assert self, 'Cannot render an emtpy source filter as JSON'
 
         if not self.excludes:
-            return self.includes if len(self.includes) > 1 else self.includes[0]
+            return [str(include) for include in self.includes] if len(self.includes) > 1 else str(self.includes[0])
 
-        obj = {'exclude': self.excludes}
+        obj = {'exclude': [str(exclude) for exclude in self.excludes]}
         if self.includes:
-            obj['include'] = self.includes
+            obj['include'] = [str(include) for include in self.includes]
 
         return obj
 
