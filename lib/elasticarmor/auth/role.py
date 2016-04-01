@@ -72,6 +72,10 @@ class Role(ElasticRole):
                         # ...unless we're inverting the match, of course
                         restrictions.append(restriction)
 
+            if not candidates:
+                # Stop here in case there are not any remaining candidates as there is nothing else to collect
+                return restrictions
+
         if index is not None and (not restrictions or candidates):
             if candidates:
                 # If there are already candidates, ensure that these are not touched and
@@ -113,6 +117,9 @@ class Role(ElasticRole):
                             # we'll stop at the first parent that is not inheriting as well
                             restrictions.extend(candidates)
                             return restrictions
+
+            if not candidates:
+                return restrictions
 
         if not restrictions or candidates:
             if candidates:
