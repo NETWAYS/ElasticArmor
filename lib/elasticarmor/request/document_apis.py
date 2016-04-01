@@ -234,6 +234,7 @@ class MultiGetApiRequest(ElasticRequest):
 
         self.json['docs'] = documents
         self.body = self.json_encode(self.json)
+        self.query.discard('_source', '_source_include', '_source_exclude')
 
     def transform(self, stream, chunk_size):
         if not self._errors:
