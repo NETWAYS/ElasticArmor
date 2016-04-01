@@ -296,9 +296,12 @@ class ElasticRequest(LoggingAware, object):
 
         return self._json
 
-    def json_encode(self, data):
+    def json_encode(self, data, pretty=False):
         """Return the given data encoded to JSON."""
-        return json.dumps(data, separators=(',', ':'))
+        if not pretty:
+            return json.dumps(data, separators=(',', ':'))
+
+        return json.dumps(data, indent=2, separators=(',', ' : '))
 
     def get_match(self, name, default=None):
         """Return the given group of the matched location or the default if no such group exists."""
