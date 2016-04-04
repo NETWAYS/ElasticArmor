@@ -168,20 +168,27 @@ class Role(ElasticRole):
 
         """
         if field is not None:
-            field_match = self._grants_permission(
-                permission, self._privileges.get('fields', {}), FieldPattern(index, document_type, field))
+            field_pattern = field
+            if index is not None and document_type is not None:
+                field_pattern = FieldPattern(index, document_type, field)
+
+            field_match = self._grants_permission(permission, self._privileges.get('fields', {}), field_pattern)
             if field_match is not None:
                 return field_match
 
-        if document_type is not None:
-            type_match = self._grants_permission(
-                permission, self._privileges.get('types', {}), TypePattern(index, document_type))
+        if document_type is not None or field is not None:
+            if document_type is None:
+                type_pattern = TypePattern(field.index, field.type)
+            else:
+                type_pattern = document_type if index is None else TypePattern(index, document_type)
+
+            type_match = self._grants_permission(permission, self._privileges.get('types', {}), type_pattern)
             if type_match is not None:
                 return type_match
 
-        if index is not None:
-            index_match = self._grants_permission(
-                permission, self._privileges.get('indices', {}), IndexPattern(index))
+        if index is not None or document_type is not None or field is not None:
+            index_pattern = IndexPattern(index or (field.index if field is not None else document_type.index))
+            index_match = self._grants_permission(permission, self._privileges.get('indices', {}), index_pattern)
             if index_match is not None:
                 return index_match
 
@@ -306,7 +313,7 @@ class IndexPattern(object):
     """
 
     def __init__(self, index_pattern):
-        self.index = index_pattern
+        self.index = str(index_pattern)
 
     def __str__(self):
         return self.index
@@ -375,8 +382,8 @@ class TypePattern(object):
     """
 
     def __init__(self, index_pattern, type_pattern):
-        self.index = index_pattern
-        self.type = type_pattern
+        self.index = str(index_pattern)
+        self.type = str(type_pattern)
 
     def __str__(self):
         return self.type
@@ -498,9 +505,9 @@ class FieldPattern(object):
     """
 
     def __init__(self, index_pattern, type_pattern, field_pattern):
-        self.index = index_pattern
-        self.type = type_pattern
-        self.field = field_pattern
+        self.index = str(index_pattern)
+        self.type = str(type_pattern)
+        self.field = str(field_pattern)
 
     def __str__(self):
         return self.field

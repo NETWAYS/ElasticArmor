@@ -177,10 +177,6 @@ class Client(LoggingAware, object):
 
     def can(self, permission, index=None, document_type=None, field=None):
         """Return whether this client has the given permission in the given context."""
-        # TODO: Find a nice way to support both strings AND pattern objects!
-        assert index is None or isinstance(index, basestring), 'You are required to pass strings, yet'
-        assert document_type is None or isinstance(document_type, basestring), 'You are required to pass strings, yet'
-        assert field is None or isinstance(field, basestring), 'You are required to pass strings, yet'
         return any(role.permits(permission, index, document_type, field) for role in self.roles)
 
     def has_restriction(self, index, document_type=None, without_permission=None):
