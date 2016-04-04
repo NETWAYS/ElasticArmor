@@ -1,5 +1,9 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
+from contextlib import closing
+from StringIO import StringIO
+
+from elasticarmor import APP_NAME
 from elasticarmor.auth import MultipleIncludesError
 from elasticarmor.request import *
 from elasticarmor.util.elastic import SourceFilter, FilterString
@@ -150,6 +154,8 @@ class SuggestApiRequest(ElasticRequest):
 
 
 class MultiSearchApiRequest(ElasticRequest):
+    _errors = None
+
     locations = {
         'GET': [
             '/_msearch',
@@ -163,9 +169,111 @@ class MultiSearchApiRequest(ElasticRequest):
         ]
     }
 
-    @Permissions('api/bulk', 'api/search/documents')
+    @Permission('api/bulk')
     def inspect(self, client):
-        pass
+        lines, self._errors = [], []
+        for i, (header, body) in enumerate(self._parse_payload()):
+            try:
+                index_filter, type_filter, _, json = SearchApiRequest.inspect_request(
+                    client, FilterString.from_list(header['index']),
+                    FilterString.from_list(header['type']), json=body)
+            except RequestError as error:
+                self._errors.append((i, {
+                    'status': error.status_code,
+                    'error': '[{0}] {1}'.format(APP_NAME, error.reason)
+                }))
+            else:
+                header['index'] = [str(part) for part in index_filter]
+                header['type'] = [str(part) for part in type_filter]
+                lines.append(self.json_encode(header))
+                lines.append(self.json_encode(json or body))
+
+        if not lines:
+            response = ElasticResponse()
+            response.content = self.json_encode({'responses': [e for p, e in self._errors]},
+                                                not self.query.is_false('pretty'))
+            response.headers['Content-Length'] = str(len(response.content))
+            response.headers['Content-Type'] = 'application/json'
+            response.status_code = 200
+            del self._errors
+            return response
+
+        self.path = '/_msearch'  # We're enforcing headers with indices and types where applicable
+        self.body = '\n'.join(lines) + '\n'
+
+    def transform(self, stream, chunk_size):
+        if not self._errors:
+            return stream
+
+        return self._transform_payload(''.join(stream), chunk_size)
+
+    def _parse_payload(self):
+        default_indices = self.get_match('indices', '').split(',')
+        default_types = self.get_match('documents', '').split(',')
+
+        with closing(StringIO(self.body)) as feed:
+            header, line, line_no = None, feed.readline(), 1
+            while line:
+                if header is None:
+                    header = line.strip()
+                else:
+                    body = line.strip()
+                    if not body:
+                        raise RequestError(
+                            400, 'Expected body at line #{0}. Got an empty line instead.'.format(line_no))
+
+                    try:
+                        header = self.json_decode(header) if header else {}
+                        if not header.get('index'):
+                            header['index'] = default_indices
+                        elif isinstance(header['index'], basestring):
+                            header['index'] = [header['index']]
+                        elif not isinstance(header['index'], list):
+                            raise RequestError(400, 'Failed to parse header at line #{0}. List or string'
+                                                    ' expected for key "index". Got type "{1}" instead.'
+                                                    ''.format(line_no - 1, type(header['index'])))
+
+                        if not header.get('type'):
+                            header['type'] = default_types
+                        elif isinstance(header['type'], basestring):
+                            header['type'] = [header['type']]
+                        elif not isinstance(header['type'], list):
+                            raise RequestError(400, 'Failed to parse header at line #{0}. List or string'
+                                                    ' expected for key "type". Got type "{1}" instead.'
+                                                    ''.format(line_no - 1, type(header['type'])))
+                    except ValueError as error:
+                        raise RequestError(
+                            400, 'Failed to decode JSON header at line #{0}: {1}'.format(line_no - 1, error))
+                    except AttributeError:
+                        raise RequestError(
+                            400, 'Failed to parse header at line #{0}. Invalid JSON object.'.format(line_no - 1))
+
+                    try:
+                        yield header, self.json_decode(body)
+                    except ValueError as error:
+                        raise RequestError(400, 'Failed to decode JSON body at line #{0}: {1}'.format(line_no, error))
+                    else:
+                        header = None
+
+                line_no += 1
+                line = feed.readline()
+
+    def _transform_payload(self, payload, chunk_size):
+        try:
+            data = self.json_decode(payload)
+        except ValueError:
+            pass
+        else:
+            for position, error in self._errors:
+                data['responses'].insert(position, error)
+
+            payload = self.json_encode(data, not self.query.is_false('pretty'))
+            if 'Content-Length' in self.context.response.headers:
+                self.context.response.headers['Content-Length'] = str(len(payload))
+
+        while payload:
+            yield payload[:chunk_size]
+            payload = payload[chunk_size:]
 
 
 class CountApiRequest(ElasticRequest):
