@@ -1827,8 +1827,13 @@ class FilterString(LoggingAware, object):
     @classmethod
     def from_string(cls, buf):
         """Create and return a new instance of FilterString using the given string."""
+        return cls.from_list(s.strip() for s in buf.split(','))
+
+    @classmethod
+    def from_list(cls, seq):
+        """Create and return a new instance of FilterString using the given sequence."""
         filter_string = cls()
-        for pattern in (s.strip() for s in buf.split(',')):
+        for pattern in seq:
             if pattern.startswith('+'):
                 filter_string.append_addition(pattern[1:])
             elif pattern.startswith('-'):
