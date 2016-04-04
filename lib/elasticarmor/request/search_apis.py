@@ -153,13 +153,13 @@ class MultiSearchApiRequest(ElasticRequest):
     locations = {
         'GET': [
             '/_msearch',
-            '/{index}/_msearch',
-            '/{index}/{document}/_msearch'
+            '/{indices}/_msearch',
+            '/{indices}/{documents}/_msearch'
         ],
         'POST': [
             '/_msearch',
-            '/{index}/_msearch',
-            '/{index}/{document}/_msearch'
+            '/{indices}/_msearch',
+            '/{indices}/{documents}/_msearch'
         ]
     }
 
