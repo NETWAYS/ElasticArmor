@@ -6,7 +6,7 @@ from StringIO import StringIO
 from elasticarmor import APP_NAME
 from elasticarmor.auth import MultipleIncludesError
 from elasticarmor.request import *
-from elasticarmor.util.elastic import SourceFilter, FilterString
+from elasticarmor.util.elastic import SourceFilter, FilterString, QueryDslParser, AggregationParser, HighlightParser
 
 
 class SearchApiRequest(ElasticRequest):
@@ -23,6 +23,44 @@ class SearchApiRequest(ElasticRequest):
         ]
     }
 
+    _permission_errors = {
+        'api/search/explain': {
+            'cluster': 'You are not permitted to access scoring explanations.',
+            'indices': 'You are not permitted to access scoring explanations of the following indices: {0}',
+            'types': 'You are not permitted to access scoring explanations of the following types: {0}'
+        },
+        'api/feature/innerHits': {
+            'cluster': 'You are not permitted to access inner hits.',
+            'indices': 'You are not permitted to access inner hits of the following indices: {0}',
+            'types': 'You are not permitted to access inner hits of the following types: {0}'
+        },
+        'api/search/suggest': {
+            'cluster': 'You are not permitted to perform suggest requests.',
+            'indices': 'You are not permitted to perform suggest requests on the following indices: {0}',
+            'types': 'You are not permitted to perform suggest requests on the following types: {0}'
+        },
+        'api/indices/stats': {
+            'cluster': 'You are not permitted to access index statistics.',
+            'indices': 'You are not permitted to access statistics of the following indices: {0}'
+        },
+        'api/feature/script': {
+            'cluster': 'You are not permitted to utilize scripts.',
+            'indices': 'You are not permitted to utilize scripts in the following indices: {0}',
+            'types': 'You are not permitted to utilize scripts in the following types: {0}'
+        },
+        'api/search/template': {
+            'cluster': 'You are not permitted to utilize search templates.',
+            'indices': 'You are not permitted to utilize search templates for the following indices: {0}',
+            'types': 'You are not permitted to utilize search templates for the following types: {0}'
+        },
+        'api/feature/significantTerms': {
+            'cluster': 'You are not permitted to utilize the significant_terms aggregation.',
+            'indices': 'You are not permitted to utilize the significant_terms aggregation'
+                       ' in the following indices: {0}',
+            'types': 'You are not permitted to utilize the significant_terms aggregation in the following types: {0}'
+        }
+    }
+
     def inspect(self, client):
         index_filter, type_filter, source_filter, json = self.inspect_request(
             client, FilterString.from_string(self.get_match('indices', '')),
@@ -30,27 +68,13 @@ class SearchApiRequest(ElasticRequest):
             SourceFilter.from_query(self.query), self.json)
 
         if not self.query.is_false('explain'):
-            for index in index_filter.iter_patterns():
-                if type_filter:
-                    for document_type in type_filter.iter_patterns():
-                        if not client.can('api/search/explain', str(index), str(document_type)):
-                            raise PermissionError(
-                                'You are not permitted to access scoring explanations of the given indices or types.')
-                elif not client.can('api/search/explain', str(index)):
-                    raise PermissionError('You are not permitted to access scoring explanations of the given indices.')
+            self._check_permission('api/search/explain', client, index_filter, type_filter)
 
-            if not index_filter and not client.can('api/search/explain'):
-                raise PermissionError('You are not permitted to access scoring explanations.')
-
-        if index_filter and type_filter and self.query.get('fields'):
+        if client.is_restricted('fields') and self.query.get('fields'):
             fields = filter(None, (field.strip() for v in self.query['fields'] for field in v.split(',')))
-            forbidden_fields = []
-            for index in index_filter.iter_patterns():
-                for document_type in type_filter.iter_patterns():
-                    for field in fields:
-                        if not client.can('api/documents/get', str(index), str(document_type), field):
-                            forbidden_fields.append(field)
-
+            forbidden_fields = [field for field in fields
+                                if not client.can('api/documents/get', index_filter.base_pattern,
+                                                  type_filter.base_pattern, field)]
             if forbidden_fields:
                 raise PermissionError('You are not permitted to access the following fields: {0}'
                                       ''.format(', '.join(forbidden_fields)))
@@ -61,56 +85,238 @@ class SearchApiRequest(ElasticRequest):
             else:
                 self.path = '/{0}/_search'.format(index_filter)
 
+        self.query.discard('_source', '_source_include', '_source_exclude')
         if source_filter:
-            self.query.discard('_source', '_source_include', '_source_exclude')
             self.query.update(source_filter.as_query())
 
         if json is not None:
             self.body = self.json_encode(json)
 
-    @staticmethod
-    def inspect_request(client, requested_indices, requested_types, requested_source, json=None):
-        restricted_types = client.is_restricted('types')
-
+    @classmethod
+    def inspect_request(cls, client, requested_indices, requested_types, requested_source=None, json=None):
+        # TODO: Error handling for unexpected types
         try:
             index_filter = client.create_filter_string('api/search/documents', requested_indices,
-                                                       single=restricted_types)
+                                                       single=client.is_restricted('types'))
         except MultipleIncludesError as error:
             raise PermissionError(
                 'You are restricted to specific types or fields. To use the search api, please pick'
                 ' a single index from the following list: {0}'.format(', '.join(error.includes)))
         else:
             if index_filter is None:
-                raise PermissionError('You are not permitted to search for documents in the given indices.')
+                raise PermissionError('You are not permitted to search for documents using'
+                                      ' the index filter "{0}".'.format(requested_indices))
 
-        if restricted_types:
-            restricted_fields = client.is_restricted('fields')
-            requested_index = index_filter.combined[0] if index_filter.combined else index_filter[0]
+        try:
+            type_filter = client.create_filter_string('api/search/documents', requested_types,
+                                                      index_filter.base_pattern, client.is_restricted('fields'))
+        except MultipleIncludesError as error:
+            raise PermissionError(
+                'You are restricted to specific fields. To use the search api, please pick a'
+                ' single type from the following list: {0}'.format(', '.join(error.includes)))
+        else:
+            if type_filter is None:
+                raise PermissionError('You are not permitted to search for documents using'
+                                      ' the type filter "{0}".'.format(requested_types))
 
-            try:
-                type_filter = client.create_filter_string('api/search/documents', requested_types,
-                                                          str(requested_index), restricted_fields)
-            except MultipleIncludesError as error:
-                raise PermissionError(
-                    'You are restricted to specific fields. To use the search api, please pick a'
-                    ' single type from the following list: {0}'.format(', '.join(error.includes)))
-            else:
-                if type_filter is None:
-                    raise PermissionError('You are not permitted to search for documents of the given types.')
+        if json is not None:
+            if 'stats' in json:
+                cls._check_permission('api/indices/stats', client, index_filter)
+            if 'facets' in json:
+                cls._check_permission('api/feature/facets', client, index_filter, type_filter)
+            if 'script_fields' in json:
+                cls._check_permission('api/feature/script', client, index_filter, type_filter)
+            if json.get('explain', False):
+                cls._check_permission('api/search/explain', client, index_filter, type_filter)
+            if 'inner_hits' in json:
+                cls._check_permission('api/feature/innerHits', client, index_filter, type_filter)
+            if 'suggest' in json:
+                cls._check_permission('api/search/suggest', client, index_filter, type_filter)
 
-            if restricted_fields:
-                requested_type = type_filter.combined[0] if type_filter.combined else type_filter[0]
-                source_filter = client.create_source_filter('api/documents/get', str(requested_index),
-                                                            str(requested_type), requested_source)
+        json_updated = False
+        if client.is_restricted('fields'):
+            if json is not None and 'fielddata_fields' in json:
+                forbidden_fielddata = [field for field in json['fielddata_fields']
+                                       if not client.can('api/documents/get', index_filter.base_pattern,
+                                                         type_filter.base_pattern, field)]
+                if forbidden_fielddata:
+                    raise PermissionError('You are not permitted to access fielddata of the following fields: {0}'
+                                          ''.format(', '.join(forbidden_fielddata)))
+
+            inspect_source = True
+            if json is not None and ('fields' in json or 'partial_fields' in json):
+                inspect_source = '_source' in json
+                if 'fields' in json:
+                    forbidden_fields = [field for field in json['fields']
+                                        if not client.can('api/documents/get', index_filter.base_pattern,
+                                                          type_filter.base_pattern, field)]
+                    if forbidden_fields:
+                        raise PermissionError('You are not permitted to access the following fields: {0}'
+                                              ''.format(', '.join(forbidden_fields)))
+
+                if 'partial_fields' in json:
+                    partial_fields = {}
+                    for partial, partial_body in json['partial_fields'].iteritems():
+                        permitted = client.create_source_filter('api/documents/get', index_filter.base_pattern,
+                                                                type_filter.base_pattern,
+                                                                SourceFilter.from_json(partial_body))
+                        if permitted is None:
+                            raise PermissionError('You are not permitted to access any of the requested fields.')
+                        elif permitted:
+                            partial_body = {
+                                'include': [str(p) for p in permitted.includes],
+                                'exclude': [str(p) for p in permitted.excludes]
+                            }
+
+                        partial_fields[partial] = partial_body
+
+                    if partial_fields != json['partial_fields']:
+                        json['partial_fields'] = partial_fields
+                        json_updated = True
+
+            if inspect_source:
+                if json is not None and '_source' in json:
+                    requested_source = SourceFilter.from_json(json['_source'])
+
+                source_filter = client.create_source_filter('api/documents/get', index_filter.base_pattern,
+                                                            type_filter.base_pattern, requested_source)
                 if source_filter is None:
-                    raise PermissionError('You are not permitted to access the requested document and/or fields.')
+                    raise PermissionError('You are not permitted to access any of the requested fields.')
+                elif json is not None and source_filter:
+                    json['_source'] = source_filter.as_json()
+                    source_filter = None
+                    json_updated = True
             else:
                 source_filter = requested_source
         else:
-            type_filter = requested_types
             source_filter = requested_source
 
-        return index_filter, type_filter, source_filter, None
+        if json is not None:
+            if json.get('query'):
+                query = QueryDslParser()
+                query.query(json['query'])
+                cls._inspect_parser(client, query, index_filter, type_filter)
+
+            aggregation_keyword = next((k for k in reversed(json) if k in ['aggregations', 'aggs']), None)
+            if aggregation_keyword is not None and json.get(aggregation_keyword):
+                aggregations = AggregationParser()
+                aggregations.aggregations(json[aggregation_keyword])
+                if cls._inspect_parser(client, aggregations, index_filter, type_filter):
+                    json_updated = True
+
+            if json.get('highlight'):
+                highlight = HighlightParser()
+                highlight.parse(json['highlight'])
+                cls._inspect_parser(client, highlight, index_filter, type_filter)
+
+            if json.get('post_filter'):
+                post_filter = QueryDslParser()
+                post_filter.filter(json['post_filter'])
+                cls._inspect_parser(client, post_filter, index_filter, type_filter)
+
+            if json.get('rescore'):
+                try:
+                    rescores = [json['rescore']['query']]
+                except IndexError:
+                    rescores = [rescore['query'] for rescore in json['rescore']]
+
+                for rescore in rescores:
+                    query = QueryDslParser()
+                    query.query(rescore['rescore_query'])
+                    cls._inspect_parser(client, query, index_filter, type_filter)
+
+        return index_filter, type_filter, source_filter, json if json_updated else None
+
+    @classmethod
+    def _check_permission(cls, permission, client, index_filter, type_filter=None):
+        if index_filter:
+            forbidden = []
+            for index in index_filter.iter_patterns():
+                if type_filter:
+                    for document_type in type_filter.iter_patterns():
+                        if not client.can(permission, index, document_type):
+                            forbidden.append('/'.join((str(index), str(document_type))))
+                elif not client.can(permission, index):
+                    forbidden.append(str(index))
+
+            if forbidden:
+                scope = 'types' if type_filter else 'indices'
+                raise PermissionError(cls._permission_errors[permission][scope].format(', '.join(forbidden)))
+        elif not client.can(permission):
+            raise PermissionError(cls._permission_errors[permission]['cluster'])
+
+    @classmethod
+    def _inspect_parser(cls, client, parser, index_filter, type_filter):
+        json_updated = False
+        for permission in parser.permissions:
+            # TODO: Context changes? Permissions are not only global anymore!
+            cls._check_permission(permission, client, index_filter, type_filter)
+
+        if client.is_restricted('indices'):
+            for index in parser.indices:
+                if not index_filter.matches(FilterString.from_string(index)):
+                    raise RequestError(400, 'Index filter "{0}" does not match the requested scope "{1}".'
+                                            ''.format(index, index_filter))
+
+        if client.is_restricted('types'):
+            for index, document_type in parser.documents:
+                if index and not index_filter.matches(FilterString.from_string(index)):
+                    raise RequestError(400, 'Index filter "{0}" does not match the requested scope "{1}".'
+                                            ''.format(index, index_filter))
+                elif not type_filter.matches(FilterString.from_string(document_type)):
+                    raise RequestError(400, 'Type filter "{0}" does not match the requested scope "{1}".'
+                                            ''.format(document_type, type_filter))
+
+        if client.is_restricted('fields'):
+            for index, document_type, field in parser.fields:
+                if index:
+                    indices = FilterString.from_string(index)
+                    if not index_filter.matches(indices):
+                        raise RequestError(400, 'Index filter "{0}" does not match the requested scope "{1}".'
+                                                ''.format(index, index_filter))
+                else:
+                    indices = index_filter
+
+                if document_type:
+                    types = FilterString.from_string(document_type)
+                    if not type_filter.matches(types):
+                        raise RequestError(400, 'Type filter "{0}" does not match the requested scope "{1}".'
+                                                ''.format(document_type, type_filter))
+                else:
+                    types = type_filter
+
+                for index in indices.iter_patterns():
+                    for document_type in types.iter_patterns():
+                        if not client.can('api/search/documents', index, document_type, field):
+                            raise PermissionError('You are not permitted to search for documents of type "{0}" in index'
+                                                  ' "{1}" by using field "{2}".'.format(document_type, index, field))
+
+            try:
+                source_requests = parser.source_requests
+            except AttributeError:
+                pass
+            else:
+                for index, document_type, source_request in source_requests:
+                    if index and not index_filter.matches(FilterString.from_string(index)):
+                        raise RequestError(400, 'Index filter "{0}" does not match the requested scope "{1}".'
+                                                ''.format(index, index_filter))
+                    elif document_type and not type_filter.matches(FilterString.from_string(document_type)):
+                        raise RequestError(400, 'Type filter "{0}" does not match the requested scope "{1}".'
+                                                ''.format(document_type, type_filter))
+
+                    requested_source = SourceFilter.from_json(source_request.get('_source'))
+                    source_filter = client.create_source_filter('api/documents/get', index_filter.base_pattern,
+                                                                type_filter.base_pattern, requested_source)
+                    if source_filter is None:
+                        raise PermissionError('You are either not permitted to access the document type'
+                                              ' "{0}" or any of the requested fields ({1}) in index "{2}".'
+                                              ''.format(document_type or type_filter.base_pattern,
+                                                        requested_source, index or index_filter.base_pattern))
+                    elif source_filter:
+                        source_request['_source'] = source_filter.as_json()
+                        json_updated = True
+
+        return json_updated
 
 
 class SearchTemplateApiRequest(ElasticRequest):
