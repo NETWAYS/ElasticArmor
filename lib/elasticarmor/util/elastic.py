@@ -1805,13 +1805,14 @@ class SourceFilter(object):
         return obj
 
 
-class FilterString(LoggingAware, object):
+class FilterString(object):
     """FilterString object which is aware of how Elasticsearch handles filter strings."""
 
     exclude_step = 1
     addition_step = 2
 
-    def __init__(self, parts=None):
+    def __init__(self, parts=None, pattern_factory=None):
+        self._pattern_factory = pattern_factory or _Pattern
         self._parts = parts or []
         self._update_order = None
         self._max_position = None
@@ -1834,14 +1835,14 @@ class FilterString(LoggingAware, object):
         return bool(self._parts)
 
     @classmethod
-    def from_string(cls, buf):
+    def from_string(cls, buf, pattern_factory=None):
         """Create and return a new instance of FilterString using the given string."""
-        return cls.from_list(s.strip() for s in buf.split(','))
+        return cls.from_list((s.strip() for s in buf.split(',')), pattern_factory)
 
     @classmethod
-    def from_list(cls, seq):
+    def from_list(cls, seq, pattern_factory=None):
         """Create and return a new instance of FilterString using the given sequence."""
-        filter_string = cls()
+        filter_string = cls(pattern_factory=pattern_factory)
         for pattern in seq:
             if pattern.startswith('+'):
                 filter_string.append_addition(pattern[1:])
@@ -1885,17 +1886,23 @@ class FilterString(LoggingAware, object):
         assert len(seq) == 1, 'Multiple patterns found'
         return seq[0]
 
+    def _create_pattern(self, pattern):
+        if not isinstance(pattern, basestring):
+            return pattern
+
+        return self._pattern_factory(pattern)
+
     def append_include(self, pattern):
         """Append a new include pattern to this filter string."""
-        self._parts.append(_Part('include', pattern, self._next_position))
+        self._parts.append(_Part('include', self._create_pattern(pattern), self._next_position))
 
     def append_exclude(self, pattern):
         """Append a new exclude pattern to this filter string."""
-        self._parts.append(_Part('exclude', pattern, self._last_position + self.exclude_step))
+        self._parts.append(_Part('exclude', self._create_pattern(pattern), self._last_position + self.exclude_step))
 
     def append_addition(self, pattern):
         """Append a new addition pattern to this filter string."""
-        self._parts.append(_Part('addition', pattern, self._last_position + self.addition_step))
+        self._parts.append(_Part('addition', self._create_pattern(pattern), self._last_position + self.addition_step))
 
     def iter_patterns(self, skip_excludes=True):
         """Return a iterator for the patterns that are part of this filter string."""
