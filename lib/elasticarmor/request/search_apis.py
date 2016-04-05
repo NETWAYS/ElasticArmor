@@ -106,17 +106,20 @@ class SearchApiRequest(ElasticRequest):
                 raise PermissionError('You are not permitted to search for documents using'
                                       ' the index filter "{0}".'.format(requested_indices))
 
-        try:
-            type_filter = client.create_filter_string('api/search/documents', requested_types,
-                                                      index_filter.base_pattern, client.is_restricted('fields'))
-        except MultipleIncludesError as error:
-            raise PermissionError(
-                'You are restricted to specific fields. To use the search api, please pick a'
-                ' single type from the following list: {0}'.format(', '.join(error.includes)))
+        if client.is_restricted('types'):
+            try:
+                type_filter = client.create_filter_string('api/search/documents', requested_types,
+                                                          index_filter.base_pattern, client.is_restricted('fields'))
+            except MultipleIncludesError as error:
+                raise PermissionError(
+                    'You are restricted to specific fields. To use the search api, please pick a'
+                    ' single type from the following list: {0}'.format(', '.join(error.includes)))
+            else:
+                if type_filter is None:
+                    raise PermissionError('You are not permitted to search for documents using'
+                                          ' the type filter "{0}".'.format(requested_types))
         else:
-            if type_filter is None:
-                raise PermissionError('You are not permitted to search for documents using'
-                                      ' the type filter "{0}".'.format(requested_types))
+            type_filter = requested_types
 
         if json is not None:
             if 'stats' in json:
