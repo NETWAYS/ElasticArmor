@@ -210,7 +210,7 @@ class GetFieldMappingApiRequest(ElasticRequest):
         if type_filter:
             self.path = '/{0}/_mapping/{1}/field/{2}'.format(index_filter, type_filter, self.fields)
         else:
-            self.path = '/{0}/_mapping/fields/{1}'.format(index_filter, self.fields)
+            self.path = '/{0}/_mapping/field/{1}'.format(index_filter, self.fields)
 
 
 class DeleteMappingApiRequest(ElasticRequest):
