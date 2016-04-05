@@ -994,7 +994,10 @@ class QueryDslParser(object):
 
     def match_all_filter(self, obj, index=None, document=None):
         """Parse the given match_all filter."""
-        pass  # Not security relevant as of Elasticsearch v1.7
+        if document is not None:
+            self.documents.add((index, document))
+        elif index is not None:
+            self.indices.add(index)
 
     def missing_filter(self, obj, index=None, document=None):
         """Parse the given missing filter. Raises ElasticSearchError in case the filter is malformed."""
