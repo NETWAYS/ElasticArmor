@@ -1442,7 +1442,7 @@ class AggregationParser(object):
 
     def significant_terms_agg(self, obj, index=None, document=None, field=None):
         """Parse the given significant_terms aggregation."""
-        self.permissions.add('api/feature/experimental')
+        self.permissions.add('api/feature/significantTerms')
 
     def range_agg(self, obj, index=None, document=None, field=None):
         """Parse the given range aggregation. Raises ElasticSearchError in case it is malformed."""
