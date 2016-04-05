@@ -524,8 +524,8 @@ class FieldPattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_field = other
+            if not isinstance(other, (IndexPattern, TypePattern)):
+                other_field = str(other)
             else:
                 return False
         else:
@@ -543,8 +543,8 @@ class FieldPattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_field = other
+            if not isinstance(other, (IndexPattern, TypePattern)):
+                other_field = str(other)
             else:
                 return False
         else:
@@ -562,8 +562,8 @@ class FieldPattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_field = other
+            if not isinstance(other, (IndexPattern, TypePattern)):
+                other_field = str(other)
             else:
                 return False
         else:
@@ -581,8 +581,8 @@ class FieldPattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_field = other
+            if not isinstance(other, (IndexPattern, TypePattern)):
+                other_field = str(other)
             else:
                 return True
         else:
@@ -600,8 +600,8 @@ class FieldPattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_field = other
+            if not isinstance(other, (IndexPattern, TypePattern)):
+                other_field = str(other)
             else:
                 return False
         else:
@@ -619,8 +619,8 @@ class FieldPattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_field = other
+            if not isinstance(other, (IndexPattern, TypePattern)):
+                other_field = str(other)
             else:
                 return False
         else:
