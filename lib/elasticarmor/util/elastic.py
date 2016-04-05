@@ -1048,9 +1048,11 @@ class QueryDslParser(object):
     def query_filter(self, obj, index=None, document=None):
         """Parse the given query filter. Raises ElasticSearchError in case the filter is malformed."""
         try:
-            self.query(obj['query'], index, document)
+            query = obj['query']
         except KeyError:
-            raise ElasticSearchError('No query given in query filter "{0!r}"'.format(obj))
+            query = obj
+
+        self.query(query, index, document)
 
     def range_filter(self, obj, index=None, document=None):
         """Parse the given range filter. Raises ElasticSearchError in case the filter is malformed."""
