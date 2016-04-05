@@ -92,8 +92,7 @@ class SearchApiRequest(ElasticRequest):
         if json is not None:
             self.body = self.json_encode(json)
 
-    @classmethod
-    def inspect_request(cls, client, requested_indices, requested_types, requested_source=None, json=None):
+    def inspect_request(self, client, requested_indices, requested_types, requested_source=None, json=None):
         # TODO: Error handling for unexpected types
         try:
             index_filter = client.create_filter_string('api/search/documents', requested_indices,
@@ -121,17 +120,17 @@ class SearchApiRequest(ElasticRequest):
 
         if json is not None:
             if 'stats' in json:
-                cls._check_permission('api/indices/stats', client, index_filter)
+                self._check_permission('api/indices/stats', client, index_filter)
             if 'facets' in json:
-                cls._check_permission('api/feature/facets', client, index_filter, type_filter)
+                self._check_permission('api/feature/facets', client, index_filter, type_filter)
             if 'script_fields' in json:
-                cls._check_permission('api/feature/script', client, index_filter, type_filter)
+                self._check_permission('api/feature/script', client, index_filter, type_filter)
             if json.get('explain', False):
-                cls._check_permission('api/search/explain', client, index_filter, type_filter)
+                self._check_permission('api/search/explain', client, index_filter, type_filter)
             if 'inner_hits' in json:
-                cls._check_permission('api/feature/innerHits', client, index_filter, type_filter)
+                self._check_permission('api/feature/innerHits', client, index_filter, type_filter)
             if 'suggest' in json:
-                cls._check_permission('api/search/suggest', client, index_filter, type_filter)
+                self._check_permission('api/search/suggest', client, index_filter, type_filter)
 
         json_updated = False
         if client.is_restricted('fields'):
@@ -195,24 +194,24 @@ class SearchApiRequest(ElasticRequest):
             if json.get('query'):
                 query = QueryDslParser()
                 query.query(json['query'])
-                cls._inspect_parser(client, query, index_filter, type_filter)
+                self._inspect_parser(client, query, index_filter, type_filter)
 
             aggregation_keyword = next((k for k in reversed(json) if k in ['aggregations', 'aggs']), None)
             if aggregation_keyword is not None and json.get(aggregation_keyword):
                 aggregations = AggregationParser()
                 aggregations.aggregations(json[aggregation_keyword])
-                if cls._inspect_parser(client, aggregations, index_filter, type_filter):
+                if self._inspect_parser(client, aggregations, index_filter, type_filter):
                     json_updated = True
 
             if json.get('highlight'):
                 highlight = HighlightParser()
                 highlight.parse(json['highlight'])
-                cls._inspect_parser(client, highlight, index_filter, type_filter)
+                self._inspect_parser(client, highlight, index_filter, type_filter)
 
             if json.get('post_filter'):
                 post_filter = QueryDslParser()
                 post_filter.filter(json['post_filter'])
-                cls._inspect_parser(client, post_filter, index_filter, type_filter)
+                self._inspect_parser(client, post_filter, index_filter, type_filter)
 
             if json.get('rescore'):
                 try:
@@ -223,12 +222,11 @@ class SearchApiRequest(ElasticRequest):
                 for rescore in rescores:
                     query = QueryDslParser()
                     query.query(rescore['rescore_query'])
-                    cls._inspect_parser(client, query, index_filter, type_filter)
+                    self._inspect_parser(client, query, index_filter, type_filter)
 
         return index_filter, type_filter, source_filter, json if json_updated else None
 
-    @classmethod
-    def _check_permission(cls, permission, client, index_filter, type_filter=None):
+    def _check_permission(self, permission, client, index_filter, type_filter=None):
         if index_filter:
             forbidden = []
             for index in index_filter.iter_patterns():
@@ -241,16 +239,15 @@ class SearchApiRequest(ElasticRequest):
 
             if forbidden:
                 scope = 'types' if type_filter else 'indices'
-                raise PermissionError(cls._permission_errors[permission][scope].format(', '.join(forbidden)))
+                raise PermissionError(self._permission_errors[permission][scope].format(', '.join(forbidden)))
         elif not client.can(permission):
-            raise PermissionError(cls._permission_errors[permission]['cluster'])
+            raise PermissionError(self._permission_errors[permission]['cluster'])
 
-    @classmethod
-    def _inspect_parser(cls, client, parser, index_filter, type_filter):
+    def _inspect_parser(self, client, parser, index_filter, type_filter):
         json_updated = False
         for permission in parser.permissions:
             # TODO: Context changes? Permissions are not only global anymore!
-            cls._check_permission(permission, client, index_filter, type_filter)
+            self._check_permission(permission, client, index_filter, type_filter)
 
         if client.is_restricted('indices'):
             for index in parser.indices:
@@ -359,7 +356,7 @@ class SuggestApiRequest(ElasticRequest):
         pass
 
 
-class MultiSearchApiRequest(ElasticRequest):
+class MultiSearchApiRequest(SearchApiRequest):
     _errors = None
 
     locations = {
@@ -380,7 +377,7 @@ class MultiSearchApiRequest(ElasticRequest):
         lines, self._errors = [], []
         for i, (header, body) in enumerate(self._parse_payload()):
             try:
-                index_filter, type_filter, _, json = SearchApiRequest.inspect_request(
+                index_filter, type_filter, _, json = self.inspect_request(
                     client, FilterString.from_list(header['index']),
                     FilterString.from_list(header['type']), json=body)
             except RequestError as error:
