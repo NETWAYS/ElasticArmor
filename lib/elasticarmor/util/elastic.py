@@ -1878,6 +1878,13 @@ class FilterString(LoggingAware, object):
         self._max_position = self._max_position + self.exclude_step + self.addition_step
         return self._max_position
 
+    @property
+    def base_pattern(self):
+        """The internal pattern this filter is based on."""
+        seq = self.combined if self.combined else list(self.iter_patterns())
+        assert len(seq) == 1, 'Multiple patterns found'
+        return seq[0]
+
     def append_include(self, pattern):
         """Append a new include pattern to this filter string."""
         self._parts.append(_Part('include', pattern, self._next_position))
