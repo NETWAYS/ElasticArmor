@@ -1929,7 +1929,8 @@ class FilterString(object):
                             else:
                                 new_part.order = existing_part.order - self.addition_step + self.exclude_step
 
-                            candidates.append(new_part)
+                            if not exit_after_excludes or new_part.pattern < existing_part.pattern:
+                                candidates.append(new_part)
                     elif exit_after_excludes:
                         break
                     elif new_part.pattern < existing_part.pattern:
