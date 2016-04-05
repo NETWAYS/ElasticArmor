@@ -393,8 +393,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.send_error(error.status_code, explain=error.reason)
             return
         except ElasticSearchError as error:
-            self.log.warning('Failed to parse request "%s %s" of client "%s". An error occurred: %s',
-                             self.command, self.path, self.client, error)
+            self.log.warning('Failed to parse request "%s %s" of client "%s" with body %r. An error occurred: %s',
+                             self.command, self.path, self.client, self.body, error)
             self.send_error(400, explain='Failed to parse request. {0}'.format(error))
             return
         except AuthorizationError as error:
