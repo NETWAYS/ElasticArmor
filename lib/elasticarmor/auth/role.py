@@ -326,51 +326,51 @@ class IndexPattern(object):
 
     def __lt__(self, other):
         try:
-            other_index = other if isinstance(other, basestring) else other.index
+            other_index = other.index
         except AttributeError:
-            return False
-        else:
-            return pattern_compare(self.index, other_index, 1) == -1
+            other_index = str(other)
+
+        return pattern_compare(self.index, other_index, 1) == -1
 
     def __le__(self, other):
         try:
-            other_index = other if isinstance(other, basestring) else other.index
+            other_index = other.index
         except AttributeError:
-            return False
-        else:
-            return pattern_compare(self.index, other_index, 1) != 1
+            other_index = str(other)
+
+        return pattern_compare(self.index, other_index, 1) != 1
 
     def __eq__(self, other):
         try:
-            other_index = other if isinstance(other, basestring) else other.index
+            other_index = other.index
         except AttributeError:
-            return False
-        else:
-            return pattern_compare(self.index, other_index, 1) == 0
+            other_index = str(other)
+
+        return pattern_compare(self.index, other_index, 1) == 0
 
     def __ne__(self, other):
         try:
-            other_index = other if isinstance(other, basestring) else other.index
+            other_index = other.index
         except AttributeError:
-            return True
-        else:
-            return pattern_compare(self.index, other_index, 1) != 0
+            other_index = str(other)
+
+        return pattern_compare(self.index, other_index, 1) != 0
 
     def __gt__(self, other):
         try:
-            other_index = other if isinstance(other, basestring) else other.index
+            other_index = other.index
         except AttributeError:
-            return False
-        else:
-            return pattern_compare(self.index, other_index, -1) == 1
+            other_index = str(other)
+
+        return pattern_compare(self.index, other_index, -1) == 1
 
     def __ge__(self, other):
         try:
-            other_index = other if isinstance(other, basestring) else other.index
+            other_index = other.index
         except AttributeError:
-            return False
-        else:
-            return pattern_compare(self.index, other_index, -1) != -1
+            other_index = str(other)
+
+        return pattern_compare(self.index, other_index, -1) != -1
 
 
 class TypePattern(object):
