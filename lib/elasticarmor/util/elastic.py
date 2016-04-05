@@ -1934,6 +1934,7 @@ class FilterString(object):
                     if new_part.is_exclude():
                         if register_excludes:
                             if existing_part.pattern <= new_part.pattern:
+                                candidates = None
                                 break
 
                             if existing_part.is_include():
@@ -1957,10 +1958,10 @@ class FilterString(object):
                         register_excludes = exit_after_excludes = True
                     else:
                         register_excludes = False
-                else:
-                    if candidates:
-                        match_found = True
-                        new_parts.extend(candidates)
+
+                if candidates:
+                    match_found = True
+                    new_parts.extend(candidates)
 
         if not match_found:
             return False
