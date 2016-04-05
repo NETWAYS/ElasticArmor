@@ -1958,6 +1958,24 @@ class FilterString(object):
         self.combined = list(combined)
         return True
 
+    def matches(self, filter_string):
+        """Return whether all patterns of the given filter string match this one."""
+        for pattern in filter_string.iter_patterns():
+            match_found = False
+            for part in self._sorted:
+                if match_found and part.is_exclude():
+                    if part.pattern >= pattern:
+                        match_found = False
+                elif not match_found and pattern <= part.pattern:
+                    match_found = True
+                    if part.is_addition():
+                        break
+
+            if not match_found:
+                return False
+
+        return True
+
 
 class _Part(object):
     def __init__(self, pattern_type, pattern, order=0):
