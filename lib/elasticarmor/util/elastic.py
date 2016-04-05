@@ -639,7 +639,7 @@ class QueryDslParser(object):
             no_match_query = 'all'
 
         if isinstance(no_match_query, dict):
-            self.query(no_match_query, '-' + ',-'.join(indices))
+            self.query(no_match_query, index, document)
         elif no_match_query not in ['all', 'none']:
             raise ElasticSearchError('Invalid value for keyword "no_match_query" in indices query "{0!r}"'.format(obj))
 
