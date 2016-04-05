@@ -122,17 +122,17 @@ class SearchApiRequest(ElasticRequest):
             type_filter = requested_types
 
         if json is not None:
-            if 'stats' in json:
+            if json.get('stats'):
                 self._check_permission('api/indices/stats', client, index_filter)
-            if 'facets' in json:
+            if json.get('facets'):
                 self._check_permission('api/feature/facets', client, index_filter, type_filter)
-            if 'script_fields' in json:
+            if json.get('script_fields'):
                 self._check_permission('api/feature/script', client, index_filter, type_filter)
             if json.get('explain', False):
                 self._check_permission('api/search/explain', client, index_filter, type_filter)
-            if 'inner_hits' in json:
+            if json.get('inner_hits'):
                 self._check_permission('api/feature/innerHits', client, index_filter, type_filter)
-            if 'suggest' in json:
+            if json.get('suggest'):
                 self._check_permission('api/search/suggest', client, index_filter, type_filter)
 
         json_updated = False
