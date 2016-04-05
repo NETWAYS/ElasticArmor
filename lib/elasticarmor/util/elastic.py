@@ -6,7 +6,7 @@ import threading
 
 import requests
 
-from elasticarmor.util import format_elasticsearch_error
+from elasticarmor.util import format_elasticsearch_error, pattern_compare
 from elasticarmor.util.http import Query
 from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
@@ -1976,3 +1976,35 @@ class _Part(object):
 
     def is_addition(self):
         return self.type == 'addition'
+
+
+class _Pattern(object):
+    def __init__(self, pattern):
+        self.pattern = str(pattern)
+
+    def __str__(self):
+        return self.pattern
+
+    def __hash__(self):
+        return hash(self.pattern)
+
+    def __repr__(self):
+        return "_Pattern('{0}')".format(self.pattern)
+
+    def __lt__(self, other):
+        return pattern_compare(self.pattern, str(other), 1) == -1
+
+    def __le__(self, other):
+        return pattern_compare(self.pattern, str(other), 1) != 1
+
+    def __eq__(self, other):
+        return pattern_compare(self.pattern, str(other), 1) == 0
+
+    def __ne__(self, other):
+        return pattern_compare(self.pattern, str(other), 1) != 0
+
+    def __gt__(self, other):
+        return pattern_compare(self.pattern, str(other), -1) == 1
+
+    def __ge__(self, other):
+        return pattern_compare(self.pattern, str(other), -1) != -1
