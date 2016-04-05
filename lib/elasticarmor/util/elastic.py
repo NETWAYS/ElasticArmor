@@ -257,6 +257,14 @@ class QueryDslParser(object):
     Any occurrence of 'None' indicates that no particular index or document is desired instead of the default ones.
     """
 
+    meta_fields = [
+        '_version',
+        '_index',
+        '_type',
+        '_all',
+        '_id'
+    ]
+
     def __init__(self):
         self.permissions = set()
         self.indices = set()
@@ -375,7 +383,8 @@ class QueryDslParser(object):
 
     def _read_field(self, obj, blacklist=None):
         """Identify and return the field name in the given object."""
-        return next((k for k in obj.iterkeys() if k[0] != '_' and (not blacklist or k not in blacklist)), None)
+        return next((k for k in obj.iterkeys()
+                     if (k[0] != '_' or k in self.meta_fields) and (not blacklist or k not in blacklist)), None)
 
     def query(self, obj, index=None, document=None):
         """Recurse into the given query and parse its contents."""
