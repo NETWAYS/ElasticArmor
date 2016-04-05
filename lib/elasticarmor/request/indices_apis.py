@@ -60,9 +60,9 @@ class GetIndexApiRequest(ElasticRequest):
         for setting, permission in self.index_settings.iteritems():
             if not keywords or setting in keywords:
                 for index in index_filter.iter_patterns():
-                    if client.can(permission, str(index)):
+                    if client.can(permission, index):
                         permitted_settings.append(setting)
-                    else:
+                    elif setting in keywords:
                         missing_permissions.setdefault(permission, []).append(str(index))
 
         if missing_permissions:
