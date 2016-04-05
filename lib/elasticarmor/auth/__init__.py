@@ -5,7 +5,7 @@ import socket
 import requests
 from ldap import LDAPError
 
-from elasticarmor.util import format_ldap_error, format_elasticsearch_error, pattern_compare
+from elasticarmor.util import format_ldap_error, format_elasticsearch_error
 from elasticarmor.util.elastic import SourceFilter, FilterString
 from elasticarmor.util.mixins import LoggingAware
 
@@ -199,15 +199,23 @@ class Client(LoggingAware, object):
         anything. Raises MultipleIncludesError if single is True and multiple includes were found.
 
         """
+        from elasticarmor.auth.role import IndexPattern, TypePattern  # Placed here to avoid a circular import
+
         if not self.is_restricted('indices' if index is None else 'types'):
             # Bail out early if the client is not restricted at all
-            return (filter_string or FilterString()) if self.can(permission, index) else None
+            if not self.can(permission, index):
+                return
+            elif filter_string:
+                return filter_string
+
+            return FilterString(pattern_factory=IndexPattern if index is None else lambda p: TypePattern(index, p))
 
         filters = self._collect_filters(permission, index)
         if not filters:
             return  # None of the client's restrictions permit access to any index or any document type
 
-        prepared_filter_string = FilterString()
+        prepared_filter_string = FilterString(
+            pattern_factory=IndexPattern if index is None else lambda p: TypePattern(index, p))
         for include, excludes in filters.iteritems():
             prepared_filter_string.append_include(include)
             for exclude in excludes:
