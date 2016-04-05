@@ -14,7 +14,7 @@ from elasticarmor.util.mixins import LoggingAware
 __all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole', 'QueryDslParser',
            'AggregationParser', 'HighlightParser', 'SourceFilter', 'FilterString']
 
-DEFAULT_TIMEOUT = 5  # Seconds
+DEFAULT_TIMEOUT = 10  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
 
 
