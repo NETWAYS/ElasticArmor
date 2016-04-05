@@ -1973,6 +1973,9 @@ class FilterString(object):
 
     def matches(self, filter_string):
         """Return whether all patterns of the given filter string match this one."""
+        if not self:
+            return True
+
         for pattern in filter_string.iter_patterns():
             match_found = False
             for part in self._sorted:
