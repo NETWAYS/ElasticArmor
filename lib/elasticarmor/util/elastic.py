@@ -978,7 +978,7 @@ class QueryDslParser(object):
             no_match_filter = 'all'
 
         if isinstance(no_match_filter, dict):
-            self.filter(no_match_filter, '-' + ',-'.join(indices))
+            self.filter(no_match_filter, index, document)
         elif no_match_filter not in ['all', 'none']:
             raise ElasticSearchError(
                 'Invalid value for keyword "no_match_filter" in indices filter "{0!r}"'.format(obj))
