@@ -399,8 +399,8 @@ class TypePattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_type = other
+            if not isinstance(other, IndexPattern):
+                other_type = str(other)
             else:
                 return False
         else:
@@ -416,8 +416,8 @@ class TypePattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_type = other
+            if not isinstance(other, IndexPattern):
+                other_type = str(other)
             else:
                 return False
         else:
@@ -433,8 +433,8 @@ class TypePattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_type = other
+            if not isinstance(other, IndexPattern):
+                other_type = str(other)
             else:
                 return False
         else:
@@ -450,8 +450,8 @@ class TypePattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_type = other
+            if not isinstance(other, IndexPattern):
+                other_type = str(other)
             else:
                 return True
         else:
@@ -467,8 +467,8 @@ class TypePattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_type = other
+            if not isinstance(other, IndexPattern):
+                other_type = str(other)
             else:
                 return False
         else:
@@ -484,8 +484,8 @@ class TypePattern(object):
             other_type = other.type
             other_index = other.index
         except AttributeError:
-            if isinstance(other, basestring):
-                other_type = other
+            if not isinstance(other, IndexPattern):
+                other_type = str(other)
             else:
                 return False
         else:
