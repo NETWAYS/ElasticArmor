@@ -331,6 +331,7 @@ class QueryDslParser(object):
             'not': self.not_filter,
             'or': self.or_filter,
             'prefix': self.prefix_filter,
+            'query': self.query_filter,
             'fquery': self.query_filter,
             'range': self.range_filter,
             'regexp': self.regexp_filter,
