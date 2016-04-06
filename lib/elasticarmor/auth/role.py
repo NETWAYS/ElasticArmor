@@ -244,7 +244,9 @@ class Role(ElasticRole):
     @staticmethod
     def _match_permissions(required, granted):
         """Return whether the given granted permission matches the given required permission."""
-        if not required.endswith('/*'):
+        if granted == '*':
+            return True
+        elif not required.endswith('/*'):
             if granted.endswith('/*'):
                 granted = granted[:-2]
 
