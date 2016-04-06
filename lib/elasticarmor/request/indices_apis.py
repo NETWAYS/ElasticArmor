@@ -7,7 +7,8 @@ from elasticarmor.util.elastic import FilterString
 
 class CreateIndexApiRequest(ElasticRequest):
     locations = {
-        'PUT': '/{index}'
+        'PUT': '/{index}',
+        'POST': '/{index}'
     }
 
     @Permission('api/indices/create/index')
