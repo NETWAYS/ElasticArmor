@@ -1893,10 +1893,11 @@ class FilterString(object):
 
     @property
     def base_pattern(self):
-        """The internal pattern this filter is based on."""
+        """The internal pattern this filter is based on. Returns None if it is empty."""
         seq = self.combined if self.combined else list(self.iter_patterns())
-        assert len(seq) == 1, 'Multiple patterns found'
-        return seq[0]
+        if seq:
+            assert len(seq) == 1, 'Multiple patterns found: {0}'.format(', '.join(str(p) for p in seq))
+            return seq[0]
 
     def _create_pattern(self, pattern):
         if not isinstance(pattern, basestring):
