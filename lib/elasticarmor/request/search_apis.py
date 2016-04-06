@@ -525,7 +525,7 @@ class SearchExistsApiRequest(ElasticRequest):
         pass
 
 
-class ValidateApiRequest(ElasticRequest):
+class ValidateApiRequest(SearchApiRequest):
     locations = {
         'GET': [
             '/_validate/query',
@@ -536,13 +536,32 @@ class ValidateApiRequest(ElasticRequest):
             '/_validate/query',
             '/{indices}/_validate/query',
             '/{indices}/{documents}/_validate/query',
-            '/.kibana/__kibanaQueryValidator/_validate/query'
+            '/(?P<indices>\.kibana)/(?P<documents>__kibanaQueryValidator)/_validate/query'
         ]
     }
 
-    @Permission('api/search/documents')
     def inspect(self, client):
-        pass
+        index_filter, type_filter, _, json = self.inspect_request(
+            client, FilterString.from_string(self.get_match('indices', '')),
+            FilterString.from_string(self.get_match('documents', '')), json=self.json)
+
+        if 'q' in self.query and self.query['q'][-1].strip() and self.query['q'][-1].strip() != '*':
+            if client.has_restriction(index_filter, type_filter):
+                # TODO: Provide a more sophisticated solution once we've got a parser for query strings!
+                raise PermissionError(
+                    'You are restricted to specific fields and as such cannot utilize the query string search.')
+
+        if not self.query.is_false('explain'):
+            self._check_permission('api/search/explain', client, index_filter, type_filter)
+
+        if index_filter:
+            if type_filter:
+                self.path = '/{0}/{1}/_validate/query'.format(index_filter, type_filter)
+            else:
+                self.path = '/{0}/_validate/query'.format(index_filter)
+
+        if json is not None:
+            self.body = self.json_encode(json)
 
 
 class ExplainApiRequest(ElasticRequest):
