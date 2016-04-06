@@ -132,7 +132,7 @@ class SearchApiRequest(ElasticRequest):
                 self._check_permission('api/search/suggest', client, index_filter, type_filter)
 
         json_updated = False
-        if client.is_restricted('fields'):
+        if type_filter and client.is_restricted('fields'):
             if json is not None and 'fielddata_fields' in json:
                 forbidden_fielddata = [field for field in json['fielddata_fields']
                                        if not client.can('api/documents/get', index_filter, type_filter, field)]
