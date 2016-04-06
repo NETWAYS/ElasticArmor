@@ -5,7 +5,7 @@ import socket
 import requests
 from ldap import LDAPError
 
-from elasticarmor.util import format_ldap_error, format_elasticsearch_error, pattern_compare
+from elasticarmor.util import format_ldap_error, format_elasticsearch_error
 from elasticarmor.util.elastic import SourceFilter, FilterString
 from elasticarmor.util.mixins import LoggingAware
 
@@ -204,8 +204,10 @@ class Client(LoggingAware, object):
             return (filter_string or FilterString()) if self.can(permission, index) else None
 
         filters = self._collect_filters(permission, index)
-        if not filters:
-            return  # None of the client's restrictions permit access to any index or any document type
+        if filters is None:
+            return  # None of the client's roles permit access to any index or any document type
+        elif not filters:
+            return filter_string or FilterString()  # Not a single restriction, congratulations!
 
         prepared_filter_string = FilterString()
         for include, excludes in filters.iteritems():
@@ -242,8 +244,10 @@ class Client(LoggingAware, object):
             return (source_filter or SourceFilter()) if self.can(permission, index, document_type) else None
 
         filters = self._collect_filters(permission, index, document_type)
-        if not filters:
-            return  # None of the client's restrictions permit access to the given index or document type
+        if filters is None:
+            return  # None of the client's roles permit access to the given index or document type
+        elif not filters:
+            return source_filter or SourceFilter()  # Not a single restriction, congratulations!
 
         prepared_source_filter = SourceFilter()
         for include, excludes in filters.iteritems():
@@ -266,14 +270,38 @@ class Client(LoggingAware, object):
     def _collect_filters(self, permission, index=None, document_type=None):
         """Collect and return the filters for the given context which grant the given permission.
         In case of overlapping filters, only those that give the client the broadest access are
-        returned.
+        returned. Returns None if not a single role grants access in the given context.
 
         """
-        filters = {}
+        from elasticarmor.auth.role import RestrictionsFound  # Placed here to avoid a circular import
+
+        filters, indisposed_roles = {}, 0
         for role in self.roles:
-            for restriction in role.get_restrictions(index, document_type, permission):
-                for include in restriction.includes:
-                    filters.setdefault(include, []).extend(e for e in restriction.excludes)
+            try:
+                restrictions = list(role.get_restrictions(index, document_type, permission))
+            except RestrictionsFound:
+                # Roles may be able to provide restrictions for the given context but
+                # cannot because the required permission is granted by none of them
+                indisposed_roles += 1
+            else:
+                if not restrictions:
+                    if not role.permits(permission, index, document_type):
+                        # The same applies to roles which are neither able to provide
+                        # restrictions nor grant the permission at a higher level
+                        indisposed_roles += 1
+                    else:
+                        # But if a role grants the permission at a higher level, guess what,
+                        # the client is obviously not restricted at all in the given context
+                        return {}
+                else:
+                    for restriction in restrictions:
+                        for include in restriction.includes:
+                            filters.setdefault(include, []).extend(e for e in restriction.excludes)
+
+        if not filters and indisposed_roles == len(self.roles):
+            # Not a single role provided restrictions nor felt being responsible
+            # for the given context, so the client is not permitted, not at all
+            return
 
         # Remove the most restrictive filters
         removed_filters = {}
