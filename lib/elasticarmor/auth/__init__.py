@@ -177,6 +177,16 @@ class Client(LoggingAware, object):
 
     def can(self, permission, index=None, document_type=None, field=None):
         """Return whether this client has the given permission in the given context."""
+        try:
+            # If it's a FilterString, use its base pattern instead. Avoids some
+            # checks otherwise required to be done in advance by the caller
+            if index is not None:
+                index = index.base_pattern
+                if document_type is not None:
+                    document_type = document_type.base_pattern
+        except AttributeError:
+            pass
+
         return any(role.permits(permission, index, document_type, field) for role in self.roles)
 
     def has_restriction(self, index, document_type=None, without_permission=None):
@@ -186,6 +196,13 @@ class Client(LoggingAware, object):
 
         """
         if self.is_restricted('types' if document_type is None else 'fields'):
+            try:
+                index = index.base_pattern
+                if document_type is not None:
+                    document_type = document_type.base_pattern
+            except AttributeError:
+                pass
+
             for role in self.roles:
                 if any(role.get_restrictions(index, document_type, without_permission,
                                              invert=without_permission is not None)):
@@ -202,6 +219,12 @@ class Client(LoggingAware, object):
         if not self.is_restricted('indices' if index is None else 'types'):
             # Bail out early if the client is not restricted at all
             return (filter_string or FilterString()) if self.can(permission, index) else None
+
+        try:
+            if index is not None:
+                index = index.base_pattern
+        except AttributeError:
+            pass
 
         filters = self._collect_filters(permission, index)
         if filters is None:
@@ -242,6 +265,12 @@ class Client(LoggingAware, object):
         if not self.is_restricted('fields'):
             # Bail out early if the client is not restricted at all
             return (source_filter or SourceFilter()) if self.can(permission, index, document_type) else None
+
+        try:
+            index = index.base_pattern
+            document_type = document_type.base_pattern
+        except AttributeError:
+            pass
 
         filters = self._collect_filters(permission, index, document_type)
         if filters is None:
