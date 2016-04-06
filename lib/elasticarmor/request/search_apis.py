@@ -6,7 +6,8 @@ from StringIO import StringIO
 from elasticarmor import APP_NAME
 from elasticarmor.auth import MultipleIncludesError
 from elasticarmor.request import *
-from elasticarmor.util.elastic import SourceFilter, FilterString, QueryDslParser, AggregationParser, HighlightParser
+from elasticarmor.util.elastic import (SourceFilter, FilterString, QueryDslParser, AggregationParser,
+                                   HighlightParser, FieldsFilter)
 
 
 class SearchApiRequest(ElasticRequest):
@@ -140,21 +141,27 @@ class SearchApiRequest(ElasticRequest):
         json_updated = False
         if type_filter and client.is_restricted('fields'):
             if json is not None and 'fielddata_fields' in json:
-                forbidden_fielddata = [field for field in json['fielddata_fields']
-                                       if not client.can('api/documents/get', index_filter, type_filter, field)]
-                if forbidden_fielddata:
-                    raise PermissionError('You are not permitted to access fielddata of the following'
-                                          ' stored fields: {0}'.format(', '.join(forbidden_fielddata)))
+                fielddata_filter = client.create_fields_filter('api/documents/get', index_filter, type_filter,
+                                                               FieldsFilter.from_json(json['fielddata_fields']))
+                if fielddata_filter is None:
+                    raise PermissionError('You are not permitted to access any of the requested fielddata fields.')
+                elif fielddata_filter:
+                    json['fielddata_fields'] = fielddata_filter.as_json()
+                    json_updated = True
 
             inspect_source = True
             if json is not None and ('fields' in json or 'partial_fields' in json):
                 inspect_source = '_source' in json
                 if 'fields' in json:
-                    forbidden_fields = [field for field in json['fields']
-                                        if not client.can('api/documents/get', index_filter, type_filter, field)]
-                    if forbidden_fields:
-                        raise PermissionError('You are not permitted to access the following stored fields: {0}'
-                                              ''.format(', '.join(forbidden_fields)))
+                    fields_filter = client.create_fields_filter('api/documents/get', index_filter, type_filter,
+                                                                FieldsFilter.from_json(json['fields']))
+                    if fields_filter is None:
+                        raise PermissionError('You are not permitted to access any of the requested stored fields.')
+                    elif fields_filter:
+                        json['fields'] = fields_filter.as_json()
+                        json_updated = True
+                        if fields_filter.requires_source:
+                            inspect_source = True
 
                 if 'partial_fields' in json:
                     partial_fields = {}
