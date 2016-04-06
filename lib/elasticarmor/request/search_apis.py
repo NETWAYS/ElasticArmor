@@ -73,8 +73,7 @@ class SearchApiRequest(ElasticRequest):
         if client.is_restricted('fields') and self.query.get('fields'):
             fields = filter(None, (field.strip() for v in self.query['fields'] for field in v.split(',')))
             forbidden_fields = [field for field in fields
-                                if not client.can('api/documents/get', index_filter.base_pattern,
-                                                  type_filter.base_pattern, field)]
+                                if not client.can('api/documents/get', index_filter, type_filter, field)]
             if forbidden_fields:
                 raise PermissionError('You are not permitted to access the following fields: {0}'
                                       ''.format(', '.join(forbidden_fields)))
@@ -106,20 +105,17 @@ class SearchApiRequest(ElasticRequest):
                 raise PermissionError('You are not permitted to search for documents using'
                                       ' the index filter "{0}".'.format(requested_indices))
 
-        if client.is_restricted('types'):
-            try:
-                type_filter = client.create_filter_string('api/search/documents', requested_types,
-                                                          index_filter.base_pattern, client.is_restricted('fields'))
-            except MultipleIncludesError as error:
-                raise PermissionError(
-                    'You are restricted to specific fields. To use the search api, please pick a'
-                    ' single type from the following list: {0}'.format(', '.join(error.includes)))
-            else:
-                if type_filter is None:
-                    raise PermissionError('You are not permitted to search for documents using'
-                                          ' the type filter "{0}".'.format(requested_types))
+        try:
+            type_filter = client.create_filter_string('api/search/documents', requested_types,
+                                                      index_filter, client.is_restricted('fields'))
+        except MultipleIncludesError as error:
+            raise PermissionError(
+                'You are restricted to specific fields. To use the search api, please pick a'
+                ' single type from the following list: {0}'.format(', '.join(error.includes)))
         else:
-            type_filter = requested_types
+            if type_filter is None:
+                raise PermissionError('You are not permitted to search for documents using'
+                                      ' the type filter "{0}".'.format(requested_types))
 
         if json is not None:
             if json.get('stats'):
@@ -139,8 +135,7 @@ class SearchApiRequest(ElasticRequest):
         if client.is_restricted('fields'):
             if json is not None and 'fielddata_fields' in json:
                 forbidden_fielddata = [field for field in json['fielddata_fields']
-                                       if not client.can('api/documents/get', index_filter.base_pattern,
-                                                         type_filter.base_pattern, field)]
+                                       if not client.can('api/documents/get', index_filter, type_filter, field)]
                 if forbidden_fielddata:
                     raise PermissionError('You are not permitted to access fielddata of the following fields: {0}'
                                           ''.format(', '.join(forbidden_fielddata)))
@@ -150,8 +145,7 @@ class SearchApiRequest(ElasticRequest):
                 inspect_source = '_source' in json
                 if 'fields' in json:
                     forbidden_fields = [field for field in json['fields']
-                                        if not client.can('api/documents/get', index_filter.base_pattern,
-                                                          type_filter.base_pattern, field)]
+                                        if not client.can('api/documents/get', index_filter, type_filter, field)]
                     if forbidden_fields:
                         raise PermissionError('You are not permitted to access the following fields: {0}'
                                               ''.format(', '.join(forbidden_fields)))
@@ -159,8 +153,7 @@ class SearchApiRequest(ElasticRequest):
                 if 'partial_fields' in json:
                     partial_fields = {}
                     for partial, partial_body in json['partial_fields'].iteritems():
-                        permitted = client.create_source_filter('api/documents/get', index_filter.base_pattern,
-                                                                type_filter.base_pattern,
+                        permitted = client.create_source_filter('api/documents/get', index_filter, type_filter,
                                                                 SourceFilter.from_json(partial_body))
                         if permitted is None:
                             raise PermissionError('You are not permitted to access any of the requested fields.')
@@ -180,8 +173,8 @@ class SearchApiRequest(ElasticRequest):
                 if json is not None and '_source' in json:
                     requested_source = SourceFilter.from_json(json['_source'])
 
-                source_filter = client.create_source_filter('api/documents/get', index_filter.base_pattern,
-                                                            type_filter.base_pattern, requested_source)
+                source_filter = client.create_source_filter('api/documents/get', index_filter,
+                                                            type_filter, requested_source)
                 if source_filter is None:
                     raise PermissionError('You are not permitted to access any of the requested fields.')
                 elif json is not None and source_filter:
@@ -305,13 +298,13 @@ class SearchApiRequest(ElasticRequest):
                                                 ''.format(document_type, type_filter))
 
                     requested_source = SourceFilter.from_json(source_request.get('_source'))
-                    source_filter = client.create_source_filter('api/documents/get', index_filter.base_pattern,
-                                                                type_filter.base_pattern, requested_source)
+                    source_filter = client.create_source_filter('api/documents/get', index_filter,
+                                                                type_filter, requested_source)
                     if source_filter is None:
                         raise PermissionError('You are either not permitted to access the document type'
                                               ' "{0}" or any of the requested fields ({1}) in index "{2}".'
-                                              ''.format(document_type or type_filter.base_pattern,
-                                                        requested_source, index or index_filter.base_pattern))
+                                              ''.format(document_type or type_filter, requested_source,
+                                                        index or index_filter))
                     elif source_filter:
                         source_request['_source'] = source_filter.as_json()
                         json_updated = True
