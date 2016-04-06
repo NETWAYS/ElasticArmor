@@ -6,7 +6,7 @@ import requests
 from ldap import LDAPError
 
 from elasticarmor.util import format_ldap_error, format_elasticsearch_error
-from elasticarmor.util.elastic import SourceFilter, FilterString
+from elasticarmor.util.elastic import SourceFilter, FilterString, FieldsFilter
 from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['AuthorizationError', 'Auth', 'MultipleIncludesError', 'Client']
@@ -295,6 +295,38 @@ class Client(LoggingAware, object):
             return  # Nothing what the client requested remained
 
         return source_filter
+
+    def create_fields_filter(self, permission, index, document_type, fields_filter=None):
+        """Create and return a fields filter based on what this client is permitted or is requesting to access. May
+        return a empty filter if the client is not restricted at all and None if the client can't access anything.
+
+        """
+        if not self.is_restricted('fields'):
+            # Bail out early if the client is not restricted at all
+            return (fields_filter or FieldsFilter()) if self.can(permission, index, document_type) else None
+        elif fields_filter is not None and not fields_filter:
+            # The client does not want any fields so we shouldn't provide them either
+            return fields_filter if self.can(permission, index, document_type) else None
+
+        try:
+            index = index.base_pattern
+            document_type = document_type.base_pattern
+        except AttributeError:
+            pass
+
+        filters = self._collect_filters(permission, index, document_type)
+        if filters is None:
+            return  # None of the client's roles permit access to the given index or document type
+        elif not filters:
+            return fields_filter or FieldsFilter()  # Not a single restriction, congratulations!
+
+        # A fields filter has no idea of excludes, so we can only use includes which do not have any
+        fields = [include for include in filters if not filters[include]]
+        if not fields:
+            return  # But if all available filters have excludes, we can't provide the client with a fields filter
+
+        if fields_filter.combine(FieldsFilter(fields)):
+            return fields_filter
 
     def _collect_filters(self, permission, index=None, document_type=None):
         """Collect and return the filters for the given context which grant the given permission.
