@@ -12,7 +12,7 @@ from elasticarmor.util.rwlock import ReadWriteLock
 from elasticarmor.util.mixins import LoggingAware
 
 __all__ = ['ElasticSearchError', 'ElasticConnection', 'ElasticObject', 'ElasticRole', 'QueryDslParser',
-           'AggregationParser', 'HighlightParser', 'SourceFilter', 'FilterString']
+           'AggregationParser', 'HighlightParser', 'SourceFilter', 'FilterString', 'FieldsFilter']
 
 DEFAULT_TIMEOUT = 10  # Seconds
 CHECK_REACHABILITY_INTERVAL = 900  # Seconds
@@ -2054,3 +2054,120 @@ class _Pattern(object):
 
     def __ge__(self, other):
         return pattern_compare(self.pattern, str(other), -1) != -1
+
+
+class FieldsFilter(object):
+    def __init__(self, fields=None, source=False):
+        self._fields = fields
+        self._source = source
+
+        self.combined = []
+
+    def __iter__(self):
+        return iter(self._fields)
+
+    def __getitem__(self, item):
+        return self._fields[item]
+
+    def __str__(self):
+        if not self:
+            return 'None'
+
+        fields = [str(p) for p in self]
+        if self.requires_source:
+            fields.append('_source')
+
+        return ','.join(fields)
+
+    def __repr__(self):
+        return repr(self.as_json()) if self else 'None'
+
+    def __nonzero__(self):
+        return self._fields is not None
+
+    @property
+    def requires_source(self):
+        return self._source
+
+    @classmethod
+    def from_query(cls, query, pattern_factory=None):
+        """Create and return a new instance of FieldsFilter using the given query."""
+        if 'fields' not in query:
+            return cls()
+
+        fields, source = [], False
+        for field in filter(None, (f.strip() for v in query['fields'] for f in v.split(','))):
+            if field == '_source':
+                source = True
+            elif pattern_factory is None:
+                fields.append(_Pattern(field))
+            else:
+                fields.append(pattern_factory(field))
+
+        return cls(fields, source)
+
+    @classmethod
+    def from_json(cls, data, pattern_factory=None):
+        """Create and return a new instance of FieldsFilter using the given JSON data."""
+        if data is None:
+            return cls()
+        elif isinstance(data, basestring):
+            data = [data]
+        elif not isinstance(data, list):
+            raise ElasticSearchError('Malformed fields filter "{0!r}"'.format(data))
+
+        fields, source = [], False
+        for field in filter(None, (f.strip() for f in data)):
+            if field == '_source':
+                source = True
+            elif pattern_factory is None:
+                fields.append(_Pattern(field))
+            else:
+                fields.append(pattern_factory(field))
+
+        return cls(fields, source)
+
+    def combine(self, fields_filter):
+        """Combine this fields filter with the given one and return whether it was successful."""
+        new_fields, combined, match_found = [], set(), False
+        for existing_field in self._fields:
+            candidates = []
+            for new_field in fields_filter:
+                if new_field < existing_field:
+                    candidates.append(new_field)
+                    combined.add(new_field)
+                    match_found = True
+                # The >= comparison MUST NOT be removed! In case both patterns are
+                # incompatible to each other this will evaluate to False as well
+                elif new_field >= existing_field:
+                    candidates.append(existing_field)
+                    combined.add(new_field)
+                    match_found = True
+
+            new_fields.extend(candidates)
+
+        if not self._fields:
+            self._fields = list(fields_filter)
+            self._source = fields_filter.requires_source
+        elif not match_found:
+            return False
+        else:
+            self.combined = combined
+            self._fields = new_fields
+
+        return True
+
+    def as_query(self):
+        """Create and return a query for this fields filter."""
+        assert self, 'Cannot create a query from a empty fields filter'
+        return Query(fields=str(self))
+
+    def as_json(self):
+        """Create and return a string or list for this fields filter."""
+        assert self, 'Cannot render an emtpy fields filter as JSON'
+
+        fields = [str(p) for p in self]
+        if self.requires_source:
+            fields.append('_source')
+
+        return fields[0] if len(fields) == 1 else fields
