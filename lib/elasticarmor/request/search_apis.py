@@ -67,6 +67,12 @@ class SearchApiRequest(ElasticRequest):
             FilterString.from_string(self.get_match('documents', '')),
             SourceFilter.from_query(self.query), self.json)
 
+        if 'q' in self.query and self.query['q'][-1].strip() and self.query['q'][-1].strip() != '*':
+            if client.has_restriction(index_filter, type_filter):
+                # TODO: Provide a more sophisticated solution once we've got a parser for query strings!
+                raise PermissionError(
+                    'You are restricted to specific fields and as such cannot utilize the query string search.')
+
         if not self.query.is_false('explain'):
             self._check_permission('api/search/explain', client, index_filter, type_filter)
 
@@ -244,7 +250,12 @@ class SearchApiRequest(ElasticRequest):
         json_updated = False
         for permission in parser.permissions:
             # TODO: Context changes? Permissions are not only global anymore!
-            self._check_permission(permission, client, index_filter, type_filter)
+            if permission != 'api/feature/queryString':
+                self._check_permission(permission, client, index_filter, type_filter)
+            elif client.has_restriction(index_filter, type_filter):
+                # TODO: Remove this once we've got a parser for query strings!
+                raise PermissionError(
+                    'You are restricted to specific fields and as such cannot utilize the query string search.')
 
         if client.is_restricted('indices'):
             for index in parser.indices:

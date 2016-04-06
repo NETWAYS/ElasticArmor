@@ -300,7 +300,7 @@ class QueryDslParser(object):
             'nested': self.nested_query,
             'prefix': self.prefix_query,
             'query_string': self.query_string_query,
-            'simple_query_string': self.simple_query_string_query,
+            'simple_query_string': self.query_string_query,
             'range': self.range_query,
             'regexp': self.regexp_query,
             'span_first': self.span_first_query,
@@ -713,11 +713,13 @@ class QueryDslParser(object):
 
     def query_string_query(self, obj, index=None, document=None):
         """Parse the given query_string query."""
-        self.permissions.add('api/feature/queryString')
+        try:
+            query_string = obj['query'].strip()
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "query" in query_string query "{0!r}"'.format(obj))
 
-    def simple_query_string_query(self, obj, index=None, document=None):
-        """Parse the given simple_query_string query."""
-        self.permissions.add('api/feature/queryString')
+        if query_string and query_string != '*':
+            self.permissions.add('api/feature/queryString')
 
     def range_query(self, obj, index=None, document=None):
         """Parse the given range query. Raises ElasticSearchError in case the query is malformed."""
