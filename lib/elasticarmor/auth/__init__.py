@@ -364,32 +364,20 @@ class Client(LoggingAware, object):
             # for the given context, so the client is not permitted, not at all
             return
 
-        # Remove the most restrictive filters
-        removed_filters = {}
+        # Remove the most restrictive filters. This is the part that ensures
+        # that we're granting the client the broadest access possible
         for include in filters.keys():
             superior = reduce(lambda a, b: b if b > a else a, filters.iterkeys(), include)
             if include is not superior:
-                removed_filters[include] = filters[include]
-                del filters[include]
+                if filters[superior]:
+                    # If the include is about to be removed check whether it is possible
+                    # to neutralize some of the excludes linked to the less restrictive
+                    # filter and if so, exchange them with the include's excludes
+                    excludes = [e for e in filters[superior] if include < e]
+                    if excludes != filters[superior]:
+                        excludes.extend(filters[include])
+                        filters[superior] = excludes
 
-        # Reduce the amount of possible excludes so that only the least restrictive ones remain
-        for excludes in (excludes for excludes in filters.itervalues() if len(excludes) > 1):
-            # Just because we've removed the most restrictive filters doesn't mean that the client has
-            # no access to the entities covered by them. So let's try to neutralize some excludes
-            #
-            # TODO: This is in fact true, BUT the filter that neutralizes another filter's exclude
-            #       may have excludes as well, which may then replace the exclude just neutralized.
-            #       If you get what I mean, spin this a bit further and you'll realize that this is
-            #       recursive as long as an exclude can be neutralized. That's why it's commented out
-            #
-            #       Example: r1 (a/b/c*,-cd*), r2 (a/b/cd*,-cde*)
-            #                - c* overlaps with cd*, so cd* is ignored
-            #                - Because c* is used, -cd* is registered but not -cde*
-            #                - cd* neutralizes -cd*, but is linked with -cde*
-            #                The final result should therefore be: a/b/c*,-cde*
-            #
-            # kept_excludes = [e for e in excludes if not any(p is not e and p <= e for p in excludes)]
-            # excludes[:] = filter(lambda e: not any(p >= e for p in removed_filters), kept_excludes)
-            excludes[:] = [e for e in excludes if not any(p is not e and p <= e for p in excludes)]
+                del filters[include]
 
         return filters
