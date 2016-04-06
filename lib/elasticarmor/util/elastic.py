@@ -1663,7 +1663,8 @@ class HighlightParser(object):
             if 'matched_fields' in field_obj:
                 self.fields.update((index, document, f) for f in field_obj['matched_fields'])
 
-            self.fields.add((index, document, field))
+            if field.strip() != '*':
+                self.fields.add((index, document, field))
 
 
 class SourceFilter(object):
