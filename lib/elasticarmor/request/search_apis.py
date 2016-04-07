@@ -77,13 +77,12 @@ class SearchApiRequest(ElasticRequest):
         if not self.query.is_false('explain'):
             self._check_permission('api/search/explain', client, index_filter, type_filter)
 
-        if client.is_restricted('fields') and self.query.get('fields'):
-            fields = filter(None, (field.strip() for v in self.query['fields'] for field in v.split(',')))
-            forbidden_fields = [field for field in fields
-                                if not client.can('api/documents/get', index_filter, type_filter, field)]
-            if forbidden_fields:
-                raise PermissionError('You are not permitted to access the following stored fields: {0}'
-                                      ''.format(', '.join(forbidden_fields)))
+        fields_filter = client.create_fields_filter('api/documents/get', index_filter, type_filter,
+                                                    FieldsFilter.from_query(self.query))
+        if fields_filter is None:
+            raise PermissionError('You are not permitted to access any of the requested stored fields.')
+        elif fields_filter:
+            self.query.update(fields_filter.as_query())
 
         if index_filter:
             if type_filter:
