@@ -2092,7 +2092,7 @@ class FieldsFilter(object):
     @classmethod
     def from_query(cls, query, pattern_factory=None):
         """Create and return a new instance of FieldsFilter using the given query."""
-        if 'fields' not in query:
+        if query.is_false('fields'):
             return cls()
 
         fields, source = [], False
@@ -2146,15 +2146,11 @@ class FieldsFilter(object):
 
             new_fields.extend(candidates)
 
-        if not self._fields:
-            self._fields = list(fields_filter)
-            self._source = fields_filter.requires_source
-        elif not match_found:
+        if self._fields and not match_found:
             return False
-        else:
-            self.combined = combined
-            self._fields = new_fields
 
+        self.combined = combined
+        self._fields = new_fields
         return True
 
     def as_query(self):
