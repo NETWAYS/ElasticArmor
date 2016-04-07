@@ -11,9 +11,31 @@ class CreateIndexApiRequest(ElasticRequest):
         'POST': '/{index}'
     }
 
+    index_settings = {
+        'settings': None,
+        'creation_date': None,
+        'mappings': 'api/indices/create/mappings',
+        'warmers': 'api/indices/create/warmers',
+        'aliases': 'api/indices/create/aliases'
+    }
+
     @Permission('api/indices/create/index')
     def inspect(self, client):
-        pass
+        if not self.json:
+            return
+
+        unknown = next((kw for kw in self.json if kw not in self.index_settings), None)
+        if unknown is not None:
+            raise PermissionError('Unknown index setting: {0}'.format(unknown))
+
+        missing_permissions = []
+        for setting, permission in self.index_settings.iteritems():
+            if permission is not None and setting in self.json and not client.can(permission, self.index):
+                missing_permissions.append(permission)
+
+        if missing_permissions:
+            raise PermissionError('You are missing the following permissions: {0}'
+                                  ''.format(', '.join(missing_permissions)))
 
 
 class DeleteIndexApiRequest(ElasticRequest):
