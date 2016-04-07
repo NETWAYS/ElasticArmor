@@ -151,7 +151,7 @@ class MultiGetApiRequest(ElasticRequest):
         default_index = self.get_match('index')
         default_document_type = self.get_match('document')
         default_source_filter = SourceFilter.from_query(self.query)
-        default_fields = [field.strip() for v in self.query.get('fields', []) for field in v.split(',')]
+        default_fields_filter = FieldsFilter.from_query(self.query)
 
         docs = self.json.get('docs', [])
         if 'ids' in self.json:
@@ -187,19 +187,23 @@ class MultiGetApiRequest(ElasticRequest):
                     if '*' in document_type or ',' in document_type:
                         error = 'You are restricted to specific types. Please specify a type.'
 
-            if not error and document.get('fields', default_fields):
-                forbidden_fields = [field for field in document.get('fields', default_fields)
-                                    if not client.can('api/documents/get', index, document_type, field)]
-                if forbidden_fields:
-                    error = 'You are not permitted to access the following fields: {0}' \
-                            ''.format(', '.join(forbidden_fields))
+            inspect_source = True
+            if not error and ('fields' in document or default_fields_filter):
+                fields_filter = client.create_fields_filter(
+                    'api/documents/get', index, document_type,
+                    FieldsFilter.from_json(document['fields']) if 'fields' in document else default_fields_filter)
+                if fields_filter is None:
+                    error = 'You are not permitted to access this document or any of the requested stored fields.'
+                elif fields_filter:
+                    document['fields'] = fields_filter.as_json()
+                    inspect_source = fields_filter.requires_source
 
-            if not error:
+            if not error and inspect_source:
                 requested_source = SourceFilter.from_json(document.get('_source'))
                 source_filter = client.create_source_filter('api/documents/get', index, document_type,
                                                             requested_source or default_source_filter)
                 if source_filter is None:
-                    error = 'You are not permitted to access this document or the requested fields.'
+                    error = 'You are not permitted to access any of the requested source fields.'
                 elif source_filter:
                     document['_source'] = source_filter.as_json()
 
