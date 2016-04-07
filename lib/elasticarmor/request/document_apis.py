@@ -15,11 +15,10 @@ class IndexApiRequest(ElasticRequest):
         ]
     }
 
+    @Permission('api/documents/index')
     def inspect(self, client):
         # TODO: Check if it's required to validate a parent's id (Whether the client has access to the parent's type)
-        if not client.can('api/documents/index', self.index, self.document):
-            raise PermissionError('You are not permitted to index documents of this type in the given index.')
-        elif client.has_restriction(self.index, self.document):
+        if client.has_restriction(self.index, self.document):
             raise PermissionError('You are restricted to specific fields of the given type.'
                                   ' Please use the update api instead.')
         elif not self.query.is_false('refresh') and not client.can('api/indices/refresh', self.index):
@@ -65,11 +64,10 @@ class DeleteApiRequest(ElasticRequest):
         'DELETE': '/{index}/{document}/{identifier}'
     }
 
+    @Permission('api/documents/delete')
     def inspect(self, client):
         # TODO: Check if it's required to validate a parent's id (Whether the client has access to the parent's type)
-        if not client.can('api/documents/delete', self.index, self.document):
-            raise PermissionError('You are not permitted to delete documents of this type in the given index.')
-        elif client.has_restriction(self.index, self.document):
+        if client.has_restriction(self.index, self.document):
             raise PermissionError('You are restricted to specific fields of the given type.')
         elif not self.query.is_false('refresh') and not client.can('api/indices/refresh', self.index):
             raise PermissionError('You are not permitted to refresh this index.')
@@ -83,20 +81,16 @@ class UpdateApiRequest(ElasticRequest):
         ]
     }
 
+    @Permission('api/documents/update')
     def inspect(self, client):
         if not self.query.is_false('refresh') and not client.can('api/indices/refresh', self.index):
             raise PermissionError('You are not permitted to refresh this index.')
-        elif 'script' in self.json:
-            if not client.can('api/documents/update', self.index, self.document):
-                raise PermissionError('You are not permitted to update this document.')
-            elif not client.can('api/feature/script', self.index, self.document):
-                raise PermissionError('You are not permitted to perform scripted updates of this document.')
+        elif 'script' in self.json and not client.can('api/feature/script', self.index, self.document):
+            raise PermissionError('You are not permitted to perform scripted updates of this document.')
         elif self.json.get('doc'):
             self._inspect_document(client, self.index, self.document, self.json['doc'])
             if self.json.get('upsert'):
                 self._inspect_document(client, self.index, self.document, self.json['upsert'])
-        elif not client.can('api/documents/update', self.index, self.document):
-            raise PermissionError('You are not permitted to update this document.')
 
         if self.query.get('fields'):
             forbidden_fields = []
@@ -154,7 +148,7 @@ class MultiGetApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/bulk')
+    @Permission('api/bulk', scope='cluster')
     def inspect(self, client):
         # TODO: Error handling for unexpected types
         default_index = self.get_match('index')
@@ -270,7 +264,8 @@ class BulkApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/bulk')
+    @Permission('api/feature/notImplemented')
+    @Permission('api/bulk', scope='cluster')
     def inspect(self, client):
         pass
 
@@ -311,6 +306,7 @@ class MultiTermVectorApiRequest(ElasticRequest):
         ]
     }
 
-    @Permissions('api/bulk', 'api/documents/termVector')
+    @Permission('api/bulk', scope='cluster')
+    @Permission('api/documents/termVector')
     def inspect(self, client):
         pass
