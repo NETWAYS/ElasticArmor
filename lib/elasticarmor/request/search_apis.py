@@ -387,7 +387,7 @@ class MultiSearchApiRequest(SearchApiRequest):
         ]
     }
 
-    @Permission('api/bulk')
+    @Permission('api/bulk', scope='cluster')
     def inspect(self, client):
         lines, self._errors = [], []
         for i, (header, body) in enumerate(self._parse_payload()):
@@ -577,6 +577,7 @@ class ExplainApiRequest(ElasticRequest):
         'POST': '/{index}/{document}/{identifier}/_explain'
     }
 
+    @Permission('api/feature/notImplemented')
     @Permission('api/search/explain')
     def inspect(self, client):
         pass
@@ -613,7 +614,8 @@ class MultiPercolateApiRequest(ElasticRequest):
         ]
     }
 
-    @Permissions('api/bulk', 'api/search/percolate')
+    @Permission('api/bulk', scope='cluster')
+    @Permission('api/search/percolate')
     def inspect(self, client):
         pass
 
@@ -623,7 +625,8 @@ class MoreLikeThisApiRequest(ElasticRequest):
         'GET': '/{index}/{document}/{identifier}/_mlt'
     }
 
-    @Permissions('api/feature/deprecated', 'api/search/moreLikeThis')
+    @Permission('api/feature/deprecated', scope='cluster')
+    @Permission('api/search/moreLikeThis')
     def inspect(self, client):
         pass
 
