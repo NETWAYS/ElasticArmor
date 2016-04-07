@@ -2,16 +2,16 @@
 
 import os
 import re
+import sys
 from functools import update_wrapper
 
-try:
-    # Python 2.7+
-    from collections import OrderedDict
+# We need object_pairs_hook, which is only available in the json module since Python 2.7
+if sys.version_info >= (2, 7):
     import json
-except ImportError:
-    # Python 2.6
-    from ordereddict import OrderedDict
+    from collections import OrderedDict
+else:
     import simplejson as json
+    from simplejson import OrderedDict
 
 from elasticarmor.util.http import HttpHeaders
 from elasticarmor.util.mixins import LoggingAware
