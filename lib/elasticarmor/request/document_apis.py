@@ -167,6 +167,9 @@ class MultiGetApiRequest(ElasticRequest):
             index = document.get('_index', default_index)
             if not index:
                 raise RequestError(400, 'Document #{0} is missing an index.'.format(i))
+            elif isinstance(index, list):
+                index = index[-1]
+                document['_index'] = index
 
             error = None
             if not client.can('api/documents/get', index):
@@ -176,6 +179,10 @@ class MultiGetApiRequest(ElasticRequest):
                 continue
 
             document_type = document.get('_type', default_document_type)
+            if isinstance(document_type, list):
+                document_type = document_type[-1]
+                document['_type'] = document_type
+
             if not error and (document_type is None or document_type.strip() == '_all'):
                 try:
                     type_filter = client.create_filter_string('api/documents/get', index=index, single=True)
