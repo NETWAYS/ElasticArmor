@@ -59,6 +59,18 @@ class SearchApiRequest(ElasticRequest):
             'indices': 'You are not permitted to utilize the significant_terms aggregation'
                        ' in the following indices: {0}',
             'types': 'You are not permitted to utilize the significant_terms aggregation in the following types: {0}'
+        },
+        'api/search/moreLikeThis': {
+            'cluster': 'You are not permitted to utilize the more_like_this query.',
+            'indices': 'You are not permitted to utilize the more_like_this query in the following indices: {0}',
+            'types': 'You are not permitted to utilize the more_like_this query in the following types: {0}'
+        },
+        'api/search/fuzzyLikeThis': {
+            'cluster': 'You are not permitted to utilize the fuzzy_like_this or fuzzy_like_this_field query.',
+            'indices': 'You are not permitted to utilize the fuzzy_like_this or fuzzy_like_this_field query'
+                       ' in the following indices: {0}',
+            'types': 'You are not permitted to utilize the fuzzy_like_this or fuzzy_like_this_field query'
+                     ' in the following types: {0}'
         }
     }
 
