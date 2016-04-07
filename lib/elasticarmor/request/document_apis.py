@@ -3,7 +3,7 @@
 from elasticarmor import APP_NAME
 from elasticarmor.auth import MultipleIncludesError
 from elasticarmor.request import *
-from elasticarmor.util.elastic import SourceFilter
+from elasticarmor.util.elastic import SourceFilter, FieldsFilter
 
 
 class IndexApiRequest(ElasticRequest):
@@ -38,25 +38,24 @@ class GetApiRequest(ElasticRequest):
     }
 
     def inspect(self, client):
-        source_filter = client.create_source_filter('api/documents/get', self.index, self.document,
-                                                    SourceFilter.from_query(self.query))
-        if source_filter is None:
-            raise PermissionError('You are not permitted to access the requested document and/or fields.')
-        elif source_filter:
-            self.query.discard('_source', '_source_include', '_source_exclude')
-            self.query.update(source_filter.as_query())
+        fields_filter = None
+        if not self.path.endswith('/_source'):
+            fields_filter = client.create_fields_filter('api/documents/get', self.index, self.document,
+                                                        FieldsFilter.from_query(self.query))
+            if fields_filter is None:
+                raise PermissionError(
+                    'You are not permitted to access this document or any of the requested stored fields.')
+            elif fields_filter:
+                self.query.update(fields_filter.as_query())
 
-        if self.query.get('fields'):
-            forbidden_fields = []
-            for field in (field.strip() for v in self.query['fields'] for field in v.split(',')):
-                if field and not client.can('api/documents/get', self.index, self.document, field):
-                    forbidden_fields.append(field)
-
-            if forbidden_fields:
-                # The fields parameter is not rewritten since it does not support
-                # wildcards and therefore contains only explicit values
-                raise PermissionError('You are not permitted to access the following fields: {0}'
-                                      ''.format(', '.join(forbidden_fields)))
+        if not fields_filter or fields_filter.requires_source:
+            source_filter = client.create_source_filter('api/documents/get', self.index, self.document,
+                                                        SourceFilter.from_query(self.query))
+            if source_filter is None:
+                raise PermissionError('You are not permitted to access any of the requested source fields.')
+            elif source_filter:
+                self.query.discard('_source', '_source_include', '_source_exclude')
+                self.query.update(source_filter.as_query())
 
 
 class DeleteApiRequest(ElasticRequest):
