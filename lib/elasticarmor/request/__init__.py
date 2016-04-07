@@ -83,6 +83,7 @@ class PermissionError(RequestError):
 
 class Permission(object):
     """Decorator for method inspect of class ElasticRequest to check a client's permission.
+    In case the client lacks a given permission, PermissionError is raised indicating the missing permissions.
 
     The basic usage is as follows:
 
@@ -94,16 +95,51 @@ class Permission(object):
         def inspect(self, client):
             pass
 
-    In case the client lacks a given permission, PermissionError is raised indicating the missing permissions.
+    Permission checks are context-aware by using the names of the default (singular) location macros to access
+    the index, document-type and field that is possibly part of the request's path. In case your locations do
+    not use the default macros, pass the name of the macro as the respective keyword argument to this decorator:
+
+        @Permission('<permission-name>', index='<macro-name>')
+        def inspect(self, client):
+            pass
+
+        @Permissions('<permission-name>', '<permission-name>', document_type='<macro-name>')
+        def inspect(self, client):
+            pass
+
+    If you want to limit the context-awareness to a particular scope, pass its identifier as keyword argument:
+
+        @Permission('<permission-name>', scope='cluster')
+        def inspect(self, client):
+            pass
+
+    Consider to stack multiple decorators if you have permissions that require different scopes:
+
+        @Permission('<permission-name>', scope='indices')
+        @Permission('<permission-name>')
+        def inspect(self, client):
+            pass
     """
 
-    def __init__(self, permission, *permissions):
+    def __init__(self, permission, *permissions, **context_attributes):
         self.permissions = list(permissions)
         self.permissions.insert(0, permission)
+        self.scope = context_attributes.get('scope')
+        self.index_attribute = context_attributes.get('index', 'index')
+        self.type_attribute = context_attributes.get('document_type', 'document')
+        self.field_attribute = context_attributes.get('field', 'field')
 
     def __call__(self, inspector):
         def protector(request, client):
-            missing = [p for p in self.permissions if not client.can(p)]
+            context = {}
+            if not self.scope or self.scope != 'cluster':
+                context['index'] = getattr(request, self.index_attribute, None)
+            if not self.scope or self.scope not in ['cluster', 'indices']:
+                context['document_type'] = getattr(request, self.type_attribute, None)
+            if not self.scope or self.scope == 'fields':
+                context['field'] = getattr(request, self.field_attribute, None)
+
+            missing = [p for p in self.permissions if not client.can(p, **context)]
             if missing:
                 raise PermissionError('You are missing the following permissions: {0}'.format(', '.join(missing)))
             else:
