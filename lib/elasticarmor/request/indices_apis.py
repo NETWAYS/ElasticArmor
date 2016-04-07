@@ -50,11 +50,8 @@ class DeleteIndexApiRequest(ElasticRequest):
 
 class GetIndexApiRequest(ElasticRequest):
     locations = {
+        'HEAD': '/{indices}',
         'GET': [
-            '/{indices}',
-            '/{indices}/{keywords}'
-        ],
-        'HEAD': [
             '/{indices}',
             '/{indices}/{keywords}'
         ]
@@ -74,26 +71,27 @@ class GetIndexApiRequest(ElasticRequest):
         elif index_filter:
             self.path = self.path.replace(self.indices, str(index_filter))
 
-        keywords = [s.strip() for s in self.get_match('keywords', '').split(',') if s]
-        unknown = next((kw for kw in keywords if kw not in self.index_settings), None)
-        if unknown is not None:
-            raise PermissionError('Unknown index setting: {0}'.format(unknown))
+        if self.command != 'HEAD':
+            keywords = [s.strip() for s in self.get_match('keywords', '').split(',') if s]
+            unknown = next((kw for kw in keywords if kw not in self.index_settings), None)
+            if unknown is not None:
+                raise PermissionError('Unknown index setting: {0}'.format(unknown))
 
-        permitted_settings, missing_permissions = [], {}
-        for setting, permission in self.index_settings.iteritems():
-            if not keywords or setting in keywords:
-                for index in index_filter.iter_patterns():
-                    if client.can(permission, index):
-                        permitted_settings.append(setting)
-                    elif setting in keywords:
-                        missing_permissions.setdefault(permission, []).append(str(index))
+            permitted_settings, missing_permissions = [], {}
+            for setting, permission in self.index_settings.iteritems():
+                if not keywords or setting in keywords:
+                    for index in index_filter.iter_patterns():
+                        if client.can(permission, index):
+                            permitted_settings.append(setting)
+                        elif setting in keywords:
+                            missing_permissions.setdefault(permission, []).append(str(index))
 
-        if missing_permissions:
-            permission_hint = ', '.join('{0} ({1})'.format(permission, ', '.join(indices))
-                                        for permission, indices in missing_permissions.iteritems())
-            raise PermissionError('You are missing the following permissions: {0}'.format(permission_hint))
-        elif not keywords and len(permitted_settings) < len(self.index_settings):
-            self.path = '/'.join((self.path.rstrip('/'), ','.join(permitted_settings)))
+            if missing_permissions:
+                permission_hint = ', '.join('{0} ({1})'.format(permission, ', '.join(indices))
+                                            for permission, indices in missing_permissions.iteritems())
+                raise PermissionError('You are missing the following permissions: {0}'.format(permission_hint))
+            elif not keywords and len(permitted_settings) < len(self.index_settings):
+                self.path = '/'.join((self.path.rstrip('/'), ','.join(permitted_settings)))
 
 
 class OpenIndexApiRequest(ElasticRequest):
