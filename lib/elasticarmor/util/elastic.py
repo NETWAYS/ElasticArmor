@@ -1702,7 +1702,9 @@ class SourceFilter(object):
             source_filter.excludes = [s.strip() for s in query['_source_exclude'][-1].split(',')]
 
         if include_keyword is None and '_source_exclude' not in query:
-            source_filter.disabled = 'fields' in query and (not query['fields'][-1] or query.is_false('fields', False))
+            source_filter.disabled = 'fields' in query and (not query['fields'][-1] or
+                                                            query.is_false('fields', False) or
+                                                            not any('_source' in v for v in query['fields']))
 
         return source_filter
 
