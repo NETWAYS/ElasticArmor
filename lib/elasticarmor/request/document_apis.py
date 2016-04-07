@@ -91,17 +91,15 @@ class UpdateApiRequest(ElasticRequest):
             if self.json.get('upsert'):
                 self._inspect_document(client, self.index, self.document, self.json['upsert'])
 
-        if self.query.get('fields'):
-            forbidden_fields = []
-            for field in (field.strip() for v in self.query['fields'] for field in v.split(',')):
-                if field == '_source' and client.has_restriction(self.index, self.document):
-                    raise PermissionError('"_source" is not available. You are restricted to specific fields.')
-                elif field and not client.can('api/documents/get', self.index, self.document, field):
-                    forbidden_fields.append(field)
+        fields_filter = client.create_fields_filter('api/documents/get', self.index, self.document,
+                                                    FieldsFilter.from_query(self.query))
+        if fields_filter is None:
+            raise PermissionError('You are not permitted to access any of the requested stored fields.')
+        elif fields_filter:
+            if fields_filter.requires_source and client.has_restriction(self.index, self.document):
+                raise PermissionError('"_source" is not available. You are restricted to specific fields.')
 
-            if forbidden_fields:
-                raise PermissionError('You are not permitted to access the following fields: {0}'
-                                      ''.format(', '.join(forbidden_fields)))
+            self.query.update(fields_filter.as_query())
 
     def _inspect_document(self, client, index, document_type, document):
         forbidden = []
