@@ -1365,13 +1365,18 @@ class AggregationParser(object):
 
     def filters_agg(self, obj, index=None, document=None, field=None):
         """Parse the given filters aggregation. Raises ElasticSearchError in case it is malformed."""
-        if isinstance(obj, list):
-            iterator = obj
+        try:
+            filters = obj['filters']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "filters" in filters aggregation "{0!r}"'.format(obj))
+
+        if isinstance(filters, list):
+            iterator = filters
         else:
             try:
-                iterator = obj.itervalues
+                iterator = filters.itervalues()
             except AttributeError:
-                raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj))
+                raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(filters))
 
         for filter in iterator:
             parser = QueryDslParser()
