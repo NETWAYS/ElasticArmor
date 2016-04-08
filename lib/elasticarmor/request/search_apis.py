@@ -80,7 +80,7 @@ class SearchApiRequest(ElasticRequest):
             FilterString.from_string(self.get_match('documents', '')),
             SourceFilter.from_query(self.query), self.json)
 
-        if 'q' in self.query and self.query['q'][-1].strip() and self.query['q'][-1].strip() != '*':
+        if self.query.last('q', '').strip() and self.query.last('q').strip() != '*':
             if client.has_restriction(index_filter, type_filter):
                 # TODO: Provide a more sophisticated solution once we've got a parser for query strings!
                 raise PermissionError(
