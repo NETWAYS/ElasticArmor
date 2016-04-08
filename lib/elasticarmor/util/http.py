@@ -337,6 +337,16 @@ class Query(OrderedDict):
             except KeyError:
                 pass
 
+    def last(self, param, default=None):
+        """Return the very last value of the given parameter,
+        or the default if the parameter does not exist.
+
+        """
+        try:
+            return self[param][-1]
+        except KeyError:
+            return default
+
     def is_false(self, param, default=True):
         """Return whether the given parameter represents a false
         value, or the default if the parameter does not exist.
