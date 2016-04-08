@@ -339,6 +339,19 @@ class SearchApiRequest(ElasticRequest):
                         document_request['_source'] = source_filter.as_json()
                         json_updated = True
 
+                    if 'fielddata_fields' in document_request:
+                        requested_fielddata = FieldsFilter.from_json(document_request['fielddata_fields'])
+                        fielddata_filter = client.create_fields_filter('api/search/documents', index_filter,
+                                                                       type_filter, requested_fielddata)
+                        if fielddata_filter is None:
+                            raise PermissionError(
+                                'You are not permitted to access any of the requested fielddata fields ({0}) of type'
+                                ' "{1}" in index "{2}".'.format(requested_fielddata, document_type or type_filter,
+                                                                index or index_filter))
+                        elif fielddata_filter:
+                            document_request['fielddata_fields'] = fielddata_filter.as_json()
+                            json_updated = True
+
         return json_updated
 
 

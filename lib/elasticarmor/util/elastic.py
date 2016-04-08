@@ -1333,13 +1333,6 @@ class AggregationParser(object):
         if 'script_fields' in obj:
             self.permissions.add('api/feature/script')
 
-        if 'fielddata_fields' in obj:
-            if isinstance(obj['fielddata_fields'], list):
-                self.fields.update((index, document, f) for f in obj['fielddata_fields'])
-            else:
-                raise ElasticSearchError(
-                    'Invalid fielddata_fields definition in top_hits aggregation "{0!r}"'.format(obj))
-
         if 'sort' in obj:
             if isinstance(obj['sort'], list):
                 try:
