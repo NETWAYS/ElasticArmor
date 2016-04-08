@@ -1149,10 +1149,10 @@ class AggregationParser(object):
 
     Any occurrence of 'None' indicates that no particular index or document is desired instead of the default ones.
 
-    In contrast to other parsers, this will also populate an attribute called "source_requests" which possibly
-    contains aggregation objects that will cause document sources to be returned in the response:
+    In contrast to other parsers, this will also populate an attribute called "document_requests" which
+    possibly contains aggregation objects that will cause documents to be returned in the response:
 
-        parser.source_requests -> [('<index-name>' | None, '<document-name>' | None, dict)]
+        parser.document_requests -> [('<index-name>' | None, '<document-name>' | None, dict)]
 
     Occurrences of 'None' have the same meaning as previously noted.
     """
@@ -1162,7 +1162,7 @@ class AggregationParser(object):
         self.indices = set()
         self.documents = set()
         self.fields = set()
-        self.source_requests = []
+        self.document_requests = []
 
         self._parsers = {
             'aggregations': self.aggregations,
@@ -1317,7 +1317,7 @@ class AggregationParser(object):
         self._validate_keywords('top_hits', obj, ['sort', '_source', 'highlight', 'explain', 'script_fields',
                                                   'fielddata_fields', 'size', 'from'])
 
-        self.source_requests.append((index, document, obj))
+        self.document_requests.append((index, document, obj))
 
         if 'highlight' in obj:
             parser = HighlightParser()

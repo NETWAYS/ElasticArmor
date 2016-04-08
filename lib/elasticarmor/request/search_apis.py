@@ -315,11 +315,11 @@ class SearchApiRequest(ElasticRequest):
                                                   ' "{1}" by using field "{2}".'.format(document_type, index, field))
 
             try:
-                source_requests = parser.source_requests
+                document_requests = parser.document_requests
             except AttributeError:
                 pass
             else:
-                for index, document_type, source_request in source_requests:
+                for index, document_type, document_request in document_requests:
                     if index and not index_filter.matches(FilterString.from_string(index)):
                         raise RequestError(400, 'Index filter "{0}" does not match the requested scope "{1}".'
                                                 ''.format(index, index_filter))
@@ -327,7 +327,7 @@ class SearchApiRequest(ElasticRequest):
                         raise RequestError(400, 'Type filter "{0}" does not match the requested scope "{1}".'
                                                 ''.format(document_type, type_filter))
 
-                    requested_source = SourceFilter.from_json(source_request.get('_source'))
+                    requested_source = SourceFilter.from_json(document_request.get('_source'))
                     source_filter = client.create_source_filter('api/search/documents', index_filter,
                                                                 type_filter, requested_source)
                     if source_filter is None:
@@ -336,7 +336,7 @@ class SearchApiRequest(ElasticRequest):
                                               ''.format(document_type or type_filter, requested_source,
                                                         index or index_filter))
                     elif source_filter:
-                        source_request['_source'] = source_filter.as_json()
+                        document_request['_source'] = source_filter.as_json()
                         json_updated = True
 
         return json_updated
