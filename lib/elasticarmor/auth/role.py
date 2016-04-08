@@ -36,19 +36,13 @@ class Role(ElasticRole):
             if self.privileges.get('cluster'):
                 privileges['cluster'] = self.privileges['cluster']
             if self.privileges.get('indices'):
-                privileges['indices'] = dict(
-                    (Restriction([k]), v)
-                    for k, v in self.privileges['indices'].iteritems())
+                privileges['indices'] = [Restriction([d]) for d in self.privileges['indices']]
             if self.privileges.get('types'):
-                privileges['types'] = dict(
-                    (Restriction([p.index, k]), v)
-                    for k, v in self.privileges['types'].iteritems()
-                    for p in (p for r in privileges['indices'] for p in r.includes))
+                privileges['types'] = [Restriction([p.index, d]) for d in self.privileges['types']
+                                       for p in (p for r in privileges['indices'] for p in r.includes)]
             if self.privileges.get('fields'):
-                privileges['fields'] = dict(
-                    (Restriction([p.index, p.type, k]), v)
-                    for k, v in self.privileges['fields'].iteritems()
-                    for p in (p for r in privileges['types'] for p in r.includes))
+                privileges['fields'] = [Restriction([p.index, p.type, d]) for d in self.privileges['fields']
+                                        for p in (p for r in privileges['types'] for p in r.includes)]
 
             if not privileges:
                 raise RoleError('Role "{0}" does not define any privileges'.format(self.id))
@@ -67,21 +61,21 @@ class Role(ElasticRole):
         restrictions, candidates, restrictions_found = [], [], False
         if document_type is not None:
             pattern = TypePattern(index, document_type)
-            for restriction, permissions in self._privileges.get('fields', {}).iteritems():
+            for restriction in self._privileges.get('fields', []):
                 if restriction.matches(pattern):
                     if permission is None:
                         # If there is no permission it's the restriction itself we're interested in
                         restrictions.append(restriction)
-                    elif not permissions:
+                    elif not restriction.permissions:
                         # Restrictions without any permissions are considered inheriting
                         candidates.append(restriction)
                     elif not invert:
                         restrictions_found = True
                         # Whereas restrictions with at least one permission
                         # are required to match and if not, are ignored...
-                        if any(self._match_permissions(permission, p) for p in permissions):
+                        if any(self._match_permissions(permission, p) for p in restriction.permissions):
                             restrictions.append(restriction)
-                    elif invert and not any(self._match_permissions(permission, p) for p in permissions):
+                    elif invert and not any(self._match_permissions(permission, p) for p in restriction.permissions):
                         # ...unless we're inverting the match, of course
                         restrictions.append(restriction)
 
@@ -104,18 +98,18 @@ class Role(ElasticRole):
                 register_candidates = True
                 pattern = IndexPattern(index)
 
-            for restriction, permissions in self._privileges.get('types', {}).iteritems():
+            for restriction in self._privileges.get('types', []):
                 if restriction.matches(pattern):
                     if permission is None:
                         restrictions.append(restriction)
-                    elif not permissions:
+                    elif not restriction.permissions:
                         if register_candidates:
                             candidates.append(restriction)
                     elif not invert:
                         if register_candidates:
                             restrictions_found = True
 
-                        if any(self._match_permissions(permission, p) for p in permissions):
+                        if any(self._match_permissions(permission, p) for p in restriction.permissions):
                             if register_candidates:
                                 # Avoid touching the restrictions as well, since we're
                                 # interested in the remaining candidates only
@@ -126,7 +120,7 @@ class Role(ElasticRole):
                                 restrictions.extend(candidates)
                                 return restrictions
                     elif invert:
-                        if any(self._match_permissions(permission, p) for p in permissions):
+                        if any(self._match_permissions(permission, p) for p in restriction.permissions):
                             if not register_candidates and candidates:
                                 # The restriction obviously grants the permission and since that's not
                                 # what we're out for in case the match is inverted it means that all
@@ -154,25 +148,25 @@ class Role(ElasticRole):
                 register_candidates = True
                 pattern = None
 
-            for restriction, permissions in self._privileges.get('indices', {}).iteritems():
+            for restriction in self._privileges.get('indices', []):
                 if pattern is None or restriction.matches(pattern):
                     if permission is None:
                         restrictions.append(restriction)
-                    elif not permissions:
+                    elif not restriction.permissions:
                         if register_candidates:
                             restrictions.append(restriction)
                     elif not invert:
                         if register_candidates:
                             restrictions_found = True
 
-                        if any(self._match_permissions(permission, p) for p in permissions):
+                        if any(self._match_permissions(permission, p) for p in restriction.permissions):
                             if register_candidates:
                                 restrictions.append(restriction)
                             elif candidates:
                                 restrictions.extend(candidates)
                                 return restrictions
                     elif invert:
-                        if any(self._match_permissions(permission, p) for p in permissions):
+                        if any(self._match_permissions(permission, p) for p in restriction.permissions):
                             if not register_candidates and candidates:
                                 return restrictions
                         elif register_candidates:
@@ -204,7 +198,7 @@ class Role(ElasticRole):
             if index is not None and document_type is not None:
                 field_pattern = FieldPattern(index, document_type, field)
 
-            field_match = self._grants_permission(permission, self._privileges.get('fields', {}), field_pattern)
+            field_match = self._grants_permission(permission, self._privileges.get('fields', []), field_pattern)
             if field_match is not None:
                 return field_match
 
@@ -214,13 +208,13 @@ class Role(ElasticRole):
             else:
                 type_pattern = document_type if index is None else TypePattern(index, document_type)
 
-            type_match = self._grants_permission(permission, self._privileges.get('types', {}), type_pattern)
+            type_match = self._grants_permission(permission, self._privileges.get('types', []), type_pattern)
             if type_match is not None:
                 return type_match
 
         if index is not None or document_type is not None or field is not None:
             index_pattern = IndexPattern(index or (field.index if field is not None else document_type.index))
-            index_match = self._grants_permission(permission, self._privileges.get('indices', {}), index_pattern)
+            index_match = self._grants_permission(permission, self._privileges.get('indices', []), index_pattern)
             if index_match is not None:
                 return index_match
 
@@ -232,11 +226,11 @@ class Role(ElasticRole):
             return
 
         check_parents = False
-        for restriction, permissions in privileges.iteritems():
+        for restriction in privileges:
             if pattern is None or restriction.matches(pattern):
-                if not permissions:
+                if not restriction.permissions:
                     check_parents = True
-                elif any(self._match_permissions(permission, p) for p in permissions):
+                elif any(self._match_permissions(permission, p) for p in restriction.permissions):
                     return True
 
         return None if check_parents else False
@@ -266,17 +260,15 @@ class Restriction(object):
     """Restriction object which represents a configured client restriction."""
 
     def __init__(self, restriction):
-        self._parsed = False
+        self._prepared = False
+        self._permissions = []
         self._includes = []
         self._excludes = []
 
         self.raw_restriction = restriction
 
-    def __str__(self):
-        return '/'.join(self.raw_restriction)
-
     def __hash__(self):
-        return hash(tuple(self.raw_restriction))
+        return hash(str(self.raw_restriction))
 
     def __repr__(self):
         return "Restriction({0!r})".format(self.raw_restriction)
@@ -285,56 +277,82 @@ class Restriction(object):
         try:
             return self.raw_restriction == other.raw_restriction
         except AttributeError:
-            return NotImplemented
+            return False
+
+    @property
+    def permissions(self):
+        # Not copied because strings are immutable and the list itself is not touched anywhere
+        self._prepare_restriction()
+        return self._permissions
 
     @property
     def includes(self):
-        self._parse_restriction()
+        self._prepare_restriction()
         return self._includes[:]
 
     @property
     def excludes(self):
-        self._parse_restriction()
+        self._prepare_restriction()
         return self._excludes[:]
 
-    def _parse_restriction(self):
-        if self._parsed:
+    def _prepare_restriction(self):
+        if self._prepared:
             return
 
         type_restriction = field_restriction = False
         if len(self.raw_restriction) == 1:
-            type_factory = IndexPattern
-            type_pattern = self.raw_restriction[0]
+            data = self.raw_restriction[0]
+            pattern_factory = IndexPattern
         elif len(self.raw_restriction) == 2:
             type_restriction = True
-            type_pattern = self.raw_restriction[1]
-            type_factory = lambda p: TypePattern(self.raw_restriction[0], p)
+            data = self.raw_restriction[1]
+            pattern_factory = lambda p: TypePattern(self.raw_restriction[0], p)
         else:
             field_restriction = True
-            type_pattern = self.raw_restriction[2]
-            type_factory = lambda p: FieldPattern(self.raw_restriction[0], self.raw_restriction[1], p)
+            data = self.raw_restriction[2]
+            pattern_factory = lambda p: FieldPattern(self.raw_restriction[0], self.raw_restriction[1], p)
 
-        for pattern in (s.strip() for s in type_pattern.split(',')):
-            if pattern.startswith('-'):
-                self._excludes.append(type_factory(pattern[1:]))
-            elif pattern:
-                if type_restriction and '*' in pattern:
-                    raise RestrictionError('Type restrictions with wildcards are not supported'
-                                           ' ("{0}")'.format(pattern))
-                elif field_restriction and len(pattern) > 1 and pattern.startswith('*'):
-                    raise RestrictionError('Field restrictions with leading wildcards are not supported'
-                                           ' ("{0}")'.format(pattern))
+        try:
+            includes = data.get('include', '').split(',')
+        except AttributeError:
+            includes = data.get('include', [])
+            if not isinstance(includes, list):
+                raise RestrictionError('Invalid value for key "include" of restriction "{0!r}"'.format(self))
 
-                self._includes.append(type_factory(pattern))
+        for pattern in filter(None, (p.strip() for p in includes)):
+            if type_restriction and '*' in pattern:
+                raise RestrictionError('Type restrictions with wildcards are not supported'
+                                       ' ("{0}")'.format(pattern))
+            elif field_restriction and len(pattern) > 1 and pattern.startswith('*'):
+                raise RestrictionError('Field restrictions with leading wildcards are not supported'
+                                       ' ("{0}")'.format(pattern))
+
+            self._includes.append(pattern_factory(pattern))
 
         if not self._includes:
             raise RestrictionError('Restriction "{0}" does not provide any includes'.format(self))
 
-        self._parsed = True
+        try:
+            excludes = data.get('exclude', '').split(',')
+        except AttributeError:
+            excludes = data.get('exclude', [])
+            if not isinstance(excludes, list):
+                raise RestrictionError('Invalid value for key "exclude" of restriction "{0!r}"'.format(self))
+
+        try:
+            permissions = data.get('permissions', '').split(',')
+        except AttributeError:
+            permissions = data.get('permissions', [])
+            if not isinstance(permissions, list):
+                raise RestrictionError('Invalid value for key "permissions" in restriction "{0!r}"'.format(self))
+
+        self._excludes = [pattern_factory(pattern) for pattern in filter(None, (p.strip() for p in excludes))]
+        self._permissions = filter(None, (permission.strip() for permission in permissions))
+        self._prepared = True
 
     def matches(self, pattern):
         """Return whether the given pattern matches this restriction."""
-        self._parse_restriction()
+        self._prepare_restriction()
         return any(pattern <= include for include in self._includes) and \
             not any(exclude >= pattern for exclude in self._excludes)
 
