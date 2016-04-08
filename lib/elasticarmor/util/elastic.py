@@ -1904,6 +1904,9 @@ class FilterString(object):
     @property
     def base_pattern(self):
         """The internal pattern this filter is based on. Returns None if it is empty."""
+        if len(self._parts) == 1:
+            return self._parts[0].pattern
+
         seq = self.combined if self.combined else list(self.iter_patterns())
         if seq:
             assert len(seq) == 1, 'Multiple patterns found: {0}'.format(', '.join(str(p) for p in seq))
