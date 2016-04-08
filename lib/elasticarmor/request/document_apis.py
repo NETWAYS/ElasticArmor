@@ -8,7 +8,11 @@ from elasticarmor.util.elastic import SourceFilter, FieldsFilter
 
 class IndexApiRequest(ElasticRequest):
     locations = {
-        'POST': '/{index}/{document}',
+        'POST': [
+            '/{index}/{document}',
+            '/{index}/{document}/{identifier}',
+            '/{index}/{document}/{identifier}/_create'
+        ],
         'PUT': [
             '/{index}/{document}/{identifier}',
             '/{index}/{document}/{identifier}/_create'
@@ -74,10 +78,7 @@ class DeleteApiRequest(ElasticRequest):
 
 class UpdateApiRequest(ElasticRequest):
     locations = {
-        'POST': [
-            '/{index}/{document}/{identifier}',
-            '/{index}/{document}/{identifier}/_update'
-        ]
+        'POST': '/{index}/{document}/{identifier}/_update'
     }
 
     @Permission('api/documents/update')
