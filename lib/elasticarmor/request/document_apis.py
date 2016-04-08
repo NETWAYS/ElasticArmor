@@ -19,13 +19,22 @@ class IndexApiRequest(ElasticRequest):
         ]
     }
 
+    @property
+    def _op_type(self):
+        if self.path.endswith('/_create'):
+            return 'create'
+
+        return self.query.last('op_type')
+
     @Permission('api/documents/index')
     def inspect(self, client):
         # TODO: Check if it's required to validate a parent's id (Whether the client has access to the parent's type)
-        if client.has_restriction(self.index, self.document):
-            raise PermissionError('You are restricted to specific fields of the given type.'
-                                  ' Please use the update api instead.')
-        elif not self.query.is_false('refresh') and not client.can('api/indices/refresh', self.index):
+        if not self.get_match('identifier') and not self._op_type == 'create':
+            if client.has_restriction(self.index, self.document):
+                raise PermissionError('You are restricted to specific fields of the given type. Please use'
+                                      ' either the update api instead or the "create" operation-type.')
+
+        if not self.query.is_false('refresh') and not client.can('api/indices/refresh', self.index):
             raise PermissionError('You are not permitted to refresh this index.')
 
 
