@@ -323,8 +323,8 @@ class ElasticRequest(LoggingAware, object):
         if self._json is False:
             self._json = None
             data = self.body
-            if not data and 'source' in self.query:
-                data = self.query['source'][-1]
+            if not data:
+                data = self.query.last('source')
 
             if data:
                 try:
