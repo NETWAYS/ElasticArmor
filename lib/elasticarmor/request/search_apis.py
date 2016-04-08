@@ -89,7 +89,7 @@ class SearchApiRequest(ElasticRequest):
         if not self.query.is_false('explain'):
             self._check_permission('api/search/explain', client, index_filter, type_filter)
 
-        fields_filter = client.create_fields_filter('api/documents/get', index_filter, type_filter,
+        fields_filter = client.create_fields_filter('api/search/documents', index_filter, type_filter,
                                                     FieldsFilter.from_query(self.query))
         if fields_filter is None:
             raise PermissionError('You are not permitted to access any of the requested stored fields.')
@@ -152,7 +152,7 @@ class SearchApiRequest(ElasticRequest):
         json_updated = False
         if type_filter and client.is_restricted('fields'):
             if json is not None and 'fielddata_fields' in json:
-                fielddata_filter = client.create_fields_filter('api/documents/get', index_filter, type_filter,
+                fielddata_filter = client.create_fields_filter('api/search/documents', index_filter, type_filter,
                                                                FieldsFilter.from_json(json['fielddata_fields']))
                 if fielddata_filter is None:
                     raise PermissionError('You are not permitted to access any of the requested fielddata fields.')
@@ -164,7 +164,7 @@ class SearchApiRequest(ElasticRequest):
             if json is not None and ('fields' in json or 'partial_fields' in json):
                 inspect_source = '_source' in json
                 if 'fields' in json:
-                    fields_filter = client.create_fields_filter('api/documents/get', index_filter, type_filter,
+                    fields_filter = client.create_fields_filter('api/search/documents', index_filter, type_filter,
                                                                 FieldsFilter.from_json(json['fields']))
                     if fields_filter is None:
                         raise PermissionError('You are not permitted to access any of the requested stored fields.')
@@ -177,7 +177,7 @@ class SearchApiRequest(ElasticRequest):
                 if 'partial_fields' in json:
                     partial_fields = {}
                     for partial, partial_body in json['partial_fields'].iteritems():
-                        permitted = client.create_source_filter('api/documents/get', index_filter, type_filter,
+                        permitted = client.create_source_filter('api/search/documents', index_filter, type_filter,
                                                                 SourceFilter.from_json(partial_body))
                         if permitted is None:
                             raise PermissionError('You are not permitted to access any of the requested'
@@ -198,7 +198,7 @@ class SearchApiRequest(ElasticRequest):
                 if json is not None and '_source' in json:
                     requested_source = SourceFilter.from_json(json['_source'])
 
-                source_filter = client.create_source_filter('api/documents/get', index_filter,
+                source_filter = client.create_source_filter('api/search/documents', index_filter,
                                                             type_filter, requested_source)
                 if source_filter is None:
                     raise PermissionError('You are not permitted to access any of the requested source fields.')
@@ -328,7 +328,7 @@ class SearchApiRequest(ElasticRequest):
                                                 ''.format(document_type, type_filter))
 
                     requested_source = SourceFilter.from_json(source_request.get('_source'))
-                    source_filter = client.create_source_filter('api/documents/get', index_filter,
+                    source_filter = client.create_source_filter('api/search/documents', index_filter,
                                                                 type_filter, requested_source)
                     if source_filter is None:
                         raise PermissionError('You are either not permitted to access the document type'
