@@ -1341,12 +1341,16 @@ class AggregationParser(object):
                     'Invalid fielddata_fields definition in top_hits aggregation "{0!r}"'.format(obj))
 
         if 'sort' in obj:
-            try:
-                for field in obj['sort'].iterkeys():
-                    if field:
-                        self.fields.add((index, document, field))
-            except AttributeError:
-                raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj['sort']))
+            if isinstance(obj['sort'], list):
+                try:
+                    for sort_body in obj['sort']:
+                        for field in sort_body.iterkeys():
+                            if field:
+                                self.fields.add((index, document, field))
+                except AttributeError:
+                    raise ElasticSearchError('Invalid JSON object "{0!r}"'.format(obj['sort']))
+            else:
+                raise ElasticSearchError('Invalid type for key "sort" in top_hits aggregation "{0!r}"'.format(obj))
 
     def scripted_metric_agg(self, obj, index=None, document=None, field=None):
         """Parse the given scripted_metric aggregation."""
