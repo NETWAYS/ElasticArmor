@@ -559,6 +559,14 @@ class ValidateApiRequest(SearchApiRequest):
     }
 
     def inspect(self, client):
+        if '__kibanaQueryValidator' in self.path:
+            # I have _still_ no explanation for this. Please enlighten
+            # me if you think this is security relevant in any way.
+            if client.can('api/search/explain', '.kibana'):
+                return
+
+            raise PermissionError(self._permission_errors['api/search/explain']['indices'].format('.kibana'))
+
         index_filter, type_filter, _, json = self.inspect_request(
             client, FilterString.from_string(self.get_match('indices', '')),
             FilterString.from_string(self.get_match('documents', '')), json=self.json)
