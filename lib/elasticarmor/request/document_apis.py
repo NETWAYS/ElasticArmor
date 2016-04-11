@@ -305,8 +305,8 @@ class DeleteByQueryApiRequest(ElasticRequest):
 class TermVectorApiRequest(ElasticRequest):
     locations = {
         'GET': [
-            '/{index}/{document}/_termvector',
-            '/{index}/{document}/{identifier}/_termvector'
+            '/{index}/{document}/_termvector{s}',
+            '/{index}/{document}/{identifier}/_termvector{s}'
         ]
     }
 
