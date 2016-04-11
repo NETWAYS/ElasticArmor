@@ -60,12 +60,12 @@ class SearchApiRequest(ElasticRequest):
                        ' in the following indices: {0}',
             'types': 'You are not permitted to utilize the significant_terms aggregation in the following types: {0}'
         },
-        'api/search/moreLikeThis': {
+        'api/feature/moreLikeThis': {
             'cluster': 'You are not permitted to utilize the more_like_this query.',
             'indices': 'You are not permitted to utilize the more_like_this query in the following indices: {0}',
             'types': 'You are not permitted to utilize the more_like_this query in the following types: {0}'
         },
-        'api/search/fuzzyLikeThis': {
+        'api/feature/fuzzyLikeThis': {
             'cluster': 'You are not permitted to utilize the fuzzy_like_this or fuzzy_like_this_field query.',
             'indices': 'You are not permitted to utilize the fuzzy_like_this or fuzzy_like_this_field query'
                        ' in the following indices: {0}',
@@ -658,7 +658,7 @@ class MoreLikeThisApiRequest(ElasticRequest):
     }
 
     @Permission('api/feature/deprecated', scope='cluster')
-    @Permission('api/search/moreLikeThis')
+    @Permission('api/feature/moreLikeThis')
     def inspect(self, client):
         pass
 

@@ -477,7 +477,7 @@ class QueryDslParser(object):
 
     def fuzzy_like_this_query(self, obj, index=None, document=None):
         """Parse the given fuzzy_like_this query. Raises ElasticSearchError in case the query is malformed."""
-        self.permissions.add('api/search/fuzzyLikeThis')
+        self.permissions.add('api/feature/fuzzyLikeThis')
 
         try:
             fields = obj['fields']
@@ -494,7 +494,7 @@ class QueryDslParser(object):
         field_name = self._read_field(obj)
         if field_name:
             self.fields.add((index, document, field_name))
-            self.permissions.add('api/search/fuzzyLikeThis')
+            self.permissions.add('api/feature/fuzzyLikeThis')
         else:
             raise ElasticSearchError('Missing field name in fuzzy_like_this_field query "{0!r}"'.format(obj))
 
@@ -670,7 +670,7 @@ class QueryDslParser(object):
         if 'docs' not in obj and 'ids' not in obj and 'like_text' not in obj:
             raise ElasticSearchError('No valid keyword given in more_like_this query "{0!r}"'.format(obj))
 
-        self.permissions.add('api/search/moreLikeThis')
+        self.permissions.add('api/feature/moreLikeThis')
 
         try:
             fields = obj['fields']
