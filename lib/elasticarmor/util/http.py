@@ -10,7 +10,7 @@ try:
     from collections import OrderedDict
 except ImportError:
     # Python 2.6
-    from ordereddict import OrderedDict
+    from simplejson import OrderedDict
 
 from requests.structures import CaseInsensitiveDict
 
