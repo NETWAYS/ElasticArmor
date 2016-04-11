@@ -9,8 +9,14 @@ import fcntl
 import resource
 import logging
 import optparse
+import subprocess
 from pwd import getpwnam
 from grp import getgrnam
+
+try:
+    from subprocess import DEVNULL
+except ImportError:
+    DEVNULL = open(os.devnull, 'w')
 
 __all__ = ['UnixDaemon', 'get_daemon_option_parser']
 
@@ -295,13 +301,18 @@ class UnixDaemon(object):
 
     def status(self):
         pid = self._getpid()
-        exit_status_code = 0
         if pid:
-            self.log.info('%s is running with pid %i', self.name, pid)
+            if subprocess.call(['ps', '-p', str(pid)], stdout=DEVNULL, stderr=DEVNULL):
+                self.log.info('%s is not running but pidfile exists', self.name)
+                exit_code = 1
+            else:
+                self.log.info('%s is running with pid %i', self.name, pid)
+                exit_code = 0
         else:
-            self.log.info('%s is NOT running', self.name)
-            exit_status_code = 3
-        return exit_status_code
+            self.log.info('Pidfile not found, %s is not running', self.name)
+            exit_code = 3
+
+        return exit_code
 
     def run(self):
         pass
@@ -329,7 +340,7 @@ class DaemonOptionParser(optparse.OptionParser):
 def get_daemon_option_parser(version=None, chdir='/', prog=None):
     usage = '%prog [options] {0}'.format('|'.join(DAEMON_FUNCTIONS))
     parser = DaemonOptionParser(usage=usage, version=version, prog=prog)
-    pidfile = '/var/run/{0}.pid'.format(parser.get_prog_name())
+    pidfile = '/var/run/{0}.pid'.format(parser.get_prog_name().lower())
     start_stop_group = optparse.OptionGroup(
         parser, 'Start and stop', 'Here are the options to specify the daemon '
                                   'and how it should start or stop:')
