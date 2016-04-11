@@ -10,6 +10,6 @@ class CatApiRequest(ElasticRequest):
     def is_valid(self):
         return self.path.startswith('/cat')
 
-    @Permission('api/cat')
+    @Permission('api/cat', scope='cluster')
     def inspect(self, client):
         pass
