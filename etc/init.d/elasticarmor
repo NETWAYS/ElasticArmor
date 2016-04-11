@@ -1,14 +1,10 @@
 #!/bin/bash
 #
-# Init script for ElasticArmor
-# For more information see https://www.netways.org/projects/elasticarmor
+# Init script for elasticarmor
+# For more information please see https://www.netways.org/projects/elasticarmor
 #
 # chkconfig:   2345 80 20
-# description: Start/Stop ElasticArmor
-#
-# Authors:
-# Eric Lippmann <eric.lippmann@netways.de>
-# Thomas Widhalm <thomas.widhalm@netways.de>
+# description: Start/Stop elasticarmor
 #
 ### BEGIN INIT INFO
 # Provides:          elasticarmor
@@ -17,66 +13,29 @@
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # X-Interactive:     false
-# Short-Description: Start/stop ElasticArmor
-# Description:       Start the ElasticArmor proxy daemon
+# Short-Description: Start/Stop elasticarmor
+# Description:       Start or stop the elasticarmor proxy daemon
 #  This script will start the proxy daemon and provide the mandatory
 #  options like status and restart
 ### END INIT INFO
 
 set -e
 
-NAME="elasticarmor"
-PIDFILE=/var/run/elasticarmor.pid
-
-# For exit codes of `status` see: http://refspecs.linuxbase.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
-
-do_status() {
-if [ -f ${PIDFILE} ]
-then
-  PID=$(cat ${PIDFILE})
-  if ps -p ${PID} > /dev/null 2>1
-  then
-    echo "${NAME} is running with PID ${PID}"
-    return 0
-  else
-    echo "Pidfile exists but process is not running!"
-    return 1
-  fi
-else
-  echo "No pidfile found, ${NAME} seems not to be running"
-  return 3
-fi
-}
-
-# For required and suggested actions see: https://wiki.debian.org/LSBInitScripts
-
 case "$1" in
-    start)
-      if do_status > /dev/null
-      then
-        echo "${NAME} is already running, not starting again."
-      else
-        o=' -b'
-        /usr/bin/python2 -m libelasticarmor.elasticarmord -p ${PIDFILE} -c /etc/elasticarmor$o "$1" && echo "${NAME} started with PID $(cat ${PIDFILE})"
-      fi
+    force-reload)
+        /usr/bin/python2 -m elasticarmor.elasticarmord -b "restart"
+        exit $?
     ;;
-    restart|force-reload) 
-      echo "Restarting ${NAME}"
-      o=' -b'
-      /usr/bin/python2 -m libelasticarmor.elasticarmord -p ${PIDFILE} -c /etc/elasticarmor$o "restart"
+    start|restart)
+        /usr/bin/python2 -m elasticarmor.elasticarmord -b "$1"
+        exit $?
     ;;
-    status)
-      do_status
-      exit $?
-    ;;
-    stop)
-      echo "Stopping ${NAME}"
-      o=''
-      /usr/bin/python2 -m libelasticarmor.elasticarmord -p ${PIDFILE} -c /etc/elasticarmor$o "$1"
+    stop|reload|status)
+        /usr/bin/python2 -m elasticarmor.elasticarmord "$1"
+        exit $?
     ;;
     *)
-      echo $"Usage: $0 {start|stop|restart|force-reload|status}"
-      exit 1
+        echo "Usage: $0 {start|stop|reload|force-reload|restart|status}"
+        exit 1
     ;;
-    esac
-
+esac
