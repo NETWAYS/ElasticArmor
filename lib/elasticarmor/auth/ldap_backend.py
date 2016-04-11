@@ -26,7 +26,6 @@ class LdapBackend(object):
         self.url = get_option('url')
         self.bind_dn = get_option('bind_dn')
         self.bind_pw = get_option('bind_pw')
-        self.root_dn = get_option('root_dn')
 
     @property
     def _local(self):
