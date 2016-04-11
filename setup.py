@@ -1,16 +1,17 @@
+# ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
+
 from setuptools import setup
 
 setup(
     name='elasticarmor',
-    version='0.0',
+    version='0.9',
+    license='GPLv2+',
     author='NETWAYS GmbH',
     author_email='info@netways.de',
-    description='a transparent proxy for securing Elasticsearch',
-    license='GPLv2+',
     url='https://www.netways.org/projects/elasticarmor',
-    long_description='The ElasticArmor is a transparent HTTP proxy for securing '
-                     'Elasticsearch by permitting specific users to access only '
-                     'specific data.',
-    packages=['libelasticarmor'],
+    description='HTTP reverse proxy to secure Elasticsearch.',
+    long_description='ElasticArmor is a HTTP reverse proxy placed in front of'
+                     ' Elasticsearch to regulate access to its REST api.',
+    packages=['lib/elasticarmor'],
     zip_safe=False
 )
