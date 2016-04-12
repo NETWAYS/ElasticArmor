@@ -384,7 +384,7 @@ class CreateIndexWarmerApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/indices/create/warmers')
+    @Permission('api/indices/create/warmers', scope='indices')
     def inspect(self, client):
         pass
 
