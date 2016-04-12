@@ -1,0 +1,37 @@
+{
+  "users": [
+    "kibana-user"
+  ],
+  "privileges": {
+    "cluster": [
+      "api/bulk",
+      "api/cluster/nodes/info"
+    ],
+    "indices": [
+      {
+        "include": "*",
+        "exclude": ".kibana*",
+        "permissions": [
+          "api/indices/get/*",
+          "api/search/documents"
+        ]
+      },
+      {
+        "include": ".kibana*",
+        "permissions": [
+          "api/cluster/health",
+          "api/indices/refresh",
+          "api/indices/create/index",
+          "api/indices/create/mapping",
+          "api/indices/get/mapping",
+          "api/documents/get",
+          "api/documents/index",
+          "api/documents/delete",
+          "api/documents/update",
+          "api/search/documents",
+          "api/search/explain"
+        ]
+      }
+    ]
+  }
+}

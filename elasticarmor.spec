@@ -35,7 +35,7 @@ Elasticsearch to regulate access to its REST api.
 
 %files
 %defattr(-,root,root)
-%doc AUTHORS COPYING
+%doc AUTHORS COPYING doc
 %{python2_sitelib}
 %attr(0755,root,root) %{_initddir}/%name
 
