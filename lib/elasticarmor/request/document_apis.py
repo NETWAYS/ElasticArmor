@@ -297,7 +297,8 @@ class DeleteByQueryApiRequest(ElasticRequest):
         ]
     }
 
-    @Permissions('api/feature/deprecated', 'api/documents/deleteByQuery')
+    @Permission('api/feature/deprecated', scope='cluster')
+    @Permission('api/documents/deleteByQuery')
     def inspect(self, client):
         pass
 
