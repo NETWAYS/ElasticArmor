@@ -1463,8 +1463,33 @@ class AggregationParser(object):
         return index, document, field
 
     def significant_terms_agg(self, obj, index=None, document=None, field=None):
-        """Parse the given significant_terms aggregation."""
-        self.permissions.add('api/feature/significantTerms')
+        """Parse the given significant_terms aggregation. Raises ElasticSearchError in case it is malformed."""
+        self._validate_keywords('significant_terms', obj, ['field', 'size', 'shard_size', 'background_filter',
+                                                           'jlh_score', 'mutual_information', 'chi_square', 'gnd',
+                                                           'percentage', 'min_doc_count', 'shard_min_doc_count',
+                                                           'script_heuristic', 'include', 'exclude', 'execution_hint'])
+        try:
+            field = obj['field']
+        except KeyError:
+            raise ElasticSearchError('Missing keyword "field" in significant_terms aggregation "{0!r}"'.format(obj))
+        else:
+            if not field:
+                raise ElasticSearchError('Empty field name in significant_terms aggregation "{0!r}"'.format(obj))
+
+            self.fields.add((index, document, field))
+
+        if 'script_heuristic' in obj:
+            self.permissions.add('api/feature/script')
+
+        if 'background_filter' in obj:
+            parser = QueryDslParser()
+            parser.filter(obj['background_filter'], index, document)
+            self.permissions |= parser.permissions
+            self.indices |= parser.indices
+            self.documents |= parser.documents
+            self.fields |= parser.fields
+
+        return index, document, field
 
     def range_agg(self, obj, index=None, document=None, field=None):
         """Parse the given range aggregation. Raises ElasticSearchError in case it is malformed."""

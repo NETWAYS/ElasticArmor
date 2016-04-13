@@ -54,12 +54,6 @@ class SearchApiRequest(ElasticRequest):
             'indices': 'You are not permitted to utilize search templates for the following indices: {0}',
             'types': 'You are not permitted to utilize search templates for the following types: {0}'
         },
-        'api/feature/significantTerms': {
-            'cluster': 'You are not permitted to utilize the significant_terms aggregation.',
-            'indices': 'You are not permitted to utilize the significant_terms aggregation'
-                       ' in the following indices: {0}',
-            'types': 'You are not permitted to utilize the significant_terms aggregation in the following types: {0}'
-        },
         'api/feature/moreLikeThis': {
             'cluster': 'You are not permitted to utilize the more_like_this query.',
             'indices': 'You are not permitted to utilize the more_like_this query in the following indices: {0}',
