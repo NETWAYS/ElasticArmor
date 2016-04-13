@@ -369,7 +369,7 @@ class Client(LoggingAware, object):
                     # If the include is about to be removed check whether it is possible
                     # to neutralize some of the excludes linked to the less restrictive
                     # filter and if so, exchange them with the include's excludes
-                    excludes = [e for e in filters[superior] if include < e]
+                    excludes = [e for e in filters[superior] if not e >= include]
                     if excludes != filters[superior]:
                         excludes.extend(filters[include])
                         filters[superior] = excludes
