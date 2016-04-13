@@ -27,8 +27,8 @@ For the cluster scope you can only define permissions, whereas for all other sco
 
 ### <a id="authorization-privileges-restrictions"></a> Restrictions
 
-A restriction consists of includes, excludes and permissions. Depending on the scope you have several ways to define
-includes and excludes.
+A restriction consists of includes and optionally excludes and permissions. Depending on the scope you have
+several ways to define includes and excludes.
 
 > **Note:**
 >
