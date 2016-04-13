@@ -6,6 +6,7 @@ import threading
 
 import requests
 
+from elasticarmor import CONFIGURATION_INDEX, CONFIGURATION_TYPE_ROLE
 from elasticarmor.util import format_elasticsearch_error, pattern_compare
 from elasticarmor.util.http import Query
 from elasticarmor.util.rwlock import ReadWriteLock
@@ -143,7 +144,7 @@ class ElasticConnection(LoggingAware, object):
 
 class ElasticObject(LoggingAware, object):
     """Base class for all objects stored in our internal Elasticsearch index."""
-    index_name = '.elasticarmor'
+    index_name = CONFIGURATION_INDEX
     document_type = '_all'
 
     def __init__(self, id):
@@ -184,7 +185,7 @@ class ElasticObject(LoggingAware, object):
 
 class ElasticRole(ElasticObject):
     """ElasticRole object representing a client's role."""
-    document_type = 'role'
+    document_type = CONFIGURATION_TYPE_ROLE
 
     def __init__(self, id, privileges):
         super(ElasticRole, self).__init__(id)
