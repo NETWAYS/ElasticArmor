@@ -263,8 +263,7 @@ class Client(LoggingAware, object):
 
         """
         if not self.is_restricted('fields'):
-            # Bail out early if the client is not restricted at all
-            return (source_filter or SourceFilter()) if self.can(permission, index, document_type) else None
+            return source_filter or SourceFilter()  # Bail out early if the client is not restricted at all
 
         try:
             index = index.base_pattern
