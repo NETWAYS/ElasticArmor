@@ -10,6 +10,37 @@ SUPPORTED_ELASTICSEARCH_VERSIONS = ['1.7']
 
 CONFIGURATION_INDEX = '.elasticarmor'
 CONFIGURATION_TYPE_ROLE = 'role'
+CONFIGURATION_INDEX_SETTINGS = {
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "lowercase_keyword": {
+                    "type": "custom",
+                    "filter": "lowercase",
+                    "tokenizer": "keyword"
+                }
+            }
+        }
+    },
+    "mappings": {
+        CONFIGURATION_TYPE_ROLE: {
+            "properties": {
+                "users": {
+                    "type": "string",
+                    "analyzer": "lowercase_keyword"
+                },
+                "groups": {
+                    "type": "string",
+                    "analyzer": "lowercase_keyword"
+                },
+                "privileges": {
+                    "type": "object",
+                    "enabled": False
+                }
+            }
+        }
+    }
+}
 
 DEFAULT_CONFIG_DIR = '/etc/elasticarmor'
 DEFAULT_LOGFILE = '/var/log/elasticarmor/elasticarmor.log'

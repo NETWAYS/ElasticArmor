@@ -69,6 +69,8 @@ class Settings(LoggingAware, object):
             parser = get_daemon_option_parser(VERSION, prog=APP_NAME)
             parser.add_option('--config', dest='config', metavar='PATH', default=DEFAULT_CONFIG_DIR,
                               help='config PATH [default: %default]')
+            parser.add_option('--skip-index-initialization', default=False, action='store_true',
+                              help='Whether to skip the initialization of the configuration index.')
             Settings.__options, Settings.__arguments = parser.parse_args()
             return Settings.__options
 

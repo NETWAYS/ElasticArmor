@@ -11,7 +11,7 @@ from SocketServer import ThreadingMixIn
 from urllib import unquote
 from urlparse import urlparse
 
-from requests import RequestException
+import requests
 
 from elasticarmor import *
 from elasticarmor.auth import AuthorizationError, Auth, Client
@@ -40,6 +40,7 @@ class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
         settings = Settings()
         self.auth = Auth(settings)
         self.elasticsearch = settings.elasticsearch
+        self.skip_index_initialization = settings.options.skip_index_initialization
 
         listen_address = settings.listen_address
         listen_port = settings.listen_port
@@ -62,7 +63,28 @@ class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
         self.wsgi_environ['wsgi.run_once'] = False
         self.wsgi_environ['wsgi.version'] = (1, 0)
 
+    def _initialize_configuration_index(self):
+        try:
+            head_response = self.elasticsearch.process(requests.Request('HEAD', '/' + CONFIGURATION_INDEX))
+        except requests.RequestException as error:
+            self.log.error('Failed to check whether configuration index "%s" does already exist. An error occurred: %s',
+                           CONFIGURATION_INDEX, error)
+        else:
+            if head_response is not None and not head_response.ok:
+                post_request = requests.Request('POST', '/' + CONFIGURATION_INDEX, json=CONFIGURATION_INDEX_SETTINGS)
+
+                try:
+                    self.elasticsearch.process(post_request).raise_for_status()
+                except requests.RequestException as error:
+                    self.log.error('Failed to initialize configuration index "%s". An error occurred: %s',
+                                   CONFIGURATION_INDEX, error)
+                else:
+                    self.log.info('Successfully initialized configuration index "%s".', CONFIGURATION_INDEX)
+
     def launch(self):
+        if not self.skip_index_initialization:
+            self._initialize_configuration_index()
+
         self.server_bind()
         self.log.debug('Bound TCP socket to "%s"...', self.server_address[0])
         self.server_activate()
@@ -144,7 +166,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self.log.debug('Client "%s" exceeded the buffer size limit. Closing connection.', self.client)
             self.close_connection = True
             self.send_error(413, explain=str(error))
-        except RequestException as error:
+        except requests.RequestException as error:
             self.log.error('An error occurred while communicating with Elasticsearch: %s',
                            format_elasticsearch_error(error))
             self.send_error(502, explain='An error occurred while communicating with Elasticsearch.'
