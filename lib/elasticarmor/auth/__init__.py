@@ -217,8 +217,7 @@ class Client(LoggingAware, object):
 
         """
         if not self.is_restricted('indices' if index is None else 'types'):
-            # Bail out early if the client is not restricted at all
-            return (filter_string or FilterString()) if self.can(permission, index) else None
+            return filter_string or FilterString()  # Bail out early if the client is not restricted at all
 
         try:
             if index is not None:
