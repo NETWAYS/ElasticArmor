@@ -387,6 +387,8 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         if request is None:
             return
 
+        self.server.auth._apply_system_defaults(self.client)
+
         try:
             response = request.inspect(self.client)
         except RequestError as error:

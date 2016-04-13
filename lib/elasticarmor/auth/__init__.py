@@ -5,6 +5,7 @@ import socket
 import requests
 from ldap import LDAPError
 
+from elasticarmor import CONFIGURATION_INDEX, CONFIGURATION_TYPE_ROLE
 from elasticarmor.util import format_ldap_error, format_elasticsearch_error
 from elasticarmor.util.elastic import SourceFilter, FilterString, FieldsFilter
 from elasticarmor.util.mixins import LoggingAware
@@ -96,6 +97,53 @@ class Auth(LoggingAware, object):
             else:
                 self.log.debug('Client "%s" is a member of the following roles: %s',
                                client, ', '.join(r.id for r in client.roles) or 'None')
+
+    # TODO: Provide a more sophisticated solution, this can't be the only one..
+    def _apply_system_defaults(self, client):
+        permitted_config_types = []
+        if client.can('config/authorization'):
+            permitted_config_types.append(CONFIGURATION_TYPE_ROLE)
+
+        if permitted_config_types:
+            from elasticarmor.auth.role import Role
+            if client.is_restricted('indices'):
+                client.roles.append(Role('sysconfig', {
+                    'indices': [{
+                        'permissions': '*',
+                        'include': CONFIGURATION_INDEX,
+                        'types': [{
+                            'include': permitted_config_types
+                        }]
+                    }]
+                }))
+            else:
+                client.roles.append(Role('sysconfig', {
+                    'indices': [
+                        {
+                            'include': '*',
+                            'exclude': CONFIGURATION_INDEX
+                        },
+                        {
+                            'permissions': '*',
+                            'include': CONFIGURATION_INDEX,
+                            'types': permitted_config_types
+                        }
+                    ]
+                }))
+        elif not client.is_restricted('indices'):
+            from elasticarmor.auth.role import Role
+            client.roles.append(Role('sysconfig', {
+                'indices': [{
+                    'include': '*',
+                    'exclude': CONFIGURATION_INDEX
+                }]
+            }))
+        else:
+            from elasticarmor.auth.role import IndexPattern
+            pattern = IndexPattern(CONFIGURATION_INDEX)
+            for restriction in (r for role in client.roles for r in role.get_restrictions()):
+                if restriction.matches(pattern):
+                    restriction._add_exclude(pattern)
 
 
 class MultipleIncludesError(AuthorizationError):

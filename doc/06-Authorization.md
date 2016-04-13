@@ -51,6 +51,15 @@ Field restrictions are much like index restrictions, except that they **must not
 Permissions are divided into namespaces separated by a slash `/`. To grant an entire namespace you can use the `*`
 wildcard instead.
 
+#### <a id="authorization-privileges-permissions-config"></a> Config Permissions
+
+ElasticArmor allows to store some of its configuration in Elasticsearch itself. To access
+the index and its configuration one of the following cluster-wide permissions is required:
+
+Permission Name         | Configuration Type
+------------------------|-------------------
+config/authorization    | Roles
+
 #### <a id="authorization-privileges-permissions-api"></a> API Permissions
 
 Each permission in the table below has a scope assigned to it. This is the smallest scope a permission can be

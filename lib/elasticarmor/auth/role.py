@@ -350,6 +350,10 @@ class Restriction(object):
         self._permissions = filter(None, (permission.strip() for permission in permissions))
         self._prepared = True
 
+    def _add_exclude(self, pattern):
+        """Don't dare to use this, ever, really!"""
+        self._excludes.append(pattern)
+
     def matches(self, pattern):
         """Return whether the given pattern matches this restriction."""
         self._prepare_restriction()
