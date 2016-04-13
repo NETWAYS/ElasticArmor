@@ -50,6 +50,7 @@ class GetApiRequest(ElasticRequest):
         ]
     }
 
+    @Permission('api/documents/get')
     def inspect(self, client):
         fields_filter = None
         if not self.path.endswith('/_source'):

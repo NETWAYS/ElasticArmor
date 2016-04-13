@@ -302,11 +302,9 @@ class Client(LoggingAware, object):
 
         """
         if not self.is_restricted('fields'):
-            # Bail out early if the client is not restricted at all
-            return (fields_filter or FieldsFilter()) if self.can(permission, index, document_type) else None
+            return fields_filter or FieldsFilter()  # Bail out early if the client is not restricted at all
         elif fields_filter is not None and not fields_filter:
-            # The client does not want any fields so we shouldn't provide them either
-            return fields_filter if self.can(permission, index, document_type) else None
+            return fields_filter  # The client does not want any fields so we shouldn't provide them either
 
         try:
             index = index.base_pattern
