@@ -139,11 +139,11 @@ class Auth(LoggingAware, object):
                 }]
             }))
         else:
-            from elasticarmor.auth.role import IndexPattern
-            pattern = IndexPattern(CONFIGURATION_INDEX)
+            from elasticarmor.auth.role import Pattern
+            pattern = Pattern(CONFIGURATION_INDEX)
             for restriction in (r for role in client.roles for r in role.get_restrictions()):
                 if restriction.matches(pattern):
-                    restriction._add_exclude(pattern)
+                    restriction.excludes.append(pattern)
 
 
 class MultipleIncludesError(AuthorizationError):
@@ -186,7 +186,7 @@ class Client(LoggingAware, object):
 
     @property
     def restricted_scope(self):
-        """The deepest scope within this client is restricted.
+        """The smallest scope within this client is restricted.
         That's either None, 'indices', 'types' or 'fields'.
 
         """
@@ -194,13 +194,13 @@ class Client(LoggingAware, object):
             return self._restricted_scope
         except AttributeError:
             scope = None
-            for role in self.roles:
-                if role.privileges.get('fields'):
+            for restricted_scope in (role.get_restricted_scope() for role in self.roles):
+                if restricted_scope == 'fields':
                     scope = 'fields'
                     break
-                elif role.privileges.get('types'):
+                elif restricted_scope == 'types':
                     scope = 'types'
-                elif scope is None and role.privileges.get('indices'):
+                elif scope is None and restricted_scope == 'indices':
                     scope = 'indices'
 
             self._restricted_scope = scope
@@ -258,6 +258,8 @@ class Client(LoggingAware, object):
 
         return False
 
+    # TODO: Make sure no request handler uses single=client.is_restricted(<scope>).
+    #       Should be single=client.has_restriction(<scope>) instead!!1
     def create_filter_string(self, permission, filter_string=None, index=None, single=False):
         """Create and return a filter string based on what this client is permitted or is requesting to access.
         May return a empty filter if the client is not restricted at all and None if the client can't access
