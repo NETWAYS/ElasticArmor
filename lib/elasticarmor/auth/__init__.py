@@ -403,7 +403,7 @@ class Client(LoggingAware, object):
                 else:
                     for restriction in restrictions:
                         for include in restriction.includes:
-                            filters.setdefault(include, []).extend(e for e in restriction.excludes)
+                            filters.setdefault(include, []).extend(restriction.excludes)
 
         if not filters and indisposed_roles == len(self.roles):
             # Not a single role provided restrictions nor felt being responsible
