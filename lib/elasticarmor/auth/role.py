@@ -6,8 +6,7 @@ from elasticarmor.auth import AuthorizationError
 from elasticarmor.util import pattern_compare
 from elasticarmor.util.elastic import ElasticRole
 
-__all__ = ['RoleError', 'RestrictionsFound', 'Role', 'RestrictionError',
-           'Restriction', 'IndexPattern', 'TypePattern', 'FieldPattern']
+__all__ = ['RoleError', 'RestrictionsFound', 'Role', 'RestrictionError', 'Restriction', 'Pattern']
 
 
 class RoleError(AuthorizationError):
