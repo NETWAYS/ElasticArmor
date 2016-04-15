@@ -59,7 +59,7 @@ def main():
 
     settings = Settings()
     daemon = ElasticArmor(settings.pidfile, settings.umask, settings.chdir, settings.user,
-                      settings.group, settings.detach, settings.log_file)
+                          settings.group, settings.detach, settings.log_file)
     return getattr(daemon, settings.arguments[0])()
 
 
