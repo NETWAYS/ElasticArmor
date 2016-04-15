@@ -7,7 +7,7 @@ from elasticarmor import APP_NAME
 from elasticarmor.auth import MultipleIncludesError
 from elasticarmor.request import *
 from elasticarmor.util.elastic import (SourceFilter, FilterString, QueryDslParser, AggregationParser,
-                                   HighlightParser, FieldsFilter)
+                                       HighlightParser, FieldsFilter)
 
 
 class SearchApiRequest(ElasticRequest):
@@ -28,7 +28,8 @@ class SearchApiRequest(ElasticRequest):
         'api/search/explain': {
             'cluster': 'You are not permitted to access scoring explanations.',
             'indices': 'You are not permitted to access scoring explanations of the following indices: {0}',
-            'types': 'You are not permitted to access scoring explanations of the following types: {0}'
+            'types': 'You are not permitted to access scoring explanations of the following types: {0}',
+            'fields': 'You are not permitted to access scoring explanations of the following fields: {0}'
         },
         'api/feature/innerHits': {
             'cluster': 'You are not permitted to access inner hits.',
@@ -47,7 +48,8 @@ class SearchApiRequest(ElasticRequest):
         'api/feature/script': {
             'cluster': 'You are not permitted to utilize scripts.',
             'indices': 'You are not permitted to utilize scripts in the following indices: {0}',
-            'types': 'You are not permitted to utilize scripts in the following types: {0}'
+            'types': 'You are not permitted to utilize scripts in the following types: {0}',
+            'fields': 'You are not permitted to utilize scripts with the following fields: {0}'
         },
         'api/search/template': {
             'cluster': 'You are not permitted to utilize search templates.',
@@ -57,14 +59,17 @@ class SearchApiRequest(ElasticRequest):
         'api/feature/moreLikeThis': {
             'cluster': 'You are not permitted to utilize the more_like_this query.',
             'indices': 'You are not permitted to utilize the more_like_this query in the following indices: {0}',
-            'types': 'You are not permitted to utilize the more_like_this query in the following types: {0}'
+            'types': 'You are not permitted to utilize the more_like_this query in the following types: {0}',
+            'fields': 'You are not permitted to utilize the more_like_this query with the following fields: {0}'
         },
         'api/feature/fuzzyLikeThis': {
             'cluster': 'You are not permitted to utilize the fuzzy_like_this or fuzzy_like_this_field query.',
             'indices': 'You are not permitted to utilize the fuzzy_like_this or fuzzy_like_this_field query'
                        ' in the following indices: {0}',
             'types': 'You are not permitted to utilize the fuzzy_like_this or fuzzy_like_this_field query'
-                     ' in the following types: {0}'
+                     ' in the following types: {0}',
+            'fields': 'You are not permitted to utilize the fuzzy_like_this or fully_like_this_field query'
+                      ' with the following fields: {0}'
         }
     }
 
@@ -241,30 +246,36 @@ class SearchApiRequest(ElasticRequest):
 
         return index_filter, type_filter, source_filter, json if json_updated else None
 
-    def _check_permission(self, permission, client, index_filter, type_filter=None):
+    def _check_permission(self, permission, client, index_filter, type_filter=None, fields=None):
         if index_filter:
             forbidden = []
             for index in index_filter.iter_patterns():
                 if type_filter:
                     for document_type in type_filter.iter_patterns():
-                        if not client.can(permission, index, document_type):
+                        if fields:
+                            for field in fields:
+                                if not client.can(permission, index, document_type, field):
+                                    forbidden.append('/'.join((str(index), str(document_type), str(field))))
+                        elif not client.can(permission, index, document_type):
                             forbidden.append('/'.join((str(index), str(document_type))))
                 elif not client.can(permission, index):
                     forbidden.append(str(index))
 
             if forbidden:
-                scope = 'types' if type_filter else 'indices'
+                scope = 'fields' if fields else 'types' if type_filter else 'indices'
                 raise PermissionError(self._permission_errors[permission][scope].format(', '.join(forbidden)))
         elif not client.can(permission):
             raise PermissionError(self._permission_errors[permission]['cluster'])
 
     def _inspect_parser(self, client, parser, index_filter, type_filter):
         json_updated = False
-        for permission in parser.permissions:
+        for permission, index, document_type, field in parser.permissions:
             # TODO: Context changes? Permissions are not only global anymore!
             if permission != 'api/feature/queryString':
-                self._check_permission(permission, client, index_filter, type_filter)
-            elif client.has_restriction(index_filter, type_filter):
+                indices = index_filter if index is None else FilterString.from_string(index)
+                types = type_filter if document_type is None else FilterString.from_string(document_type)
+                self._check_permission(permission, client, indices, types, None if field is None else [field])
+            elif client.has_restriction(index or index_filter, document_type or type_filter):
                 # TODO: Remove this once we've got a parser for query strings!
                 raise PermissionError(
                     'You are restricted to specific fields and as such cannot utilize the query string search.')

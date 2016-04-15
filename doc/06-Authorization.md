@@ -116,19 +116,19 @@ api/search/documents            | fields
 api/search/templates            | cluster
 api/search/shards               | indices
 api/search/suggest              | cluster
-api/search/explain              | types
+api/search/explain              | fields
 api/search/percolate            | types
 api/search/fieldStats           | indices
 api/cat                         | cluster
 api/bulk                        | cluster
 api/feature/deprecated          | cluster
 api/feature/facets              | types
-api/feature/fuzzyLikeThis       | types
+api/feature/fuzzyLikeThis       | fields
 api/feature/innerHits           | types
-api/feature/moreLikeThis        | types
+api/feature/moreLikeThis        | fields
 api/feature/notImplemented      | types
 api/feature/queryString         | types
-api/feature/script              | types
+api/feature/script              | fields
 
 While the purpose of most of the permissions above should be clear, as they are very similar structured to how
 Elasticsearch's REST api is, you may wonder what these permissions in the feature namespace are for. They look

@@ -478,31 +478,32 @@ class QueryDslParser(object):
 
     def fuzzy_like_this_query(self, obj, index=None, document=None):
         """Parse the given fuzzy_like_this query. Raises ElasticSearchError in case the query is malformed."""
-        self.permissions.add('api/feature/fuzzyLikeThis')
-
         try:
             fields = obj['fields']
         except KeyError:
             self.fields.add((index, document, '_all'))
+            self.permissions.add(('api/feature/fuzzyLikeThis', index, document, '_all'))
         else:
             if not fields:
                 raise ElasticSearchError('No fields provided in fuzzy_like_this query "{0!r}"'.format(obj))
 
-            self.fields.update((index, document, field) for field in fields)
+            for field in fields:
+                self.fields.add((index, document, field))
+                self.permissions.add(('api/feature/fuzzyLikeThis', index, document, field))
 
     def fuzzy_like_this_field_query(self, obj, index=None, document=None):
         """Parse the given fuzzy_like_this_field query. Raises ElasticSearchError in case the query is malformed."""
         field_name = self._read_field(obj)
         if field_name:
             self.fields.add((index, document, field_name))
-            self.permissions.add('api/feature/fuzzyLikeThis')
+            self.permissions.add(('api/feature/fuzzyLikeThis', index, document, field_name))
         else:
             raise ElasticSearchError('Missing field name in fuzzy_like_this_field query "{0!r}"'.format(obj))
 
     def _parse_score_function(self, obj, index, document):
         """Parse the given score function and return whether it was a success."""
         if 'script_score' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, None))
         elif 'field_value_factor' in obj:
             try:
                 self.fields.add((index, document, obj['field_value_factor']['field']))
@@ -671,8 +672,6 @@ class QueryDslParser(object):
         if 'docs' not in obj and 'ids' not in obj and 'like_text' not in obj:
             raise ElasticSearchError('No valid keyword given in more_like_this query "{0!r}"'.format(obj))
 
-        self.permissions.add('api/feature/moreLikeThis')
-
         try:
             fields = obj['fields']
         except KeyError:
@@ -684,7 +683,9 @@ class QueryDslParser(object):
         try:
             documents = obj['docs']
         except KeyError:
-            self.fields.update((index, document, field) for field in fields)
+            for field in fields:
+                self.fields.add((index, document, field))
+                self.permissions.add(('api/feature/moreLikeThis', index, document, field))
         else:
             if not documents:
                 raise ElasticSearchError('No documents given in more_like_this query "{0!r}"'.format(obj))
@@ -697,7 +698,9 @@ class QueryDslParser(object):
 
                 # Artificial documents are intentionally ignored here because as with real documents we have
                 # no knowledge about a document's fields unless specifically mentioned by a restriction
-                self.fields.update((index, document, field) for field in fields)
+                for field in fields:
+                    self.fields.add((index, document, field))
+                    self.permissions.add(('api/feature/moreLikeThis', index, document, field))
 
     def nested_query(self, obj, index=None, document=None):
         """Parse the given nested query. Raises ElasticSearchError in case the query is malformed."""
@@ -725,7 +728,7 @@ class QueryDslParser(object):
             raise ElasticSearchError('Missing keyword "query" in query_string query "{0!r}"'.format(obj))
 
         if query_string and query_string != '*':
-            self.permissions.add('api/feature/queryString')
+            self.permissions.add(('api/feature/queryString', index, document, None))
 
     def range_query(self, obj, index=None, document=None):
         """Parse the given range query. Raises ElasticSearchError in case the query is malformed."""
@@ -830,7 +833,7 @@ class QueryDslParser(object):
 
     def template_query(self, obj, index=None, document=None):
         """Parse the given template query."""
-        self.permissions.add('api/search/template')
+        self.permissions.add(('api/search/template', index, document, None))
 
     def filter(self, obj, index=None, document=None):
         """Recurse into the given filter and parse its contents."""
@@ -1089,7 +1092,7 @@ class QueryDslParser(object):
 
     def script_filter(self, obj, index=None, document=None):
         """Parse the given script filter."""
-        self.permissions.add('api/feature/script')
+        self.permissions.add(('api/feature/script', index, document, None))
 
     def term_filter(self, obj, index=None, document=None):
         """Parse the given term filter. Raises ElasticSearchError in case the filter is malformed."""
@@ -1249,7 +1252,7 @@ class AggregationParser(object):
             self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_path' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         return index, document, field
 
@@ -1329,10 +1332,10 @@ class AggregationParser(object):
             self.fields |= parser.fields
 
         if 'explain' in obj:
-            self.permissions.add('api/search/explain')
+            self.permissions.add(('api/search/explain', index, document, field))
 
         if 'script_fields' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         if 'sort' in obj:
             if isinstance(obj['sort'], list):
@@ -1348,7 +1351,7 @@ class AggregationParser(object):
 
     def scripted_metric_agg(self, obj, index=None, document=None, field=None):
         """Parse the given scripted_metric aggregation."""
-        self.permissions.add('api/feature/script')
+        self.permissions.add(('api/feature/script', index, document, field))
 
     def global_agg(self, obj, index=None, document=None, field=None):
         """Parse the given global aggregation. Raises ElasticSearchError in case it is malformed."""
@@ -1458,7 +1461,7 @@ class AggregationParser(object):
             self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         return index, document, field
 
@@ -1479,7 +1482,7 @@ class AggregationParser(object):
             self.fields.add((index, document, field))
 
         if 'script_heuristic' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         if 'background_filter' in obj:
             parser = QueryDslParser()
@@ -1507,7 +1510,7 @@ class AggregationParser(object):
             self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         return index, document, field
 
@@ -1527,7 +1530,7 @@ class AggregationParser(object):
             self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         return index, document, field
 
@@ -1546,7 +1549,7 @@ class AggregationParser(object):
             self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         return index, document, field
 
@@ -1566,7 +1569,7 @@ class AggregationParser(object):
             self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         return index, document, field
 
@@ -1587,7 +1590,7 @@ class AggregationParser(object):
             self.fields.add((index, document, field))
 
         if 'script' in obj or 'script_id' in obj or 'script_file' in obj:
-            self.permissions.add('api/feature/script')
+            self.permissions.add(('api/feature/script', index, document, field))
 
         return index, document, field
 
