@@ -270,7 +270,6 @@ class SearchApiRequest(ElasticRequest):
     def _inspect_parser(self, client, parser, index_filter, type_filter):
         json_updated = False
         for permission, index, document_type, field in parser.permissions:
-            # TODO: Context changes? Permissions are not only global anymore!
             if permission != 'api/feature/queryString':
                 indices = index_filter if index is None else FilterString.from_string(index)
                 types = type_filter if document_type is None else FilterString.from_string(document_type)
