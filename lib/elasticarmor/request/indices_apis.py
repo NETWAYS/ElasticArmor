@@ -176,9 +176,7 @@ class GetMappingApiRequest(ElasticRequest):
 
         if restricted_types:
             requested_types = FilterString.from_string(self.get_match('documents', ''))
-            requested_index = index_filter.combined[0] if index_filter.combined else index_filter[0]
-            type_filter = client.create_filter_string('api/indices/get/mappings', requested_types,
-                                                      str(requested_index))
+            type_filter = client.create_filter_string('api/indices/get/mappings', requested_types, index_filter)
             if type_filter is None:
                 raise PermissionError('You are not permitted to access the mappings of the given types.')
         else:
