@@ -32,7 +32,7 @@ class Auth(LoggingAware, object):
         if client.username is None or client.password is None:
             # In case we have no authentication credentials check if access by ip[:port] is permitted
             allowed_ports = self.allow_from.get(client.address, [])
-            if allowed_ports is not None and client.port not in allowed_ports:
+            if allowed_ports is not None and (client.port is None or client.port not in allowed_ports):
                 return False
             else:
                 default_timeout = socket.getdefaulttimeout()
@@ -160,7 +160,7 @@ class MultipleIncludesError(AuthorizationError):
 class Client(LoggingAware, object):
     """An object representing a client who is sending a request."""
 
-    def __init__(self, address, port):
+    def __init__(self, address, port=None):
         self.address = address
         self.port = port
 
@@ -181,6 +181,9 @@ class Client(LoggingAware, object):
 
         if self.username is not None:
             return self.username
+
+        if self.port is None:
+            return self.address
 
         return '%s:%u' % (self.address, self.port)
 

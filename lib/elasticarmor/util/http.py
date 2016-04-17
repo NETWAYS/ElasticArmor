@@ -233,6 +233,24 @@ class HttpContext(object):
         self.request = request
         self.response = response
 
+    @property
+    def forwarded_for(self):
+        """The IP-address and port of the host which is the actual origin of the request."""
+        ip = port = None
+        if 'x-forward-for' in self.request.headers:
+            # Required for compatibility reasons with Kibana 4.1.x.
+            # See https://github.com/elastic/kibana/issues/4609 for more details
+            ip = self.request.headers.getheaders('x-forward-for')[0].strip()
+        elif 'x-forwarded-for' in self.request.headers:
+            ip = self.request.headers.getheaders('x-forwarded-for')[0].strip()
+        elif 'forwarded' in self.request.headers:
+            pass  # TODO: https://tools.ietf.org/html/rfc7239#section-4
+
+        if not ip or ip == 'unknown' or ip.startswith('_'):
+            return None, None
+
+        return ip, port
+
     def create_wsgi_environ(self):
         """Create and return a WSGI compliant environment."""
         environ = self.server.wsgi_environ.copy()
