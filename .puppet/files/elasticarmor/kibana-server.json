@@ -1,0 +1,29 @@
+{
+  "users": [
+    "localhost"
+  ],
+  "privileges": {
+    "cluster": [
+      "api/bulk",
+      "api/cluster/nodes/info"
+    ],
+    "indices": [
+      {
+        "include": ".kibana",
+        "permissions": [
+          "api/cluster/health",
+          "api/indices/refresh",
+          "api/indices/create/index",
+          "api/indices/create/mapping",
+          "api/indices/get/mapping",
+          "api/documents/get",
+          "api/documents/index",
+          "api/documents/delete",
+          "api/documents/update",
+          "api/search/documents",
+          "api/search/explain"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "lowercase_keyword": {
+                    "type": "custom",
+                    "filter": "lowercase",
+                    "tokenizer": "keyword"
+                }
+            }
+        }
+    },
+    "mappings": {
+        "role": {
+            "properties": {
+                "users": {
+                    "type": "string",
+                    "analyzer": "lowercase_keyword"
+                },
+                "groups": {
+                    "type": "string",
+                    "analyzer": "lowercase_keyword"
+                },
+                "privileges": {
+                    "type": "object",
+                    "enabled": false
+                }
+            }
+        }
+    }
+}
