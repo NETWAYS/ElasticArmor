@@ -30,7 +30,6 @@ class Settings(LoggingAware, object):
         'application': APP_NAME,
         'level': 'error',
         'elasticsearch': DEFAULT_NODE,
-        'allow_from': 'localhost',
         'address': DEFAULT_ADDRESS,
         'port': DEFAULT_PORT,
         'secured': 'false'
@@ -245,7 +244,13 @@ class Settings(LoggingAware, object):
     @property
     def allow_from(self):
         allow_from = {}
-        for host_and_port in self.config.get('proxy', 'allow_from').split(','):
+
+        try:
+            value = self.config.get('proxy', 'allow_from')
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            return allow_from
+
+        for host_and_port in value.split(','):
             try:
                 host, port = host_and_port.split(':')
             except ValueError:
