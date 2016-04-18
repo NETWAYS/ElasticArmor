@@ -18,7 +18,8 @@ end
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "bento/centos-7.2"
 
-  config.vm.network "forwarded_port", guest: 5601, host: 8080, auto_correct: true
+  config.vm.network "forwarded_port", guest: 80, host: 8080, auto_correct: true
+  config.vm.network "forwarded_port", guest: 5601, host: 5601, auto_correct: true
   config.vm.network "forwarded_port", guest: 9200, host: 9200, auto_correct: true
 
   config.vm.synced_folder ".", "/vagrant"
