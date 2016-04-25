@@ -158,19 +158,35 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         except socket.timeout:
             self.close_connection = True
             self.log.debug('Client "%s" timed out. Closing connection.', self.client)
-            self.send_error(408, explain='Idle time limit exceeded. (%u Seconds)' % CONNECTION_TIMEOUT)
+
+            try:
+                self.send_error(408, explain='Idle time limit exceeded. (%u Seconds)' % CONNECTION_TIMEOUT)
+            except socket.error as error:
+                self.log.debug('Failed to send error response to "%s". An error occurred: %s', client_address, error)
         except ChunkParserError as error:
             self.log.debug('Client "%s" sent an invalid chunked payload. Error: %s', self.client, error)
-            self.send_error(400, explain='Payload encoding invalid. Error: {0}'.format(error))
+
+            try:
+                self.send_error(400, explain='Payload encoding invalid. Error: {0}'.format(error))
+            except socket.error as error:
+                self.log.debug('Failed to send error response to "%s". An error occurred: %s', client_address, error)
         except RequestEntityTooLarge as error:
             self.log.debug('Client "%s" exceeded the buffer size limit. Closing connection.', self.client)
             self.close_connection = True
-            self.send_error(413, explain=str(error))
+
+            try:
+                self.send_error(413, explain=str(error))
+            except socket.error as error:
+                self.log.debug('Failed to send error response to "%s". An error occurred: %s', client_address, error)
         except requests.RequestException as error:
             self.log.error('An error occurred while communicating with Elasticsearch: %s',
                            format_elasticsearch_error(error))
-            self.send_error(502, explain='An error occurred while communicating with Elasticsearch.'
-                                         ' Please contact an administrator.')
+
+            try:
+                self.send_error(502, explain='An error occurred while communicating with Elasticsearch.'
+                                             ' Please contact an administrator.')
+            except socket.error as error:
+                self.log.debug('Failed to send error response to "%s". An error occurred: %s', client_address, error)
         except socket.error as error:
             self.log.error('Connection to client "%s" broke. An error occurred: %s', self.client, error)
         except Exception:
