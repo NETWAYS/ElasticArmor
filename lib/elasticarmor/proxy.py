@@ -225,7 +225,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             self._continue_expected = False
             self.log.debug('Answered to 100-continue expectation.')
 
-        if self._context.has_chunked_payload():
+        if self._context is not None and self._context.has_chunked_payload():
             self.log.debug('Fetching streamed request payload...')
             self._body = read_chunked_content(self.rfile, CONTENT_BUFFER_SIZE)
             self.log.debug('Completed fetching payload of length %u.', len(self._body))
@@ -254,7 +254,9 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         if self._client is not None:
             return self._client
 
-        client_address, client_port = self._context.forwarded_for
+        client_address = client_port = None
+        if self._context is not None:
+            client_address, client_port = self._context.forwarded_for
         if client_address is None:
             client_address, client_port = self.client_address
 
