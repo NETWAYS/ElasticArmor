@@ -26,29 +26,29 @@ class ElasticSearchError(Exception):
 class ElasticConnection(LoggingAware, object):
     """Class for failover handling of multiple Elasticsearch nodes."""
     def __init__(self, nodes):
+        self.nodes = set(nodes)
+
         self._last_check = None
-        self._unreachable_nodes = []
-        self._node_priorities = dict((node, index) for index, node in enumerate(nodes))
+        self._unreachable_nodes = set()
+        self._node_priorities = dict((node, index) for index, node in enumerate(self.nodes))
 
         self._check_flag = threading.Event()
         self._reachable_nodes_lock = ReadWriteLock()
         self._unreachable_nodes_lock = ReadWriteLock()
 
-        self.nodes = nodes
-
     @property
     def _reachable_nodes(self):
         """Return a list of all currently available nodes."""
         with self._reachable_nodes_lock.readContext:
-            return self.nodes[:]
+            return self.nodes.copy()
 
     def _mark_as_unreachable(self, node):
         """Register the given node as unreachable."""
         with self._reachable_nodes_lock.writeContext:
-            self.nodes.remove(node)
+            self.nodes.discard(node)
 
         with self._unreachable_nodes_lock.writeContext:
-            self._unreachable_nodes.append(node)
+            self._unreachable_nodes.add(node)
 
     def _is_reachability_check_necessary(self):
         """Return whether it is necessary to check node reachability."""
@@ -64,26 +64,29 @@ class ElasticConnection(LoggingAware, object):
         self._check_flag.set()
 
         # Check if any unreachable nodes are reachable again
-        reachable_nodes = []
+        reachable_nodes, still_unreachable = [], []
         with self._unreachable_nodes_lock.writeContext:
-            for node in self._unreachable_nodes[:]:
+            for node in self._unreachable_nodes.copy():
                 try:
-                    if requests.head(node).raise_for_status():
-                        self._unreachable_nodes.remove(node)
-                        reachable_nodes.append(node)
-                        self.log.debug('Node "%s" is reachable and being made available again.', node)
+                    requests.head(node).raise_for_status()
                 except requests.RequestException as error:
+                    still_unreachable.append(node)
                     self.log.debug('Node "%s" is still unreachable. Error: %s',
                                    node, format_elasticsearch_error(error))
+                else:
+                    reachable_nodes.append(node)
+                    self._unreachable_nodes.remove(node)
+                    self.log.debug('Node "%s" is reachable and being made available again.', node)
 
         if reachable_nodes:
             # Make the now reachable nodes available again and ensure that the priority order is restored
             with self._reachable_nodes_lock.writeContext:
-                self.nodes = sorted(self.nodes.extend(reachable_nodes), key=self._node_priorities.__getitem__)
+                self.nodes.update(reachable_nodes)
+                self.nodes = set(sorted(self.nodes, key=self._node_priorities.__getitem__))
+                reachable_nodes = self.nodes.copy()
 
-        self.log.debug('Currently available nodes: %s', ', '.join(self.nodes) if self.nodes else 'None')
-        self.log.debug('Currently unavailable nodes: %s',
-                       ', '.join(self._unreachable_nodes) if self._unreachable_nodes else 'None')
+        self.log.debug('Currently available nodes: %s', ', '.join(reachable_nodes) if reachable_nodes else 'None')
+        self.log.debug('Currently unavailable nodes: %s', ', '.join(still_unreachable) if still_unreachable else 'None')
 
         # Remember when we've checked reachability the last time and clear the flag
         self._last_check = time.time()
