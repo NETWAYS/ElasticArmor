@@ -266,6 +266,7 @@ class QueryDslParser(object):
         '_index',
         '_type',
         '_all',
+        '_uid',
         '_id'
     ]
 
