@@ -522,7 +522,7 @@ class MultiSearchApiRequest(SearchApiRequest):
             payload = payload[chunk_size:]
 
 
-class CountApiRequest(ElasticRequest):
+class CountApiRequest(SearchApiRequest):
     locations = {
         'GET': [
             '/_count',
@@ -536,9 +536,25 @@ class CountApiRequest(ElasticRequest):
         ]
     }
 
-    @Permission('api/search/documents')
     def inspect(self, client):
-        pass
+        index_filter, type_filter, _, json = self.inspect_request(
+            client, FilterString.from_string(self.get_match('indices', '')),
+            FilterString.from_string(self.get_match('documents', '')), json=self.json)
+
+        if self.query.last('q', '').strip() and self.query.last('q').strip() != '*':
+            if client.has_restriction(index_filter, type_filter):
+                # TODO: Provide a more sophisticated solution once we've got a parser for query strings!
+                raise PermissionError(
+                    'You are restricted to specific fields and as such cannot utilize the query string search.')
+
+        if index_filter:
+            if type_filter:
+                self.path = '/{0}/{1}/_count'.format(index_filter, type_filter)
+            else:
+                self.path = '/{0}/_count'.format(index_filter)
+
+        if json is not None:
+            self.body = self.json_encode(json)
 
 
 class SearchExistsApiRequest(ElasticRequest):
