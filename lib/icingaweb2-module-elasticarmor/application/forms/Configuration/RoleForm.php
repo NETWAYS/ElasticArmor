@@ -10,6 +10,76 @@ use Icinga\Web\Url;
 class RoleForm extends RepositoryForm
 {
     /**
+     * All available permissions and their smallest scope
+     *
+     * @var array
+     */
+    protected $permissions = array(
+        'config/authorization'          => 'cluster',
+        'api/cluster/health'            => 'indices',
+        'api/cluster/state'             => 'cluster',
+        'api/cluster/stats'             => 'cluster',
+        'api/cluster/pendingTasks'      => 'cluster',
+        'api/cluster/reroute'           => 'cluster',
+        'api/cluster/get/settings'      => 'cluster',
+        'api/cluster/update/settings'   => 'cluster',
+        'api/cluster/nodes/stats'       => 'cluster',
+        'api/cluster/nodes/info'        => 'cluster',
+        'api/cluster/nodes/hotThreads'  => 'cluster',
+        'api/cluster/nodes/shutdown'    => 'cluster',
+        'api/indices/create/index'      => 'indices',
+        'api/indices/delete/index'      => 'indices',
+        'api/indices/open'              => 'indices',
+        'api/indices/close'             => 'indices',
+        'api/indices/create/mappings'   => 'types',
+        'api/indices/delete/mappings'   => 'types',
+        'api/indices/get/mappings'      => 'types',
+        'api/indices/create/aliases'    => 'indices',
+        'api/indices/delete/aliases'    => 'indices',
+        'api/indices/get/aliases'       => 'indices',
+        'api/indices/update/settings'   => 'indices',
+        'api/indices/get/settings'      => 'indices',
+        'api/indices/analyze'           => 'indices',
+        'api/indices/create/templates'  => 'cluster',
+        'api/indices/delete/templates'  => 'cluster',
+        'api/indices/get/templates'     => 'cluster',
+        'api/indices/create/warmers'    => 'indices',
+        'api/indices/delete/warmers'    => 'indices',
+        'api/indices/get/warmers'       => 'indices',
+        'api/indices/stats'             => 'indices',
+        'api/indices/segments'          => 'indices',
+        'api/indices/recovery'          => 'indices',
+        'api/indices/cache/clear'       => 'indices',
+        'api/indices/flush'             => 'indices',
+        'api/indices/refresh'           => 'indices',
+        'api/indices/optimize'          => 'indices',
+        'api/indices/upgrade'           => 'indices',
+        'api/documents/index'           => 'types',
+        'api/documents/get'             => 'fields',
+        'api/documents/delete'          => 'types',
+        'api/documents/update'          => 'fields',
+        'api/documents/deleteByQuery'   => 'types',
+        'api/documents/termVector'      => 'types',
+        'api/search/documents'          => 'fields',
+        'api/search/templates'          => 'cluster',
+        'api/search/shards'             => 'indices',
+        'api/search/suggest'            => 'cluster',
+        'api/search/explain'            => 'fields',
+        'api/search/percolate'          => 'types',
+        'api/search/fieldStats'         => 'indices',
+        'api/cat'                       => 'cluster',
+        'api/bulk'                      => 'cluster',
+        'api/feature/deprecated'        => 'cluster',
+        'api/feature/facets'            => 'types',
+        'api/feature/fuzzyLikeThis'     => 'fields',
+        'api/feature/innerHits'         => 'types',
+        'api/feature/moreLikeThis'      => 'fields',
+        'api/feature/notImplemented'    => 'types',
+        'api/feature/queryString'       => 'types',
+        'api/feature/script'            => 'fields'
+    );
+
+    /**
      * {@inheritdoc}
      */
     protected function onInsertSuccess()
@@ -119,5 +189,58 @@ class RoleForm extends RepositoryForm
         }
 
         return sprintf($message, $this->identifier);
+    }
+
+    /**
+     * Check whether the given permission is harmful and if so, return a explanation why
+     *
+     * @param   string|null
+     */
+    protected function isHarmfulPermission($permission)
+    {
+        switch ($permission)
+        {
+            case 'api/cat':
+                return $this->translate('No inspection of any kind is being applied yet.');
+            case 'api/feature/deprecated':
+                return $this->translate(
+                    'API endpoints which are deprecated as of Elasticsearch v1.7.x'
+                    . ' and have valid alternatives are not being inspected.'
+                );
+            case 'api/feature/facets':
+                return $this->translate(
+                    'Faceted searches are not being inspected as they are a relict of Elasticsearch'
+                    . ' v0.x and were replaced by aggregations in newer versions.'
+                );
+            case 'api/feature/fuzzyLikeThis':
+                return $this->translate(
+                    'While it is possible to regulate the starting point of the Fuzzy Like'
+                    . ' This Query, it is not possible to regulate what is being returned.'
+                );
+            case 'api/feature/innerHits':
+                return $this->translate(
+                    'The inner hits feature allows to return documents matched in different'
+                    . ' scopes. This may allow the user to access non-permitted data.'
+                );
+            case 'api/feature/moreLikeThis':
+                return $this->translate(
+                    'While it is possible to regulate the starting point of the More Like This'
+                    . ' API/Query, it is not possible to regulate what is being returned.'
+                );
+            case 'api/feature/notImplemented':
+                return $this->translate(
+                    'API endpoints which are not yet inspected allow the user'
+                    . ' to freely perform write operations or access data.'
+                );
+            case 'api/feature/queryString':
+                return $this->translate(
+                    'Query string searches are not being inspected yet and'
+                    . ' may allow the user to access non-permitted fields.'
+                );
+            case 'api/feature/script':
+                return $this->translate(
+                    'Scripts are not being inspected and can possibly access data outside a query\'s scope.'
+                );
+        }
     }
 }
