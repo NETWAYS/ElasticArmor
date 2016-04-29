@@ -68,4 +68,4 @@ See [here](doc/08-Limitations.md#limitations) to learn more about what ElasticAr
 ## Support
 
 If you come across problems at some time, feel free to ask for assistance and open a issue
-on our [ElasticArmor Project Page](https://gitlab.netways.org/ElasticArmor/ElasticArmor).
+on our [ElasticArmor Project Page](https://www.netways.org/projects/elasticarmor).
