@@ -37,6 +37,57 @@ class RolesController extends Controller
     }
 
     /**
+     * Create and return the tabs for the detail actions
+     *
+     * @param   string  $roleName
+     *
+     * @return  Tabs
+     */
+    protected function createDetailTabs($roleName)
+    {
+        $tabs = $this->getTabs();
+
+        $tabs->add(
+            'restrictions',
+            array(
+                'url'       => 'elasticarmor/roles/restrictions',
+                'urlParams' => array('role' => $roleName),
+                'label'     => $this->translate('Restrictions'),
+                'title'     => $this->translate('Set up restrictions for specific indices, types and fields')
+            )
+        );
+        $tabs->add(
+            'permissions',
+            array(
+                'url'       => 'elasticarmor/roles/permissions',
+                'urlParams' => array('role' => $roleName),
+                'label'     => $this->translate('Permissions'),
+                'title'     => $this->translate('Define what to permit on a cluster-wide basis')
+            )
+        );
+        $tabs->add(
+            'users',
+            array(
+                'url'       => 'elasticarmor/roles/users',
+                'urlParams' => array('role' => $roleName),
+                'label'     => $this->translate('Users'),
+                'title'     => $this->translate('Assign this role to one or more users')
+            )
+        );
+        $tabs->add(
+            'groups',
+            array(
+                'url'       => 'elasticarmor/roles/groups',
+                'urlParams' => array('role' => $roleName),
+                'label'     => $this->translate('Groups'),
+                'title'     => $this->translate('Assign this role to one or more groups')
+            )
+        );
+
+        return $tabs;
+    }
+
+    /**
      * Return the configuration backend to use
      */
     protected function getConfigurationBackend()
@@ -143,5 +194,69 @@ class RolesController extends Controller
 
         $this->view->form = $form;
         $this->render('form');
+    }
+
+    /**
+     * List all configured restrictions for a role
+     */
+    public function restrictionsAction()
+    {
+        $roleName = $this->params->getRequired('role');
+
+        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('name', 'privileges'));
+        if ($role === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $this->view->role = $role;
+        $this->createDetailTabs($roleName)->activate('restrictions');
+    }
+
+    /**
+     * List all configured cluster permissions for a role
+     */
+    public function permissionsAction()
+    {
+        $roleName = $this->params->getRequired('role');
+
+        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('name', 'privileges'));
+        if ($role === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $this->view->role = $role;
+        $this->createDetailTabs($roleName)->activate('permissions');
+    }
+
+    /**
+     * List all users assigned to a role
+     */
+    public function usersAction()
+    {
+        $roleName = $this->params->getRequired('role');
+
+        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('name', 'users'));
+        if ($role === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $this->view->role = $role;
+        $this->createDetailTabs($roleName)->activate('users');
+    }
+
+    /**
+     * List all groups assigned to a role
+     */
+    public function groupsAction()
+    {
+        $roleName = $this->params->getRequired('role');
+
+        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('name', 'groups'));
+        if ($role === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $this->view->role = $role;
+        $this->createDetailTabs($roleName)->activate('groups');
     }
 }

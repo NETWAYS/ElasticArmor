@@ -1,0 +1,22 @@
+<div class="controls separated">
+<?php if (! $this->compact): ?>
+    <?= $tabs ?>
+<?php endif ?>
+    <?= $this->qlink(
+        $this->translate('Edit Role'),
+        'elasticarmor/roles/update',
+        array(
+            'role'      => $role->name,
+            'detail'    => 'groups'
+        ),
+        array(
+            'class' => 'button-link pull-right',
+            'icon'  => 'edit',
+            'title' => sprintf($this->translate('Edit Role %s'), $role->name)
+        )
+    ) ?>
+    <h2><?= $this->escape($role->name) ?></h2>
+</div>
+<div class="content">
+
+</div>
