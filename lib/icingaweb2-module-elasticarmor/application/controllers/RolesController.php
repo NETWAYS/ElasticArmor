@@ -8,6 +8,7 @@ use Icinga\Web\Controller;
 use Icinga\Web\Url;
 use Icinga\Web\Widget\Tabs;
 use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
+use Icinga\Module\Elasticarmor\Forms\Configuration\PermissionsForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\RoleForm;
 
 class RolesController extends Controller
@@ -224,7 +225,12 @@ class RolesController extends Controller
             $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
         }
 
+        $form = new PermissionsForm();
+        $form->setRepository($this->getConfigurationBackend());
+        $form->edit($roleName, $role->privileges ?: array())->handleRequest();
+
         $this->view->role = $role;
+        $this->view->form = $form;
         $this->createDetailTabs($roleName)->activate('permissions');
     }
 
