@@ -117,4 +117,31 @@ class RolesController extends Controller
         $this->view->form = $form;
         $this->render('form');
     }
+
+    /**
+     * Remove a role
+     */
+    public function removeAction()
+    {
+        $roleName = $this->params->getRequired('role');
+
+        $form = new RoleForm();
+        $form->setRedirectUrl('elasticarmor/roles/list');
+        $form->setRepository($this->getConfigurationBackend());
+
+        try {
+            $form->remove($roleName)->handleRequest();
+        } catch (NotFoundError $_) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $this->getTabs()->add('roles/remove', array(
+            'active'    => true,
+            'label'     => $this->translate('Remove Role'),
+            'url'       => Url::fromRequest()
+        ));
+
+        $this->view->form = $form;
+        $this->render('form');
+    }
 }
