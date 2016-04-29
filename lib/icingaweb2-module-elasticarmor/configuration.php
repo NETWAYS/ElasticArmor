@@ -5,3 +5,6 @@
 
 $menuSection = $this->menuSection('ElasticArmor')
     ->setIcon('lock');
+
+$menuSection->add(N_('Roles'))
+    ->setUrl('elasticarmor/roles/list');
