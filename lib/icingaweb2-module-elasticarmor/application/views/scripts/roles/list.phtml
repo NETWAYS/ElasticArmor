@@ -1,0 +1,61 @@
+<?php
+
+if (! $this->compact): ?>
+<div class="controls separated">
+    <?= $this->tabs ?>
+    <?= $this->paginator ?>
+    <div class="sort-controls-container">
+        <?= $this->limiter ?>
+        <?= $this->sortBox ?>
+    </div>
+    <?= $this->filterEditor ?>
+</div>
+<?php endif ?>
+<div class="content">
+    <?= $this->qlink(
+        $this->translate('Create a New Role') ,
+        'elasticarmor/roles/create',
+        null,
+        array(
+            'class'             => 'button-link',
+            'data-base-target'  => '_next',
+            'icon'              => 'plus'
+        )
+    ) ?>
+
+<?php if (! $roles->hasResult()): ?>
+    <p><?= $this->translate('No roles found matching the filter') ?></p>
+</div>
+<?php return; endif ?>
+
+    <table data-base-target="_next" class="table-row-selectable common-table">
+    <thead>
+        <tr>
+            <th><?= $this->translate('Role') ?></th>
+            <th><?= $this->translate('Remove') ?></th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($roles as $role): ?>
+        <tr>
+            <td><?= $this->qlink(
+                $role->name,
+                'elasticarmor/roles/restrictions',
+                array('role' => $role->name),
+                array('title' => sprintf($this->translate('Show detailed information for role %s'), $role->name))
+            ) ?></td>
+            <td class="icon-col"><?= $this->qlink(
+                null,
+                'elasticarmor/roles/remove',
+                array('role' => $role->name),
+                array(
+                    'class' => 'action-link',
+                    'icon'  => 'cancel',
+                    'title' => sprintf($this->translate('Remove role %s'), $role->name)
+                )
+            ) ?></td>
+        </tr>
+    <?php endforeach ?>
+    </tbody>
+    </table>
+</div>
