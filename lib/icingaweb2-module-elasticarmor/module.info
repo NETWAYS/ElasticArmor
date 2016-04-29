@@ -1,0 +1,5 @@
+Module: elasticarmor
+Version: 0.9
+Depends: elasticsearch
+Description: ElasticArmor Configuration Module
+ This module provides a graphical user-interface to configure ElasticArmor.
