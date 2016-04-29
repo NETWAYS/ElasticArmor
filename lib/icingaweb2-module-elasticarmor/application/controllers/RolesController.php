@@ -4,8 +4,10 @@
 namespace Icinga\Module\Elasticarmor\Controllers;
 
 use Icinga\Web\Controller;
+use Icinga\Web\Url;
 use Icinga\Web\Widget\Tabs;
 use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
+use Icinga\Module\Elasticarmor\Forms\Configuration\RoleForm;
 
 class RolesController extends Controller
 {
@@ -68,5 +70,24 @@ class RolesController extends Controller
             ),
             $query
         );
+    }
+
+    /**
+     * Create a new role
+     */
+    public function createAction()
+    {
+        $form = new RoleForm();
+        $form->setRepository($this->getConfigurationBackend());
+        $form->add()->handleRequest();
+
+        $this->getTabs()->add('roles/create', array(
+            'active'    => true,
+            'label'     => $this->translate('Create Role'),
+            'url'       => Url::fromRequest()
+        ));
+
+        $this->view->form = $form;
+        $this->render('form');
     }
 }
