@@ -3,6 +3,7 @@
 
 namespace Icinga\Module\Elasticarmor\Controllers;
 
+use Icinga\Exception\NotFoundError;
 use Icinga\Web\Controller;
 use Icinga\Web\Url;
 use Icinga\Web\Widget\Tabs;
@@ -84,6 +85,32 @@ class RolesController extends Controller
         $this->getTabs()->add('roles/create', array(
             'active'    => true,
             'label'     => $this->translate('Create Role'),
+            'url'       => Url::fromRequest()
+        ));
+
+        $this->view->form = $form;
+        $this->render('form');
+    }
+
+    /**
+     * Update a role
+     */
+    public function updateAction()
+    {
+        $roleName = $this->params->getRequired('role');
+
+        $form = new RoleForm();
+        $form->setRepository($this->getConfigurationBackend());
+
+        try {
+            $form->edit($roleName)->handleRequest();
+        } catch (NotFoundError $_) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $this->getTabs()->add('roles/update', array(
+            'active'    => true,
+            'label'     => $this->translate('Update Role'),
             'url'       => Url::fromRequest()
         ));
 
