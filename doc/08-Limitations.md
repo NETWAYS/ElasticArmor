@@ -59,8 +59,6 @@ These functionalities currently include the following:
     * No rewriting.
 * [Suggesters](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-suggesters.html)
     * No payload inspection.
-* [Count API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-count.html)
-    * No URL-Query and payload inspection. No rewriting.
 * [Search Exists API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-exists.html)
     * No URL-Query and payload inspection. No rewriting.
 * [Explain API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-explain.html)
