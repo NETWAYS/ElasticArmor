@@ -83,7 +83,7 @@ class PermissionsForm extends RoleForm
      */
     protected function addListEntriesFromConfig()
     {
-        $availablePermissions = $this->permissions;
+        $availablePermissions = $this->availablePermissions;
         if ($this->data !== null && isset($this->data['cluster'])) {
             $grantedPermissions = array_flip($this->data['cluster']);
 
@@ -124,7 +124,7 @@ class PermissionsForm extends RoleForm
             }
         }
 
-        $availablePermissions = $this->permissions;
+        $availablePermissions = $this->availablePermissions;
         foreach ($availablePermissions as $permission => $_) {
             if (isset($grantedPermissions[$permission])) {
                 unset($availablePermissions[$permission]);
