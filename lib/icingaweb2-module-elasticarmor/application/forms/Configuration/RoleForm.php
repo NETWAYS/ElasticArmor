@@ -10,6 +10,26 @@ use Icinga\Web\Url;
 class RoleForm extends RepositoryForm
 {
     /**
+     * Cluster context identifier
+     */
+    const CLUSTER_CONTEXT = 'cluster';
+
+    /**
+     * Index context identifier
+     */
+    const INDEX_CONTEXT = 'indices';
+
+    /**
+     * Document type context identifier
+     */
+    const TYPE_CONTEXT = 'types';
+
+    /**
+     * Field context identifier
+     */
+    const FIELD_CONTEXT = 'fields';
+
+    /**
      * All available permissions and their smallest scope
      *
      * @var array
