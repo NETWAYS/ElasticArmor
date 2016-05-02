@@ -95,7 +95,7 @@ class RestrictionsRenderer
         }
         $this->renderCreateLink('indices', $this->view()->translate('Create a new index restriction'));
 
-        if (isset($this->privileges['indices'])) {
+        if (isset($this->privileges['indices']) && !empty($this->privileges['indices'])) {
             $this->renderTerm($this->view()->translate('Types'));
             if (isset($this->privileges['types'])) {
                 foreach ($this->privileges['types'] as $id => $restriction) {
@@ -104,7 +104,7 @@ class RestrictionsRenderer
             }
             $this->renderCreateLink('types', $this->view()->translate('Create a new type restriction'));
 
-            if (isset($this->privileges['types'])) {
+            if (isset($this->privileges['types']) && !empty($this->privileges['types'])) {
                 $this->renderTerm($this->view()->translate('Fields'));
                 if (isset($this->privileges['fields'])) {
                     foreach ($this->privileges['fields'] as $id => $restriction) {
