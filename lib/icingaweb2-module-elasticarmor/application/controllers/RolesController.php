@@ -277,6 +277,36 @@ class RolesController extends Controller
     }
 
     /**
+     * Remove a restriction
+     */
+    public function restrictionsRemoveAction()
+    {
+        $roleName = $this->params->getRequired('role');
+        $restrictionPath = $this->params->getRequired('path');
+
+        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('privileges'));
+        if ($role === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $form = new RestrictionForm();
+        $form->setRedirectUrl(Url::fromPath('elasticarmor/roles/restrictions', array('role' => $roleName)));
+        $form->setRepository($this->getConfigurationBackend());
+        $form->edit($roleName, $role->privileges ?: array());
+        $form->removeRestriction($restrictionPath);
+        $form->handleRequest();
+
+        $this->getTabs()->add('roles/restrictions/remove', array(
+            'active'    => true,
+            'label'     => $this->translate('Remove Restriction'),
+            'url'       => Url::fromRequest()
+        ));
+
+        $this->view->form = $form;
+        $this->render('form');
+    }
+
+    /**
      * List all configured cluster permissions for a role
      */
     public function permissionsAction()
