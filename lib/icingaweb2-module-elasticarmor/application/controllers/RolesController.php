@@ -247,6 +247,36 @@ class RolesController extends Controller
     }
 
     /**
+     * Update a restriction
+     */
+    public function restrictionsUpdateAction()
+    {
+        $roleName = $this->params->getRequired('role');
+        $restrictionPath = $this->params->getRequired('path');
+
+        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('privileges'));
+        if ($role === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $form = new RestrictionForm();
+        $form->setRedirectUrl(Url::fromPath('elasticarmor/roles/restrictions', array('role' => $roleName)));
+        $form->setRepository($this->getConfigurationBackend());
+        $form->edit($roleName, $role->privileges ?: array());
+        $form->updateRestriction($restrictionPath);
+        $form->handleRequest();
+
+        $this->getTabs()->add('roles/restrictions/update', array(
+            'active'    => true,
+            'label'     => $this->translate('Update Restriction'),
+            'url'       => Url::fromRequest()
+        ));
+
+        $this->view->form = $form;
+        $this->render('form');
+    }
+
+    /**
      * List all configured cluster permissions for a role
      */
     public function permissionsAction()
