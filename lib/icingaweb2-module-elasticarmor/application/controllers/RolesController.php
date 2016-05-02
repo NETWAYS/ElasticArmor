@@ -9,6 +9,7 @@ use Icinga\Web\Url;
 use Icinga\Web\Widget\Tabs;
 use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
 use Icinga\Module\Elasticarmor\Forms\Configuration\PermissionsForm;
+use Icinga\Module\Elasticarmor\Forms\Configuration\RestrictionForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\RoleForm;
 use Icinga\Module\Elasticarmor\Web\Role\RestrictionsRenderer;
 
@@ -213,6 +214,36 @@ class RolesController extends Controller
         $this->view->role = $role;
         $this->view->restrictions = new RestrictionsRenderer($role->name, $role->privileges ?: array());
         $this->createDetailTabs($roleName)->activate('restrictions');
+    }
+
+    /**
+     * Create a new restriction
+     */
+    public function restrictionsCreateAction()
+    {
+        $roleName = $this->params->getRequired('role');
+        $restrictionPath = $this->params->getRequired('path');
+
+        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('privileges'));
+        if ($role === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $form = new RestrictionForm();
+        $form->setRedirectUrl(Url::fromPath('elasticarmor/roles/restrictions', array('role' => $roleName)));
+        $form->setRepository($this->getConfigurationBackend());
+        $form->edit($roleName, $role->privileges ?: array());
+        $form->createRestriction($restrictionPath);
+        $form->handleRequest();
+
+        $this->getTabs()->add('roles/restrictions/create', array(
+            'active'    => true,
+            'label'     => $this->translate('Create Restriction'),
+            'url'       => Url::fromRequest()
+        ));
+
+        $this->view->form = $form;
+        $this->render('form');
     }
 
     /**
