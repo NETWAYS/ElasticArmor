@@ -10,6 +10,7 @@ use Icinga\Web\Widget\Tabs;
 use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
 use Icinga\Module\Elasticarmor\Forms\Configuration\PermissionsForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\RoleForm;
+use Icinga\Module\Elasticarmor\Web\Role\RestrictionsRenderer;
 
 class RolesController extends Controller
 {
@@ -210,6 +211,7 @@ class RolesController extends Controller
         }
 
         $this->view->role = $role;
+        $this->view->restrictions = new RestrictionsRenderer($role->name, $role->privileges ?: array());
         $this->createDetailTabs($roleName)->activate('restrictions');
     }
 
