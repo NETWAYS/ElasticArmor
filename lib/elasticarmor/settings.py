@@ -157,7 +157,9 @@ class Settings(LoggingAware, object):
 
     @property
     def log_file(self):
-        return self.config.get('logging', 'file')
+        file_path = self.config.get('logging', 'file')
+        self._check_file_permissions(file_path, 'a')
+        return file_path
 
     @property
     def log_application(self):
