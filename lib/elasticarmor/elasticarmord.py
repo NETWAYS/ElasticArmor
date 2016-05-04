@@ -8,12 +8,13 @@ from elasticarmor.proxy import ElasticReverseProxy
 from elasticarmor.request import ElasticRequest
 from elasticarmor.settings import Settings
 from elasticarmor.util.daemon import UnixDaemon
+from elasticarmor.util.mixins import LoggingAware
 
 
 __all__ = ['ElasticArmor']
 
 
-class ElasticArmor(UnixDaemon):
+class ElasticArmor(UnixDaemon, LoggingAware):
     name = APP_NAME.lower()
 
     def __init__(self, *args, **kwargs):

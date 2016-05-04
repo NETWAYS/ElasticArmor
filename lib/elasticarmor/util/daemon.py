@@ -69,11 +69,7 @@ class UnixDaemon(object):
 
     @property
     def log(self):
-        try:
-            return self.__log
-        except AttributeError:
-            self.__log = logging.getLogger(self.name)
-            return self.__log
+        return logging.getLogger(self.name)
 
     def _daemonize(self):
         try:
