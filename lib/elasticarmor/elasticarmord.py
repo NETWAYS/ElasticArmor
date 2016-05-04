@@ -14,7 +14,7 @@ __all__ = ['ElasticArmor']
 
 
 class ElasticArmor(UnixDaemon):
-    name = APP_NAME
+    name = APP_NAME.lower()
 
     def __init__(self, *args, **kwargs):
         super(ElasticArmor, self).__init__(*args, **kwargs)

@@ -340,7 +340,7 @@ class DaemonOptionParser(optparse.OptionParser):
 def get_daemon_option_parser(version=None, chdir='/', prog=None):
     usage = '%prog [options] {0}'.format('|'.join(DAEMON_FUNCTIONS))
     parser = DaemonOptionParser(usage=usage, version=version, prog=prog)
-    pidfile = '/var/run/{0}.pid'.format(parser.get_prog_name().lower())
+    pidfile = '/var/run/{0}.pid'.format(parser.get_prog_name())
     start_stop_group = optparse.OptionGroup(
         parser, 'Start and stop', 'Here are the options to specify the daemon '
                                   'and how it should start or stop:')

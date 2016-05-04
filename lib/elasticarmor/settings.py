@@ -27,7 +27,7 @@ class Settings(LoggingAware, object):
         'log': 'syslog',
         'file': DEFAULT_LOGFILE,
         'facility': 'authpriv',
-        'application': APP_NAME,
+        'application': APP_NAME.lower(),
         'level': 'error',
         'elasticsearch': DEFAULT_NODE,
         'address': DEFAULT_ADDRESS,
@@ -65,7 +65,7 @@ class Settings(LoggingAware, object):
         try:
             return Settings.__options
         except AttributeError:
-            parser = get_daemon_option_parser(VERSION, prog=APP_NAME)
+            parser = get_daemon_option_parser(VERSION, prog=APP_NAME.lower())
             parser.add_option('--config', dest='config', metavar='PATH', default=DEFAULT_CONFIG_DIR,
                               help='config PATH [default: %default]')
             parser.add_option('--skip-index-initialization', default=False, action='store_true',

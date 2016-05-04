@@ -13,7 +13,7 @@ for each backend and their default values. The default backend is syslog.
     log="syslog"
     level="error"
     facility="authpriv"
-    application="ElasticArmor"
+    application="elasticarmor"
 
 ### <a id="configuration-logging-file"></a> File
 
