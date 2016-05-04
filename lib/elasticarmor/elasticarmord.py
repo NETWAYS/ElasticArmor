@@ -58,8 +58,8 @@ def main():
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
     settings = Settings()
-    daemon = ElasticArmor(settings.pidfile, settings.umask, settings.chdir, settings.user,
-                          settings.group, settings.detach, settings.log_file)
+    daemon = ElasticArmor(settings.pidfile, settings.umask, settings.chdir,
+                          settings.user, settings.group, settings.detach)
     return getattr(daemon, settings.arguments[0])()
 
 
