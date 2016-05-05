@@ -18,7 +18,7 @@ try:
 except ImportError:
     DEVNULL = open(os.devnull, 'w')
 
-__all__ = ['UnixDaemon', 'create_daemon_option_parser']
+__all__ = ['UnixDaemon', 'StreamLogger', 'create_daemon_option_parser']
 
 DAEMON_FUNCTIONS = ['start', 'stop', 'status', 'restart', 'reload']
 
@@ -288,6 +288,18 @@ class UnixDaemon(object):
             os.unlink(self.pid_file_path)
         except (IOError, OSError):
             pass
+
+
+class StreamLogger(object):
+    """File-like object which redirects writes to a log handler."""
+
+    def __init__(self, log):
+        self.log = log
+
+    def write(self, buf):
+        buf = buf.lstrip()
+        if buf:
+            self.log(buf)
 
 
 class DaemonOptionParser(optparse.OptionParser):

@@ -7,7 +7,7 @@ from elasticarmor import *
 from elasticarmor.proxy import ElasticReverseProxy
 from elasticarmor.request import ElasticRequest
 from elasticarmor.settings import Settings
-from elasticarmor.util.daemon import UnixDaemon
+from elasticarmor.util.daemon import UnixDaemon, StreamLogger
 from elasticarmor.util.mixins import LoggingAware
 
 
@@ -41,6 +41,14 @@ class ElasticArmor(UnixDaemon, LoggingAware):
     def run(self):
         self.log.info('Launching reverse proxy...')
         self._proxy.launch()
+
+    def redirect_stdout(self):
+        super(ElasticArmor, self).redirect_stdout()
+        sys.stdout = StreamLogger(logging.getLogger(self.name + '.stdout').info)
+
+    def redirect_stderr(self):
+        super(ElasticArmor, self).redirect_stderr()
+        sys.stderr = StreamLogger(logging.getLogger(self.name + '.stderr').error)
 
     def before_daemonize(self):
         settings = Settings()
