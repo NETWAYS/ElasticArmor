@@ -95,7 +95,6 @@ class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
     def process_request(self, request, client_address):
         self.log.debug('Accepted request from "%s:%u".', *client_address)
         thread = threading.Thread(target=self.process_request_thread, args=(request, client_address))
-        thread.setDaemon(1)  # Required because UnixDaemon utilizes atexit for cleanup purposes
         thread.request_thread = True  # Required to simplify identification when cleaning up
         thread.start()
         self.log.debug('Started thread %s to process request from "%s:%u".', thread.name, *client_address)

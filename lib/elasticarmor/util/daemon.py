@@ -10,6 +10,7 @@ import resource
 import signal
 import subprocess
 import sys
+import threading
 from grp import getgrnam
 from pwd import getpwnam
 
@@ -82,18 +83,14 @@ class UnixDaemon(object):
             self._close_unneeded_files()
         self._write_pid()
 
-        signal.signal(signal.SIGTERM, self._sigterm_handler)
-        signal.signal(signal.SIGHUP, self._sighup_handler)
+        signal.signal(signal.SIGTERM, self._apply_cleanup)
+        signal.signal(signal.SIGINT, self._apply_cleanup)
+        signal.signal(signal.SIGHUP, self._apply_reload)
         atexit.register(self._atexit)
         if not self.detach:
             self.log.info('Use Control-C to exit.')
 
-        try:
-            self.run()
-        except KeyboardInterrupt:
-            if not self.detach:
-                self.log.info('Exiting...')
-
+        self.run()
         return 0
 
     def reload(self):
@@ -196,7 +193,7 @@ class UnixDaemon(object):
             except OSError:
                 pass  # fd isn't open
 
-    def _sighup_handler(self, signum, frame):
+    def _apply_reload(self, signum, frame):
         self.log.info('Got signal to reload %s.', self.name)
 
         try:
@@ -206,11 +203,13 @@ class UnixDaemon(object):
         else:
             self.log.info('Successfully reloaded %s.', self.name)
 
-    def _sigterm_handler(self, signum, frame):
-        sys.exit(0)
+    def _apply_cleanup(self, signum, frame):
+        # If anyone is wondering why this is not part of the atexit handler, move it back there and try
+        # to do any serious cleanup tasks which involve thread-synchronisation, then you'll know why..
+        threading.Thread(target=self.cleanup, name='CleanupThread').start()
+        # And don't dare to put sys.exit(0) back in here. Ever.
 
     def _atexit(self):
-        self.cleanup()
         self._remove_pid_file()
 
     def _open_pid_file(self):
@@ -247,8 +246,8 @@ class UnixDaemon(object):
     def _read_pid(self):
         if self._pid_file is None:
             self._open_pid_file()
-        elif self._pid_locked:
-            return
+            if self._pid_locked:
+                return  # We've got the lock, so there is no other process alive
 
         try:
             self._pid_file.seek(0, os.SEEK_SET)
