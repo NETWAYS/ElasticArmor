@@ -1,314 +1,54 @@
 # UnixDaemon | (c) 2013 NETWAYS GmbH | GPLv2+
 
-import sys
-import os
-import signal
 import atexit
 import errno
 import fcntl
-import resource
 import logging
 import optparse
+import os
+import resource
+import signal
 import subprocess
-from pwd import getpwnam
+import sys
 from grp import getgrnam
+from pwd import getpwnam
 
 try:
     from subprocess import DEVNULL
 except ImportError:
     DEVNULL = open(os.devnull, 'w')
 
-__all__ = ['UnixDaemon', 'get_daemon_option_parser']
+__all__ = ['UnixDaemon', 'create_daemon_option_parser']
 
-try:
-    os.SEEK_SET
-except AttributeError:
-    # Python < 2.5
-    os.SEEK_SET = 0
-try:
-    MAXFD = os.sysconf('SC_OPEN_MAX')
-except:
-    MAXFD = 1024
 DAEMON_FUNCTIONS = ['start', 'stop', 'status', 'restart', 'reload']
 
 
 class UnixDaemon(object):
     """Well-behaved unix daemon according to Stevens in [1].
-    [1] W. Richard Stevens, "Advanced Programming in the Unix Environment",
-        1992, Addison-Wesley"""
-    name = None
 
-    def __init__(
-            self,
-            pidfile,
-            umask=0,
-            chdir='/',
-            user=None,
-            group=None,
-            detach=False,
-            logfile=None,
-            **kwargs):
-        self._pidfle = os.path.realpath(pidfile)
-        self._pidfp = None
-        self._pidlocked = False
-        self._chdir = os.path.realpath(chdir)
-        self._detach = detach
-        self._logfile = os.path.realpath(logfile) if logfile else None
-        if user:
-            self.uid = getpwnam(user).pw_uid
-        else:
-            self.uid = os.getuid()
-        if group:
-            self.gid = getgrnam(group).gr_gid
-        else:
-            self.gid = os.getgid()
-        self._umask = umask
-        self._stdout = sys.stdout
-        self._stderr = sys.stderr
+    [1] W. Richard Stevens, "Advanced Programming in the Unix Environment", 1992, Addison-Wesley
+    """
+
+    name = 'daemon'
+    default_maxfd = 1024
+
+    def __init__(self, pid_file_path, detach=False, user=None, group=None, umask=0, chdir='/'):
+        self._pid_locked = False
+        self._pid_file = None
+
+        self.chdir = os.path.realpath(chdir)
+        self.pid_file_path = os.path.realpath(pid_file_path)
+        self.user_id = getpwnam(user).pw_uid if user else os.getuid()
+        self.group_id = getgrnam(group).gr_gid if group else os.getgid()
+        self.detach = detach
+        self.umask = umask
+
+        self.persistent_files = []
         super(UnixDaemon, self).__init__()
 
     @property
     def log(self):
         return logging.getLogger(self.name)
-
-    def _daemonize(self):
-        try:
-            pid = os.fork()
-            if pid > 0:
-                os._exit(0)
-        except OSError, e:
-            raise Exception('fork #1 failed: {0} ({1})'.format(e.errno,
-                                                               e.strerror))
-        os.setsid()
-        try:
-            pid = os.fork()
-            if pid > 0:
-                os._exit(0)
-        except OSError, e:
-            raise Exception('fork #2 failed: {0} ({1})' .format(e.errno,
-                                                                e.strerror))
-
-    def _sigterm_handler(self, signum, frame):
-        sys.exit(0)
-
-    def _atexit(self):
-        self.cleanup()
-        self._delpid()
-
-    def cleanup(self):
-        pass
-
-    def _sighup_handler(self, signum, frame):
-        self.log.info('Got signal to reload {0}'.format(self.name))
-
-        try:
-            self.handle_reload()
-        except Exception as error:
-            self.log.error(
-                'An error occured while reloading {0}: {1}'
-                ''.format(self.name, error))
-        else:
-            self.log.info('Successfully reloaded {0}'.format(self.name))
-
-    def handle_reload(self):
-        pass
-
-    def _delpid(self):
-        if not self._pidlocked:
-            raise Exception('Trying to unlink PID file while not holding '
-                            'lock.')
-        try:
-            os.unlink(self._pidfle)
-        except OSError:
-            pass
-
-    def _openpidfile(self):
-        try:
-            self._pidfp = open(self._pidfle, 'r+')
-        except IOError:
-            pidpath = os.path.dirname(self._pidfle)
-            try:
-                os.mkdir(pidpath)
-                os.chown(pidpath, self.uid, -1)
-            except OSError, e:
-                if e.errno != errno.EEXIST:
-                    raise e
-            self._pidfp = open(self._pidfle, 'w+')
-        self._waitpidfile(False)
-
-    def _waitpidfile(self, blocking=True):
-        if not self._pidlocked:
-            try:
-                flags = fcntl.LOCK_EX
-                if not blocking:
-                    flags |= fcntl.LOCK_NB
-
-                fcntl.flock(self._pidfp.fileno(), flags)
-                self._pidlocked = True
-            except (OSError, IOError):
-                pass
-
-    def _closepidfile(self):
-        if self._pidfp != None:
-            self._pidfp.close()
-        self._pidfp = None
-        self._pidlocked = False
-
-    def _getpid(self):
-        if self._pidfp == None:
-            self._openpidfile()
-        if self._pidlocked:
-            return None
-        try:
-            self._pidfp.seek(0, os.SEEK_SET)
-            pidstr = self._pidfp.readline()
-        except IOError:
-            return True
-        try:
-            return int(pidstr.strip())
-        except ValueError:
-            return True
-
-    def _writepid(self):
-        if not self._pidlocked:
-            raise Exception('Trying to write PID file while not holding lock.')
-        self._pidfp.seek(0, os.SEEK_SET)
-        self._pidfp.truncate()
-        self._pidfp.write(str(os.getpid()))
-        self._pidfp.flush()
-
-    def _redirect_stream(self, source, target):
-        try:
-            targetfd = target.fileno()
-        except AttributeError:
-            targetfd = os.open(target, os.O_CREAT | os.O_APPEND | os.O_RDWR)
-        source.flush()
-        os.dup2(targetfd, source.fileno())
-
-    def _close_fds(self, but):
-        maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
-        if maxfd == resource.RLIM_INFINITY:
-            maxfd = MAXFD
-        try:
-            os.closerange(3, but)
-            os.closerange(but + 1, maxfd)
-        except AttributeError:
-            # Python < v2.6
-            for i in xrange(3, maxfd):
-                if i == but:
-                    continue
-                try:
-                    os.close(i)
-                except:
-                    pass
-
-    def _check_logfile_permissions(self):
-        if self._logfile:
-            try:
-                fp = open(self._logfile, 'a')
-            except IOError as error:
-                if error.errno == errno.EACCES:
-                    self.log.critical('Permission denied to write to logfile `%s`',
-                                      self._logfile)
-                    sys.exit(1)
-                if error.errno == errno.ENOENT:
-                    self.log.critical('No such directory: `%s`',
-                                      os.path.dirname(self._logfile))
-                    sys.exit(1)
-                # Not a permission error
-                raise
-            else:
-                fp.close()
-
-    def start(self):
-        pid = self._getpid()
-        if pid:
-            self.log.error('%s already running with pid %i', self.name, pid)
-            sys.exit(1)
-        self.log.info('Starting %s..', self.name)
-        os.umask(self._umask)
-        os.chdir(self._chdir)
-        os.setgid(self.gid)
-        os.setuid(self.uid)
-        self.before_daemonize()
-        if self._detach:
-            self._check_logfile_permissions()
-            self._daemonize()
-            # self._close_fds(self._pidfp.fileno())
-            redirect_to = os.devnull
-            if self._logfile and self._logfile != '-':
-                for channel in logging.getLogger().handlers:
-                    # Find the handler(s) which logs to file
-                    try:
-                        channel.baseFilename
-                    except AttributeError:
-                        continue
-                    else:
-                        if channel.baseFilename == os.path.abspath(self._logfile):
-                            if channel.stream is None:
-                                # The file handler might have been initialized with delay=True
-                                channel.stream = channel._open()
-                            redirect_to = channel.stream
-            self._redirect_stream(sys.stdin, os.devnull)
-            self._redirect_stream(sys.stdout, redirect_to)
-            self._redirect_stream(sys.stderr, redirect_to)
-        signal.signal(signal.SIGTERM, self._sigterm_handler)
-        signal.signal(signal.SIGHUP, self._sighup_handler)
-        atexit.register(self._atexit)
-        self._writepid()
-        if not self._detach:
-            self.log.info('Use Control-C to exit')
-        try:
-            self.run()
-        except KeyboardInterrupt:
-            if not self._detach:
-                self.log.info('Exiting')
-        return 0
-
-    def stop(self, ignore_error=False):
-        pid = self._getpid()
-        if not pid and not ignore_error:
-            self.log.error('%s is NOT running', self.name)
-            sys.exit(1)
-        self.log.info('Waiting for %s to stop..', self.name)
-        try:
-            if pid and pid != True:
-                os.kill(pid, signal.SIGTERM)
-                self._waitpidfile()
-        except OSError, e:
-            if e.errno != errno.ESRCH:
-                raise e
-        return 0
-
-    def reload(self):
-        pid = self._getpid()
-        if not pid:
-            self.log.error('%s is NOT running', self.name)
-            sys.exit(1)
-        self.log.info('Issuing reload procedures of %s', self.name)
-        if pid != True:
-            os.kill(pid, signal.SIGHUP)
-        return 0
-
-    def restart(self):
-        self.stop(True)
-        self._closepidfile()
-        return self.start()
-
-    def status(self):
-        pid = self._getpid()
-        if pid:
-            if subprocess.call(['ps', '-p', str(pid)], stdout=DEVNULL, stderr=DEVNULL):
-                self.log.info('%s is not running but pidfile exists', self.name)
-                exit_code = 1
-            else:
-                self.log.info('%s is running with pid %i', self.name, pid)
-                exit_code = 0
-        else:
-            self.log.info('Pidfile not found, %s is not running', self.name)
-            exit_code = 3
-
-        return exit_code
 
     def run(self):
         pass
@@ -316,51 +56,272 @@ class UnixDaemon(object):
     def before_daemonize(self):
         pass
 
+    def handle_reload(self):
+        pass
 
-class UnsupportedDaemonFunction(Exception): pass
+    def cleanup(self):
+        pass
+
+    def start(self):
+        pid = self._read_pid()
+        if pid is not None:
+            self.log.critical('%s is already running with PID %i.', self.name, pid)
+            sys.exit(1)
+
+        self.log.info('Starting %s...', self.name)
+        os.umask(self.umask)
+        os.chdir(self.chdir)
+        os.setgid(self.group_id)
+        os.setuid(self.user_id)
+        self.before_daemonize()
+        if self.detach:
+            self.daemonize()
+            self.redirect_stdin()
+            self.redirect_stdout()
+            self.redirect_stderr()
+            self._close_unneeded_files()
+        self._write_pid()
+
+        signal.signal(signal.SIGTERM, self._sigterm_handler)
+        signal.signal(signal.SIGHUP, self._sighup_handler)
+        atexit.register(self._atexit)
+        if not self.detach:
+            self.log.info('Use Control-C to exit.')
+
+        try:
+            self.run()
+        except KeyboardInterrupt:
+            if not self.detach:
+                self.log.info('Exiting...')
+
+        return 0
+
+    def reload(self):
+        pid = self._read_pid()
+        if pid is None:
+            self.log.critical('%s is NOT running.', self.name)
+            sys.exit(1)
+
+        self.log.info('Issuing reload procedures of %s...', self.name)
+        os.kill(pid, signal.SIGHUP)
+        return 0
+
+    def restart(self):
+        self.stop(ignore_error=True)
+        self._close_pid_file()
+        return self.start()
+
+    def stop(self, ignore_error=False):
+        pid = self._read_pid()
+        if pid is None and not ignore_error:
+            self.log.critical('%s is NOT running.', self.name)
+            sys.exit(1)
+
+        self.log.info('Waiting for %s to stop...', self.name)
+
+        try:
+            if pid is not None:
+                os.kill(pid, signal.SIGTERM)
+                self._lock_pid_file()
+        except OSError as e:
+            if e.errno != errno.ESRCH:
+                self.log.critical('Failed to stop %s.', self.name, exc_info=True)
+                sys.exit(1)
+
+        return 0
+
+    def status(self):
+        pid = self._read_pid()
+        if pid is not None:
+            if subprocess.call(['ps', '-p', str(pid)], stdout=DEVNULL, stderr=DEVNULL):
+                self.log.info('%s is not running but PID file exists.', self.name)
+                exit_code = 1
+            else:
+                self.log.info('%s is running with PID %i.', self.name, pid)
+                exit_code = 0
+        else:
+            self.log.info('PID file not found or is empty, %s is not running.', self.name)
+            exit_code = 3
+
+        return exit_code
+
+    def daemonize(self):
+        try:
+            pid = os.fork()
+            if pid > 0:
+                os._exit(0)
+        except OSError:
+            self.log.critical('Fork #1 failed.', exc_info=True)
+            sys.exit(1)
+
+        os.setsid()
+
+        try:
+            pid = os.fork()
+            if pid > 0:
+                os._exit(0)
+        except OSError:
+            self.log.critical('Fork #2 failed.', exc_info=True)
+            sys.exit(1)
+
+    def redirect_stdin(self):
+        os.dup2(os.open(os.devnull, os.O_RDONLY), sys.stdin.fileno())
+
+    def redirect_stdout(self):
+        sys.stdout.flush()
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+
+    def redirect_stderr(self):
+        sys.stderr.flush()
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stderr.fileno())
+
+    def _close_unneeded_files(self):
+        maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+        if maxfd == resource.RLIM_INFINITY:
+            try:
+                maxfd = os.sysconf('SC_OPEN_MAX')
+            except (AttributeError, ValueError):
+                maxfd = self.default_maxfd
+
+        but = [self._pid_file.fileno()]
+        for f in self.persistent_files:
+            try:
+                but.append(f.fileno())
+            except AttributeError:
+                but.append(f)
+
+        for fd in (fd for fd in xrange(3, maxfd) if fd not in but):
+            try:
+                os.close(fd)
+            except OSError:
+                pass  # fd isn't open
+
+    def _sighup_handler(self, signum, frame):
+        self.log.info('Got signal to reload %s.', self.name)
+
+        try:
+            self.handle_reload()
+        except Exception:
+            self.log.error('An error occurred while reloading %s.', self.name, exc_info=True)
+        else:
+            self.log.info('Successfully reloaded %s.', self.name)
+
+    def _sigterm_handler(self, signum, frame):
+        sys.exit(0)
+
+    def _atexit(self):
+        self.cleanup()
+        self._remove_pid_file()
+
+    def _open_pid_file(self):
+        try:
+            self._pid_file = open(self.pid_file_path, 'r+')
+        except IOError:
+            pid_file_dir = os.path.dirname(self.pid_file_path)
+
+            try:
+                os.mkdir(pid_file_dir)
+                os.chown(pid_file_dir, self.user_id, -1)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    self.log.critical('Failed to create PID file directory.', exc_info=True)
+                    sys.exit(1)
+
+            self._pid_file = open(self.pid_file_path, 'w+')
+        self._lock_pid_file(blocking=False)
+
+    def _lock_pid_file(self, blocking=True):
+        if not self._pid_locked:
+            try:
+                flags = fcntl.LOCK_EX
+                if not blocking:
+                    flags |= fcntl.LOCK_NB
+
+                fcntl.flock(self._pid_file.fileno(), flags)
+                self._pid_locked = True
+            except (OSError, IOError) as e:
+                if blocking or e.errno != errno.EWOULDBLOCK:
+                    self.log.critical('Failed to lock PID.', exc_info=True)
+                    sys.exit(1)
+
+    def _read_pid(self):
+        if self._pid_file is None:
+            self._open_pid_file()
+        elif self._pid_locked:
+            return
+
+        try:
+            self._pid_file.seek(0, os.SEEK_SET)
+            pid = self._pid_file.readline().strip()
+        except (IOError, OSError):
+            self.log.critical('Failed to read PID.', exc_info=True)
+            sys.exit(1)
+
+        try:
+            if pid:
+                return int(pid)
+        except ValueError:
+            self.log.critical('Malformed PID: %s', pid)
+            sys.exit(1)
+
+    def _write_pid(self):
+        if not self._pid_locked:
+            raise Exception('Trying to write to PID file while not holding lock')
+
+        self._pid_file.seek(0, os.SEEK_SET)
+        self._pid_file.truncate()
+        self._pid_file.write(str(os.getpid()))
+        self._pid_file.flush()
+
+    def _close_pid_file(self):
+        if self._pid_file is not None:
+            self._pid_file.close()
+
+        self._pid_file = None
+        self._pid_locked = False
+
+    def _remove_pid_file(self):
+        if not self._pid_locked:
+            raise Exception('Trying to unlink PID file while not holding lock')
+
+        try:
+            os.unlink(self.pid_file_path)
+        except (IOError, OSError):
+            pass
 
 
 class DaemonOptionParser(optparse.OptionParser):
+    """Option parser which validates daemon function arguments."""
 
-    def parse_args(self, a=None, v=None):
-        options, args = optparse.OptionParser.parse_args(self, a, v)
-        try:
-            if args[0] not in DAEMON_FUNCTIONS:
-                raise UnsupportedDaemonFunction()
-        except (IndexError, UnsupportedDaemonFunction):
+    def parse_args(self, args=None, values=None):
+        options, args = optparse.OptionParser.parse_args(self, args, values)
+        if not args or args[0] not in DAEMON_FUNCTIONS:
             self.print_usage()
             sys.exit(1)
+
         return options, args
 
 
-def get_daemon_option_parser(version=None, chdir='/', prog=None):
+def create_daemon_option_parser(version=None, chdir='/', prog=None):
+    """Create and return the option parser for a daemon."""
     usage = '%prog [options] {0}'.format('|'.join(DAEMON_FUNCTIONS))
     parser = DaemonOptionParser(usage=usage, version=version, prog=prog)
-    pidfile = '/var/run/{0}.pid'.format(parser.get_prog_name())
-    start_stop_group = optparse.OptionGroup(
-        parser, 'Start and stop', 'Here are the options to specify the daemon '
-                                  'and how it should start or stop:')
-    start_stop_group.add_option(
-        '-p', '--pidfile', dest='pidfile', metavar='FILE', default=pidfile,
-        help='pidfile FILE [default: %default]')
-    start_stop_group.add_option(
-        '-u', '--user', dest='user', default=None,
-        help='Start/stop the daemon as the user.')
-    start_stop_group.add_option(
-        '-g', '--group', dest='group', default=None,
-        help='Start/stop the daemon as in the group.')
-    start_group = optparse.OptionGroup(parser, 'Start',
-        'These options are only used for starting daemons:')
-    start_group.add_option(
-        '-b', '--background', dest='detach', default=False,
-        action='store_true', help='Force the daemon into the background.')
-    start_group.add_option(
-        '-d', '--chdir', dest='chdir', metavar='DIR', default=chdir,
-        help='chdir to directory DIR before starting the daemon. '
-             '[default: %default]')
-    start_group.add_option(
-        '-k', '--umask', type='int', dest='umask', default=0,
-        help='Set the umask of the daemon. [default: %default]')
+    pid_file_path = '/var/run/{0}.pid'.format(parser.get_prog_name())
+
+    start_stop_group = optparse.OptionGroup(parser, 'Start and Stop', 'Options used to start and stop the daemon:')
+    start_stop_group.add_option('-p', '--pidfile', dest='pidfile', metavar='PATH', default=pid_file_path,
+                                help='pidfile PATH [default: %default]')
+    start_stop_group.add_option('-u', '--user', dest='user', default=None, help='The user to run the daemon as.')
+    start_stop_group.add_option('-g', '--group', dest='group', default=None, help='The group to run the daemon as.')
     parser.add_option_group(start_stop_group)
+
+    start_group = optparse.OptionGroup(parser, 'Start', 'Options used to start the daemon:')
+    start_group.add_option('-b', '--background', dest='detach', default=False, action='store_true',
+                           help='Force the daemon into the background.')
+    start_group.add_option('-d', '--chdir', dest='chdir', metavar='DIR', default=chdir,
+                           help='Change to directory DIR before starting the daemon. [default: %default]')
+    start_group.add_option('-k', '--umask', type='int', dest='umask', default=0,
+                           help='The umask of the daemon. [default: %default]')
     parser.add_option_group(start_group)
+
     return parser

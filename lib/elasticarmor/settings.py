@@ -15,7 +15,7 @@ from elasticarmor.auth.elasticsearch_backend import ElasticsearchRoleBackend
 from elasticarmor.auth.ldap_backend import LdapUserBackend, LdapUsergroupBackend
 from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version, propertycache
 from elasticarmor.util.config import Parser
-from elasticarmor.util.daemon import get_daemon_option_parser
+from elasticarmor.util.daemon import create_daemon_option_parser
 from elasticarmor.util.elastic import ElasticConnection
 from elasticarmor.util.mixins import LoggingAware
 
@@ -65,7 +65,7 @@ class Settings(LoggingAware, object):
         try:
             return Settings.__options
         except AttributeError:
-            parser = get_daemon_option_parser(VERSION, prog=APP_NAME.lower())
+            parser = create_daemon_option_parser(VERSION, prog=APP_NAME.lower())
             parser.add_option('--config', dest='config', metavar='PATH', default=DEFAULT_CONFIG_DIR,
                               help='config PATH [default: %default]')
             parser.add_option('--skip-index-initialization', default=False, action='store_true',

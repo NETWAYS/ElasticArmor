@@ -21,6 +21,7 @@ class ElasticArmor(UnixDaemon, LoggingAware):
         super(ElasticArmor, self).__init__(*args, **kwargs)
 
         self._proxy = ElasticReverseProxy()
+        self.persistent_files.append(self._proxy.socket)
 
     def cleanup(self):
         self.log.info('Shutting down reverse proxy...')
@@ -59,8 +60,8 @@ def main():
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
     settings = Settings()
-    daemon = ElasticArmor(settings.pidfile, settings.umask, settings.chdir,
-                          settings.user, settings.group, settings.detach)
+    daemon = ElasticArmor(settings.pidfile, settings.detach, settings.user,
+                          settings.group, settings.umask, settings.chdir)
     return getattr(daemon, settings.arguments[0])()
 
 
