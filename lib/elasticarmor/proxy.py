@@ -37,6 +37,8 @@ PRETTY_ERROR_FORMAT = '''{
 
 class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
     def __init__(self):
+        self._terminator = threading.Event()
+
         settings = Settings()
         self.auth = Auth(settings)
         self.elasticsearch = settings.elasticsearch
@@ -99,8 +101,12 @@ class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
         thread.start()
         self.log.debug('Started thread %s to process request from "%s:%u".', thread.name, *client_address)
 
+    def is_shutting_down(self):
+        return self._terminator.is_set()
+
     def shutdown(self):
         self.log.debug('Stopping to serve incoming requests...')
+        self._terminator.set()
         HTTPServer.shutdown(self)
 
         for thread in threading.enumerate():
@@ -389,6 +395,11 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         self._context = HttpContext(self.server, self)
         if not self._context.has_proper_framing():
             self.send_error(400, explain='Bad or malicious message framing detected.')
+            return
+
+        if self.server.is_shutting_down():
+            self.close_connection = True
+            self.send_error(503, explain='Proxy is shutting down. Please try again later.')
             return
 
         self._received_requests += 1
