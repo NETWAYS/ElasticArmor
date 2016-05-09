@@ -12,11 +12,68 @@
         array(
             'class' => 'button-link pull-right',
             'icon'  => 'edit',
-            'title' => sprintf($this->translate('Edit Role %s'), $role->name)
+            'title' => sprintf($this->translate('Edit role %s'), $role->name)
         )
     ) ?>
     <h2><?= $this->escape($role->name) ?></h2>
+<?php if (! $this->compact): ?>
+    <?= $this->paginator ?>
+    <div class="sort-controls-container">
+        <?= $this->limiter ?>
+        <?= $this->sortBox ?>
+    </div>
+    <?= $this->filterEditor ?>
+<?php endif ?>
 </div>
 <div class="content">
+    <?= $this->qlink(
+        $this->translate('Add User'),
+        'elasticarmor/roles/users-add',
+        array('role' => $role->name),
+        array(
+            'icon'  => 'plus',
+            'class' => 'button-link',
+            'title' => sprintf($this->translate('Add user to role %s'), $role->name)
+        )
+    ) ?>
 
+<?php if (! $members->hasResult()): ?>
+  <p><?= $this->translate('No user found matching the filter') ?></p>
+</div>
+<?php return; endif ?>
+
+    <table data-base-target="_next" class="table-row-selectable common-table">
+        <thead>
+            <tr>
+                <th><?= $this->translate('Username') ?></th>
+                <th><?= $this->translate('Remove') ?></th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($members as $member): ?>
+            <tr>
+                <td>
+                <?php if (isset($member->backend)): ?>
+                    <?= $this->qlink(
+                        $this->escape($member->user),
+                        'user/show',
+                        array(
+                            'backend'   => $member->backend,
+                            'user'      => $member->user
+                        ),
+                        array(
+                            'title' => sprintf($this->translate('Show detailed information about %s'), $member->user)
+                        )
+                    ) ?>
+                <?php else: ?>
+                    <?= $this->escape($member->user) ?>
+                <?php endif ?>
+                </td>
+                <td class="icon-col" data-base-target="_self">
+                    <?php $removeForm->getElement('user_id')->setValue($member->id); echo $removeForm ?>
+                </td>
+            </tr>
+        <?php endforeach ?>
+        </tbody>
+    </table>
 </div>
