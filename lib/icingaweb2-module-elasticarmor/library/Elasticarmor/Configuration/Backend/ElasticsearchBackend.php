@@ -17,20 +17,35 @@ class ElasticsearchBackend extends ElasticsearchRepository
      */
     protected $queryColumns = array(
         'role' => array(
-            'name'  => '_id',
-            'user'  => 'users',
-            'group' => 'groups',
+            'name'          => '_id',
             'privileges'
+        ),
+        'role_user' => array(
+            'role'      => '_parent',
+            'id'        => '_id',
+            'user'      => 'name',
+            'backend'
+        ),
+        'role_group' => array(
+            'role'      => '_parent',
+            'id'        => '_id',
+            'group'     => 'name',
+            'backend'
         )
     );
 
     /**
      * {@inheritdoc}
      */
+    protected $blacklistedQueryColumns = array(
+        'role'
+    );
+
+    /**
+     * {@inheritdoc}
+     */
     protected $filterColumns = array(
-        'name',
-        'user',
-        'group'
+        'name'
     );
 
     /**
@@ -45,6 +60,12 @@ class ElasticsearchBackend extends ElasticsearchRepository
      */
     protected $sortRules = array(
         'name' => array(
+            'order' => 'asc'
+        ),
+        'user' => array(
+            'order' => 'asc'
+        ),
+        'group' => array(
             'order' => 'asc'
         )
     );
