@@ -8,3 +8,9 @@ $menuSection = $this->menuSection('Elasticsearch')
     ->setIcon('lock')
     ->setPriority(820)
     ->setUrl('elasticarmor/roles/list');
+
+$this->provideConfigTab('elasticarmor/general', array(
+    'title' => $this->translate('Adjust the general configuration of the ElasticArmor module'),
+    'label' => $this->translate('General'),
+    'url'   => 'config/general'
+));
