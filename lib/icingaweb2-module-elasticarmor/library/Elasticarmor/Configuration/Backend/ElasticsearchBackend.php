@@ -142,11 +142,11 @@ class ElasticsearchBackend extends ElasticsearchRepository
     public static function fromConfig(ConfigObject $config = null)
     {
         if ($config === null) {
-            $config = Config::module('elasticarmor')->getSection('elasticarmor');
+            $config = Config::module('elasticsearch')->getSection('elasticsearch');
         }
 
         $resource = new RestApiClient(
-            $config->get('url', 'localhost:59200'),
+            $config->get('url', 'localhost:9200'),
             $config->get('username'),
             $config->get('password'),
             $config->get('certificate_path')
