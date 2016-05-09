@@ -265,9 +265,13 @@ class QueryDslParser(object):
     """
 
     meta_fields = [
+        '_field_names',
+        '_timestamp',
         '_version',
+        '_parent',
         '_index',
         '_type',
+        '_size',
         '_all',
         '_uid',
         '_id'
