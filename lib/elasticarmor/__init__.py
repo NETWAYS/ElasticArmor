@@ -10,6 +10,8 @@ SUPPORTED_ELASTICSEARCH_VERSIONS = ['1.7']
 
 CONFIGURATION_INDEX = '.elasticarmor'
 CONFIGURATION_TYPE_ROLE = 'role'
+CONFIGURATION_TYPE_ROLE_USER = 'role_user'
+CONFIGURATION_TYPE_ROLE_GROUP = 'role_group'
 CONFIGURATION_INDEX_SETTINGS = {
     "settings": {
         "analysis": {
@@ -25,17 +27,39 @@ CONFIGURATION_INDEX_SETTINGS = {
     "mappings": {
         CONFIGURATION_TYPE_ROLE: {
             "properties": {
-                "users": {
-                    "type": "string",
-                    "analyzer": "lowercase_keyword"
-                },
-                "groups": {
-                    "type": "string",
-                    "analyzer": "lowercase_keyword"
-                },
                 "privileges": {
                     "type": "object",
                     "enabled": False
+                }
+            }
+        },
+        CONFIGURATION_TYPE_ROLE_USER: {
+            "_parent": {
+                "type": CONFIGURATION_TYPE_ROLE
+            },
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "analyzer": "lowercase_keyword"
+                },
+                "backend": {
+                    "type": "string",
+                    "analyzer": "lowercase_keyword"
+                }
+            }
+        },
+        CONFIGURATION_TYPE_ROLE_GROUP: {
+            "_parent": {
+                "type": CONFIGURATION_TYPE_ROLE
+            },
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "analyzer": "lowercase_keyword"
+                },
+                "backend": {
+                    "type": "string",
+                    "analyzer": "lowercase_keyword"
                 }
             }
         }

@@ -1,7 +1,4 @@
 {
-  "users": [
-    "kibana-server"
-  ],
   "privileges": {
     "cluster": [
       "api/bulk",

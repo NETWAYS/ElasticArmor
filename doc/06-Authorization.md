@@ -222,17 +222,39 @@ This index is created on the first run using the following settings and mappings
   "mappings": {
     "role": {
       "properties": {
-        "users": {
-          "type": "string",
-          "analyzer": "lowercase_keyword"
-        },
-        "groups": {
-          "type": "string",
-          "analyzer": "lowercase_keyword"
-        },
         "privileges": {
           "type": "object",
           "enabled": false
+        }
+      }
+    },
+    "role_user": {
+      "_parent": {
+        "type": "role"
+      },
+      "properties": {
+        "name": {
+          "type": "string",
+          "analyzer": "lowercase_keyword"
+        },
+        "backend": {
+          "type": "string",
+          "analyzer": "lowercase_keyword"
+        }
+      }
+    },
+    "role_group": {
+      "_parent": {
+        "type": "role"
+      },
+      "properties": {
+        "name": {
+          "type": "string",
+          "analyzer": "lowercase_keyword"
+        },
+        "backend": {
+          "type": "string",
+          "analyzer": "lowercase_keyword"
         }
       }
     }
@@ -240,10 +262,21 @@ This index is created on the first run using the following settings and mappings
 }
 ```
 
+> **Note:**
+>
+> The `backend` property is required for flawless integration with the configuration UI. If you are not using the
+> UI, you can omit it safely. If used, it should hold the name of the backend the user or group originates from.
+
 A simple example on how to create or update a role:
 
 ```shell
 curl -XPOST localhost:9200/.elasticarmor/role/kibana-user -d @examples/kibana-user.json
+```
+
+And a basic example on how to assign a user to this role:
+
+```shell
+curl -XPOST localhost:9200/.elasticarmor/role_user?parent=kibana-user -d '{"name": "kibana"}'
 ```
 
 For more information on how to manage roles please take a look at the

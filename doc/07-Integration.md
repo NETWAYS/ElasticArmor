@@ -53,8 +53,6 @@ Kibana stores its content configuration in an index called *.kibana* by default.
 role that grants full access to it and read only access to all other indices is shown below:
 
 ```yaml
-users:
-  - kibana-user
 privileges:
   cluster:
     - api/bulk
@@ -93,8 +91,6 @@ Since version 4, Kibana provides its own web-server and may issue REST api reque
 An example role that grants the required access to the *.kibana* index is shown below:
 
 ```yaml
-users:
-  - kibana-server
 privileges:
   cluster:
     - api/bulk
