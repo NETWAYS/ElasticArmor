@@ -296,7 +296,7 @@ class StreamLogger(object):
         self.log = log
 
     def write(self, buf):
-        buf = buf.lstrip()
+        buf = buf.rstrip()
         if buf:
             self.log(buf)
 
