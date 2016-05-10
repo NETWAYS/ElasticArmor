@@ -35,7 +35,10 @@ class RoleForm extends RepositoryForm
      * @var array
      */
     protected $availablePermissions = array(
+        'config/*'                      => 'cluster',
         'config/authorization'          => 'cluster',
+        'api/*'                         => 'cluster',
+        'api/cluster/*'                 => 'cluster',
         'api/cluster/health'            => 'indices',
         'api/cluster/state'             => 'cluster',
         'api/cluster/stats'             => 'cluster',
@@ -43,10 +46,16 @@ class RoleForm extends RepositoryForm
         'api/cluster/reroute'           => 'cluster',
         'api/cluster/get/settings'      => 'cluster',
         'api/cluster/update/settings'   => 'cluster',
+        'api/cluster/nodes/*'           => 'cluster',
         'api/cluster/nodes/stats'       => 'cluster',
         'api/cluster/nodes/info'        => 'cluster',
         'api/cluster/nodes/hotThreads'  => 'cluster',
         'api/cluster/nodes/shutdown'    => 'cluster',
+        'api/indices/*'                 => 'indices',
+        'api/indices/get/*'             => 'types',
+        'api/indices/create/*'          => 'types',
+        'api/indices/update/*'          => 'types',
+        'api/indices/delete/*'          => 'types',
         'api/indices/create/index'      => 'indices',
         'api/indices/delete/index'      => 'indices',
         'api/indices/open'              => 'indices',
@@ -74,12 +83,14 @@ class RoleForm extends RepositoryForm
         'api/indices/refresh'           => 'indices',
         'api/indices/optimize'          => 'indices',
         'api/indices/upgrade'           => 'indices',
+        'api/documents/*'               => 'fields',
         'api/documents/index'           => 'types',
         'api/documents/get'             => 'fields',
         'api/documents/delete'          => 'types',
         'api/documents/update'          => 'fields',
         'api/documents/deleteByQuery'   => 'types',
         'api/documents/termVector'      => 'types',
+        'api/search/*'                  => 'fields',
         'api/search/documents'          => 'fields',
         'api/search/templates'          => 'cluster',
         'api/search/shards'             => 'indices',
@@ -220,6 +231,11 @@ class RoleForm extends RepositoryForm
     {
         switch ($permission)
         {
+            case 'api/*':
+                return $this->translate(
+                    'This opens up the entire API, including endpoints which'
+                    . ' are not fully inspected or not inspected at all.'
+                );
             case 'api/cat':
                 return $this->translate('No inspection of any kind is being applied yet.');
             case 'api/feature/deprecated':
