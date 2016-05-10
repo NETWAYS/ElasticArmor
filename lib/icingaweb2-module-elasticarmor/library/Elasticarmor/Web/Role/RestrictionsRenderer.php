@@ -190,7 +190,8 @@ class RestrictionsRenderer
             array(
                 'icon'              => 'plus',
                 'title'             => $title,
-                'data-base-target'  => '_next'
+                'data-base-target'  => '_next',
+                'class'             => 'create-link'
             )
         ));
     }
@@ -213,7 +214,8 @@ class RestrictionsRenderer
             array(
                 'icon'              => 'edit',
                 'title'             => $title,
-                'data-base-target'  => '_next'
+                'data-base-target'  => '_next',
+                'class'             => 'update-link'
             )
         ));
     }
@@ -236,7 +238,8 @@ class RestrictionsRenderer
             array(
                 'icon'              => 'cancel',
                 'title'             => $title,
-                'data-base-target'  => '_next'
+                'data-base-target'  => '_next',
+                'class'             => 'remove-link',
             )
         ));
     }
