@@ -181,7 +181,7 @@ class RestrictionsRenderer
     protected function renderCreateLink($path, $title)
     {
         $this->renderDescription($this->view()->qlink(
-            null,
+            $title,
             'elasticarmor/roles/restrictions-create',
             array(
                 'role'  => $this->roleName,
