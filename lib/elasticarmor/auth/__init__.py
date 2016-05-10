@@ -147,6 +147,10 @@ class Auth(LoggingAware, object):
                 if restriction.matches(pattern):
                     restriction.excludes.append(pattern)
 
+        # TODO: Once this method is not "the" solution anymore, make
+        # sure that this is not required in the new solution as well
+        del client._restricted_scope
+
 
 class MultipleIncludesError(AuthorizationError):
     """Raised by Client.create_filter_string() if more includes than expected were found.
