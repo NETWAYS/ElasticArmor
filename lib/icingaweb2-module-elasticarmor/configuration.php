@@ -3,8 +3,14 @@
 
 /** @var $this \Icinga\Application\Modules\Module */
 
-$menuSection = $this->menuSection('ElasticArmor')
-    ->setIcon('lock');
-
-$menuSection->add(N_('Roles'))
+$menuSection = $this->menuSection('Elasticsearch')
+    ->add(N_('Authentication'))
+    ->setIcon('lock')
+    ->setPriority(820)
     ->setUrl('elasticarmor/roles/list');
+
+$this->provideConfigTab('elasticarmor/general', array(
+    'title' => $this->translate('Adjust the general configuration of the ElasticArmor module'),
+    'label' => $this->translate('General'),
+    'url'   => 'config/general'
+));

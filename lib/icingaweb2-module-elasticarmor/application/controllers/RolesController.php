@@ -5,6 +5,7 @@ namespace Icinga\Module\Elasticarmor\Controllers;
 
 use Icinga\Exception\NotFoundError;
 use Icinga\Web\Controller;
+use Icinga\Web\Form;
 use Icinga\Web\Url;
 use Icinga\Web\Widget\Tabs;
 use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
@@ -333,14 +334,61 @@ class RolesController extends Controller
     public function usersAction()
     {
         $roleName = $this->params->getRequired('role');
+        $backend = $this->getConfigurationBackend();
 
-        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('name', 'users'));
+        $role = $backend->fetchDocument('role', $roleName, array('name'));
         if ($role === false) {
             $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
         }
 
+        $members = $backend
+            ->select()
+            ->from('role_user', array('id', 'user', 'backend'))
+            ->where('role', $roleName);
+
+        $this->setupFilterControl(
+            $members,
+            array('user', 'backend'),
+            array('user'),
+            array('role')
+        );
+        $this->setupPaginationControl($members);
+        $this->setupLimitControl();
+        $this->setupSortControl(
+            array(
+                'user'      => $this->translate('Username'),
+                'backend'   => $this->translate('Backend')
+            ),
+            $members
+        );
+
         $this->view->role = $role;
+        $this->view->members = $members;
         $this->createDetailTabs($roleName)->activate('users');
+
+        $removeForm = new Form();
+        $removeForm->setUidDisabled();
+        $removeForm->setAction(
+            Url::fromPath('roles/users-remove', array('role' => $roleName))
+        );
+        $removeForm->addElement('hidden', 'user_id', array(
+            'isArray'       => true,
+            'decorators'    => array('ViewHelper')
+        ));
+        $removeForm->addElement('hidden', 'redirect', array(
+            'value'         => Url::fromPath('elasticarmor/roles/users', array('role' => $roleName)),
+            'decorators'    => array('ViewHelper')
+        ));
+        $removeForm->addElement('button', 'btn_submit', array(
+            'escape'        => false,
+            'type'          => 'submit',
+            'class'         => 'link-button spinner',
+            'value'         => 'btn_submit',
+            'decorators'    => array('ViewHelper'),
+            'label'         => $this->view->icon('cancel'),
+            'title'         => $this->translate('Remove this member')
+        ));
+        $this->view->removeForm = $removeForm;
     }
 
     /**
@@ -349,13 +397,60 @@ class RolesController extends Controller
     public function groupsAction()
     {
         $roleName = $this->params->getRequired('role');
+        $backend = $this->getConfigurationBackend();
 
-        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('name', 'groups'));
+        $role = $backend->fetchDocument('role', $roleName, array('name'));
         if ($role === false) {
             $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
         }
 
+        $members = $backend
+            ->select()
+            ->from('role_group', array('id', 'group', 'backend'))
+            ->where('role', $roleName);
+
+        $this->setupFilterControl(
+            $members,
+            array('group', 'backend'),
+            array('group'),
+            array('role')
+        );
+        $this->setupPaginationControl($members);
+        $this->setupLimitControl();
+        $this->setupSortControl(
+            array(
+                'group'     => $this->translate('Group'),
+                'backend'   => $this->translate('Backend')
+            ),
+            $members
+        );
+
         $this->view->role = $role;
+        $this->view->members = $members;
         $this->createDetailTabs($roleName)->activate('groups');
+
+        $removeForm = new Form();
+        $removeForm->setUidDisabled();
+        $removeForm->setAction(
+            Url::fromPath('roles/groups-remove', array('role' => $roleName))
+        );
+        $removeForm->addElement('hidden', 'group_id', array(
+            'isArray'       => true,
+            'decorators'    => array('ViewHelper')
+        ));
+        $removeForm->addElement('hidden', 'redirect', array(
+            'value'         => Url::fromPath('elasticarmor/roles/groups', array('role' => $roleName)),
+            'decorators'    => array('ViewHelper')
+        ));
+        $removeForm->addElement('button', 'btn_submit', array(
+            'escape'        => false,
+            'type'          => 'submit',
+            'class'         => 'link-button spinner',
+            'value'         => 'btn_submit',
+            'decorators'    => array('ViewHelper'),
+            'label'         => $this->view->icon('cancel'),
+            'title'         => $this->translate('Remove this member')
+        ));
+        $this->view->removeForm = $removeForm;
     }
 }

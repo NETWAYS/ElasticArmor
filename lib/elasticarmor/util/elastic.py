@@ -6,7 +6,7 @@ import threading
 
 import requests
 
-from elasticarmor import CONFIGURATION_INDEX, CONFIGURATION_TYPE_ROLE
+from elasticarmor import *
 from elasticarmor.util import format_elasticsearch_error, pattern_compare
 from elasticarmor.util.http import Query
 from elasticarmor.util.rwlock import ReadWriteLock
@@ -204,26 +204,29 @@ class ElasticRole(ElasticObject):
         if user or groups:
             conditions = []
             if user:
-                conditions.append({'query': {'match': {'users': user}}})
+                conditions.append({
+                    'has_child': {
+                        'type': CONFIGURATION_TYPE_ROLE_USER,
+                        'query': {'match': {'name': user}}
+                    }
+                })
 
             if groups:
                 conditions.append({
                     'bool': {
-                        'should': [{'query': {'match': {'groups': group}}} for group in groups]
+                        'should': [{
+                            'has_child': {
+                                'type': CONFIGURATION_TYPE_ROLE_GROUP,
+                                'query': {'match': {'name': group}}
+                            }
+                        } for group in groups]
                     }
                 })
 
             data = {
                 'query': {
-                    'filtered': {
-                        'query': {
-                            'match_all': {}
-                        },
-                        'filter': {
-                            'bool': {
-                                'should': conditions
-                            }
-                        }
+                    'bool': {
+                        'should': conditions
                     }
                 }
             }
@@ -262,9 +265,13 @@ class QueryDslParser(object):
     """
 
     meta_fields = [
+        '_field_names',
+        '_timestamp',
         '_version',
+        '_parent',
         '_index',
         '_type',
+        '_size',
         '_all',
         '_uid',
         '_id'

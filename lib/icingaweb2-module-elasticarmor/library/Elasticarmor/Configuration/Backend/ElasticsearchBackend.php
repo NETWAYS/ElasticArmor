@@ -17,20 +17,35 @@ class ElasticsearchBackend extends ElasticsearchRepository
      */
     protected $queryColumns = array(
         'role' => array(
-            'name'  => '_id',
-            'user'  => 'users',
-            'group' => 'groups',
+            'name'          => '_id',
             'privileges'
+        ),
+        'role_user' => array(
+            'role'      => '_parent',
+            'id'        => '_id',
+            'user'      => 'name',
+            'backend'
+        ),
+        'role_group' => array(
+            'role'      => '_parent',
+            'id'        => '_id',
+            'group'     => 'name',
+            'backend'
         )
     );
 
     /**
      * {@inheritdoc}
      */
+    protected $blacklistedQueryColumns = array(
+        'role'
+    );
+
+    /**
+     * {@inheritdoc}
+     */
     protected $filterColumns = array(
-        'name',
-        'user',
-        'group'
+        'name'
     );
 
     /**
@@ -45,6 +60,12 @@ class ElasticsearchBackend extends ElasticsearchRepository
      */
     protected $sortRules = array(
         'name' => array(
+            'order' => 'asc'
+        ),
+        'user' => array(
+            'order' => 'asc'
+        ),
+        'group' => array(
             'order' => 'asc'
         )
     );
@@ -114,26 +135,23 @@ class ElasticsearchBackend extends ElasticsearchRepository
     /**
      * Create and return a new instance of ElasticsearchBackend
      *
-     * @param   ConfigObject    $config     The configuration to use, otherwise the module's configuration
-     *
      * @return  ElasticsearchBackend
      */
-    public static function fromConfig(ConfigObject $config = null)
+    public static function fromConfig()
     {
-        if ($config === null) {
-            $config = Config::module('elasticarmor')->getSection('elasticarmor');
-        }
+        $resourceConfig = Config::module('elasticsearch')->getSection('elasticsearch');
+        $backendConfig = Config::module('elasticarmor')->getSection('backend');
 
         $resource = new RestApiClient(
-            $config->get('url', 'localhost:59200'),
-            $config->get('username'),
-            $config->get('password'),
-            $config->get('certificate_path')
+            $resourceConfig->get('url', 'localhost:9200'),
+            $resourceConfig->get('username'),
+            $resourceConfig->get('password'),
+            $resourceConfig->get('certificate_path')
         );
 
         $backend = new static($resource);
         $backend->setName('elasticarmor_config_backend');
-        $backend->setIndex($config->get('index', '.elasticarmor'));
+        $backend->setIndex($backendConfig->get('index', '.elasticarmor'));
         return $backend;
     }
 }
