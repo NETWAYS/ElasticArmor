@@ -278,7 +278,7 @@ class Client(LoggingAware, object):
         except AttributeError:
             pass
 
-        filters = self._collect_filters(permission, index)
+        filters = self._collect_filters(permission, filter_string, index)
         if filters is None:
             return  # None of the client's roles permit access to any index or any document type
         elif not filters:
@@ -323,7 +323,7 @@ class Client(LoggingAware, object):
         except AttributeError:
             pass
 
-        filters = self._collect_filters(permission, index, document_type)
+        filters = self._collect_filters(permission, None, index, document_type)
         if filters is None:
             return  # None of the client's roles permit access to the given index or document type
         elif not filters:
@@ -363,7 +363,7 @@ class Client(LoggingAware, object):
         except AttributeError:
             pass
 
-        filters = self._collect_filters(permission, index, document_type)
+        filters = self._collect_filters(permission, None, index, document_type)
         if filters is None:
             return  # None of the client's roles permit access to the given index or document type
         elif not filters:
@@ -377,7 +377,7 @@ class Client(LoggingAware, object):
         if fields_filter.combine(FieldsFilter(fields)):
             return fields_filter
 
-    def _collect_filters(self, permission, index=None, document_type=None):
+    def _collect_filters(self, permission, filter_string=None, index=None, document_type=None):
         """Collect and return the filters for the given context which grant the given permission.
         In case of overlapping filters, only those that give the client the broadest access are
         returned. Returns None if not a single role grants access in the given context.
@@ -385,7 +385,7 @@ class Client(LoggingAware, object):
         """
         from elasticarmor.auth.role import RestrictionsFound  # Placed here to avoid a circular import
 
-        filters, indisposed_roles = {}, 0
+        filters, involved_roles, indisposed_roles = {}, {}, 0
         for role in self.roles:
             try:
                 restrictions = list(role.get_restrictions(index, document_type, permission))
@@ -406,6 +406,7 @@ class Client(LoggingAware, object):
                 else:
                     for restriction in restrictions:
                         for include in restriction.includes:
+                            involved_roles[include] = role
                             filters.setdefault(include, []).extend(restriction.excludes)
 
         if not filters and indisposed_roles == len(self.roles):
@@ -415,18 +416,31 @@ class Client(LoggingAware, object):
 
         # Remove the most restrictive filters. This is the part that ensures
         # that we're granting the client the broadest access possible
+        scope = 'indices' if index is None else 'types' if document_type is None else 'fields'
         for include in filters.keys():
             superior = reduce(lambda a, b: b if b > a else a, filters.iterkeys(), include)
             if include is not superior:
-                if filters[superior]:
+                if filter_string and all(include >= p for p in filter_string.iter_patterns()):
+                    # The client may restrict itself already far enough so that the include,
+                    # whilst not being the least restrictive one, is still more restrictive.
+                    # If that's the case, we must not remove the include but the one which
+                    # is superior as otherwise the client may not have the granted access
+                    del filters[superior]
+                else:
                     # If the include is about to be removed check whether it is possible
                     # to neutralize some of the excludes linked to the less restrictive
                     # filter and if so, exchange them with the include's excludes
-                    excludes = [e for e in filters[superior] if not e >= include]
-                    if excludes != filters[superior]:
-                        excludes.extend(filters[include])
-                        filters[superior] = excludes
+                    if involved_roles[include].get_restricted_scope() != scope:
+                        # But this is only possible if the include restricts the client not
+                        # in another scope than we're collecting filters for. Otherwise the
+                        # client may have more access than intended
+                        pass
+                    elif filters[superior]:
+                        excludes = [e for e in filters[superior] if not e >= include]
+                        if excludes != filters[superior]:
+                            excludes.extend(filters[include])
+                            filters[superior] = excludes
 
-                del filters[include]
+                    del filters[include]
 
         return filters
