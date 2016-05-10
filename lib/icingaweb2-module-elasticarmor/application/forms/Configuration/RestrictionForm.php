@@ -350,6 +350,7 @@ class RestrictionForm extends RoleForm
             return $this->discard($data[$key], $path);
         } else {
             unset($data[$key]);
+            $data = array_values($data);
         }
     }
 }
