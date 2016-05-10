@@ -1,72 +1,72 @@
 .content > dl > dt {
-	margin-top: 0;
+  margin-top: 0;
 }
 
 dl {
-	.rounded-corners(4px);
-	padding: 4px;
-	margin-top: -4px;
-	margin-left: -4px;
-	margin-bottom: 0;
+  .rounded-corners(4px);
+  padding: 4px;
+  margin-top: -4px;
+  margin-left: -4px;
+  margin-bottom: 0;
 }
 
 dl > dt {
-	margin-top: 18px;
+  margin-top: 18px;
 }
 
 a + dl > dt:first-child {
-	margin-top: 0;
+  margin-top: 0;
 }
 
 dt:last-of-type {
-	margin-bottom: 6px;
+  margin-bottom: 6px;
 }
 
 dt {
-	font-weight: bold;
+  font-weight: bold;
 }
 
 dd {
-	margin-left: 12px;
+  margin-left: 12px;
 
-	& > a {
-		float: right;
-		margin-right: 2px;
-		color: #0095bf;
-		padding: 4px;
-	}
+  & > a {
+    float: right;
+    margin-right: 2px;
+    color: #0095bf;
+    padding: 4px;
+  }
 
-	& > a + dl {
-		.transition(ease .3s background);
-	}
+  & > a + dl {
+    .transition(ease .3s background);
+  }
 
-	& > a:hover + dl {
-		background: #eaeaea;
-	}
+  & > a:hover + dl {
+    background: #eaeaea;
+  }
 }
 
 dl > dd > dl > dd > a:hover ~ dl {
-	background: #f7f7f7;
+  background: #f7f7f7;
 }
 
 dl > dd > dl > dd > dl > dd > a:hover ~ dl {
-	background: #fafafa;
+  background: #fafafa;
 }
 
 .create-link {
-	display: inline-block;
-	float: none;
-	color: transparent;
-	text-decoration: none;
+  display: inline-block;
+  float: none;
+  color: transparent;
+  text-decoration: none;
 
-	& > i {
-		color: #0095bf;
-		margin-right: 3px;
-	}
+  & > i {
+    color: #0095bf;
+    margin-right: 3px;
+  }
 
-	&:hover {
-		color: inherit;
-		background: #eee;
-		border-radius: 4px;
-	}
+  &:hover {
+    color: inherit;
+    background: #eee;
+    border-radius: 4px;
+  }
 }

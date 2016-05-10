@@ -253,7 +253,7 @@ class RestrictionsRenderer
     protected function renderIndexRestriction($path, array $restriction)
     {
         $this->html('<dd>');
-		 $this->renderRemoveLink($path, $this->view()->translate('Remove this index restriction'));
+         $this->renderRemoveLink($path, $this->view()->translate('Remove this index restriction'));
         $this->renderUpdateLink($path, $this->view()->translate('Edit this index restriction'));
         $this->html('<dl class="table-row-selectable">');
         foreach ($restriction as $key => $values) {
