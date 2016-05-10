@@ -1948,11 +1948,12 @@ class FilterString(object):
         """The internal pattern this filter is based on. Returns None if it is empty."""
         if len(self._parts) == 1:
             return self._parts[0].pattern
-
-        seq = self.combined if self.combined else list(self.iter_patterns())
-        if seq:
-            assert len(seq) == 1, 'Multiple patterns found: {0}'.format(', '.join(str(p) for p in seq))
-            return seq[0]
+        elif self.combined:
+            assert len(self.combined) == 1, \
+                'Multiple patterns found: {0}'.format(', '.join(str(p) for p in self.combined))
+            return self.combined[0]
+        elif self:
+            return self._create_pattern('*')
 
     def _create_pattern(self, pattern):
         if not isinstance(pattern, basestring):
