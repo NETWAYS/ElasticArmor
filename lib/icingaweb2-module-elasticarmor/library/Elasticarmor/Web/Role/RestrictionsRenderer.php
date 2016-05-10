@@ -253,9 +253,9 @@ class RestrictionsRenderer
     protected function renderIndexRestriction($path, array $restriction)
     {
         $this->html('<dd>');
+		 $this->renderRemoveLink($path, $this->view()->translate('Remove this index restriction'));
         $this->renderUpdateLink($path, $this->view()->translate('Edit this index restriction'));
-        $this->renderRemoveLink($path, $this->view()->translate('Remove this index restriction'));
-        $this->html('<dl>');
+        $this->html('<dl class="table-row-selectable">');
         foreach ($restriction as $key => $values) {
             if ($key === 'include') {
                 $this->renderTerm($this->view()->translate('Include'));
@@ -297,9 +297,9 @@ class RestrictionsRenderer
     protected function renderTypeRestriction($path, array $restriction)
     {
         $this->html('<dd>');
-        $this->renderUpdateLink($path, $this->view()->translate('Edit this type restriction'));
         $this->renderRemoveLink($path, $this->view()->translate('Remove this type restriction'));
-        $this->html('<dl>');
+        $this->renderUpdateLink($path, $this->view()->translate('Edit this type restriction'));
+        $this->html('<dl class="table-row-selectable">');
         foreach ($restriction as $key => $values) {
             if ($key === 'include') {
                 $this->renderTerm($this->view()->translate('Include'));
@@ -339,8 +339,8 @@ class RestrictionsRenderer
     protected function renderFieldRestriction($path, array $restriction)
     {
         $this->html('<dd>');
-        $this->renderUpdateLink($path, $this->view()->translate('Edit this field restriction'));
         $this->renderRemoveLink($path, $this->view()->translate('Remove this field restriction'));
+        $this->renderUpdateLink($path, $this->view()->translate('Edit this field restriction'));
         $this->html('<dl>');
         foreach ($restriction as $key => $values) {
             if ($key === 'include') {
