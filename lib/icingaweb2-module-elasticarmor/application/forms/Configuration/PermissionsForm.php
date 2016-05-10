@@ -106,6 +106,7 @@ class PermissionsForm extends RoleForm
     protected function addListEntriesFromSubmit(array $formData)
     {
         $grantedPermissions = array();
+        $wildcardPermissions = array();
         foreach ($formData as $fieldName => $fieldValue) {
             if (substr($fieldName, 0, 11) === 'permission_') {
                 list($_, $ident, $id) = explode('_', $fieldName);
@@ -113,13 +114,28 @@ class PermissionsForm extends RoleForm
                     $grantedPermissions[$fieldValue] = null;
                 } elseif ($ident === 'name') {
                     $grantedPermissions[$fieldValue] = $id;
+                    if (strpos($fieldValue, '*') !== false) {
+                        $wildcardPermissions[] = $fieldValue;
+                    }
                 }
             } elseif ($fieldName === 'add_permission' && isset($formData['btn_add_permission'])) {
                 $grantedPermissions[$fieldValue] = $this->generateEntryId();
+                if (strpos($fieldValue, '*') !== false) {
+                    $wildcardPermissions[] = $fieldValue;
+                }
+
                 if (($reason = $this->isHarmfulPermission($fieldValue)) !== null) {
                     $this->warning(
                         sprintf($this->translate('Permission "%s" is possibly harmful: %s'), $fieldValue, $reason)
                     );
+                }
+            }
+        }
+
+        foreach ($wildcardPermissions as $wildcard) {
+            foreach (array_keys($grantedPermissions) as $granted) {
+                if ($granted !== $wildcard && preg_match('~' . str_replace('*', '.*', $wildcard) . '~', $granted)) {
+                    unset($grantedPermissions[$granted]);
                 }
             }
         }
