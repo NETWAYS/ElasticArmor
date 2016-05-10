@@ -5,7 +5,7 @@ import socket
 import requests
 from ldap import LDAPError
 
-from elasticarmor import CONFIGURATION_INDEX, CONFIGURATION_TYPE_ROLE
+from elasticarmor import *
 from elasticarmor.util import format_ldap_error, format_elasticsearch_error
 from elasticarmor.util.elastic import SourceFilter, FilterString, FieldsFilter
 from elasticarmor.util.mixins import LoggingAware
@@ -102,7 +102,11 @@ class Auth(LoggingAware, object):
     def _apply_system_defaults(self, client):
         permitted_config_types = []
         if client.can('config/authorization'):
-            permitted_config_types.append(CONFIGURATION_TYPE_ROLE)
+            permitted_config_types.append({'include': [
+                CONFIGURATION_TYPE_ROLE,
+                CONFIGURATION_TYPE_ROLE_USER,
+                CONFIGURATION_TYPE_ROLE_GROUP
+            ]})
 
         if permitted_config_types:
             from elasticarmor.auth.role import Role
@@ -111,9 +115,7 @@ class Auth(LoggingAware, object):
                     'indices': [{
                         'permissions': '*',
                         'include': CONFIGURATION_INDEX,
-                        'types': [{
-                            'include': permitted_config_types
-                        }]
+                        'types': permitted_config_types
                     }]
                 }))
             else:
