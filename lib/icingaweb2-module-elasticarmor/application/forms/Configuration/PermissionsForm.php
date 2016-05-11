@@ -35,7 +35,12 @@ class PermissionsForm extends RoleForm
                 array(
                     'ignore'        => true,
                     'label'         => $this->translate('Permission'),
-                    'multiOptions'  => array_combine($permissions, $permissions), // TODO: Placeholder
+                    'value'         => 'placeholder',
+                    'disable'       => array('placeholder'),
+                    'multiOptions'  => array_merge(
+                        array('placeholder' => '- ' . $this->translate('Choose a permission to add') . ' -'),
+                        array_combine($permissions, $permissions)
+                    ),
                     'decorators'    => $decorators
                 )
             );
