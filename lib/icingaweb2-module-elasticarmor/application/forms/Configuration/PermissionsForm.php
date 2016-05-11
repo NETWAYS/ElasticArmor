@@ -16,39 +16,51 @@ class PermissionsForm extends RoleForm
             $permissions = $this->addListEntriesFromConfig();
         }
 
-        $decorators = static::$defaultElementDecorators;
-        array_pop($decorators); // Removes the HtmlTag decorator
-        $this->addElement(
-            'select',
-            'add_permission',
-            array(
-                'ignore'        => true,
-                'label'         => $this->translate('Permission'),
-                'multiOptions'  => array_combine($permissions, $permissions), // TODO: Placeholder
-                'decorators'    => $decorators
-            )
-        );
-        $this->addElement(
-            'submit',
-            'btn_add_permission',
-            array(
-                'type'              => 'submit',
-                'formnovalidate'    => 'formnovalidate',
-                'label'             => $this->translate('Add'),
-                'decorators'        => array('ViewHelper')
-            )
-        );
-        $this->addDisplayGroup(
-            array('add_permission', 'btn_add_permission'),
-            'add-permission-control-group',
-            array(
-                'order'         => 0,
-                'decorators'    => array(
-                    'FormElements',
-                    array('HtmlTag', array('tag' => 'div', 'class' => 'control-group'))
+        if (empty($permissions)) {
+            $this->info(
+                sprintf(
+                    $this->translate(
+                        'Role "%s" is granted the entire set of available permissions.'
+                    ),
+                    $this->identifier
+                ),
+                false
+            );
+        } else {
+            $decorators = static::$defaultElementDecorators;
+            array_pop($decorators); // Removes the HtmlTag decorator
+            $this->addElement(
+                'select',
+                'add_permission',
+                array(
+                    'ignore'        => true,
+                    'label'         => $this->translate('Permission'),
+                    'multiOptions'  => array_combine($permissions, $permissions), // TODO: Placeholder
+                    'decorators'    => $decorators
                 )
-            )
-        );
+            );
+            $this->addElement(
+                'submit',
+                'btn_add_permission',
+                array(
+                    'type'              => 'submit',
+                    'formnovalidate'    => 'formnovalidate',
+                    'label'             => $this->translate('Add'),
+                    'decorators'        => array('ViewHelper')
+                )
+            );
+            $this->addDisplayGroup(
+                array('add_permission', 'btn_add_permission'),
+                'add-permission-control-group',
+                array(
+                    'order'         => 0,
+                    'decorators'    => array(
+                        'FormElements',
+                        array('HtmlTag', array('tag' => 'div', 'class' => 'control-group'))
+                    )
+                )
+            );
+        }
 
         $this->setSubmitLabel($this->translate('Save'));
     }
@@ -87,10 +99,23 @@ class PermissionsForm extends RoleForm
         if ($this->data !== null && isset($this->data['cluster'])) {
             $grantedPermissions = array_flip($this->data['cluster']);
 
+            $wildcardPermissions = array();
+            foreach ($grantedPermissions as $permission => $_) {
+                if (strpos($permission, '*') !== false) {
+                    $wildcardPermissions[$permission] = '~' . str_replace('*', '.*', $permission) . '~';
+                }
+            }
+
             foreach ($availablePermissions as $permission => $_) {
                 if (isset($grantedPermissions[$permission])) {
                     unset($availablePermissions[$permission]);
                     $this->addListEntry($this->generateEntryId(), $permission);
+                } elseif (! empty($wildcardPermissions)) {
+                    foreach ($wildcardPermissions as $pattern) {
+                        if (preg_match($pattern, $permission)) {
+                            unset($availablePermissions[$permission]);
+                        }
+                    }
                 }
             }
         }
@@ -112,16 +137,17 @@ class PermissionsForm extends RoleForm
                 list($_, $ident, $id) = explode('_', $fieldName);
                 if ($ident === 'remove') {
                     $grantedPermissions[$fieldValue] = null;
+                    unset($wildcardPermissions[$fieldValue]);
                 } elseif ($ident === 'name') {
                     $grantedPermissions[$fieldValue] = $id;
                     if (strpos($fieldValue, '*') !== false) {
-                        $wildcardPermissions[] = $fieldValue;
+                        $wildcardPermissions[$fieldValue] = '~' . str_replace('*', '.*', $fieldValue) . '~';
                     }
                 }
             } elseif ($fieldName === 'add_permission' && isset($formData['btn_add_permission'])) {
                 $grantedPermissions[$fieldValue] = $this->generateEntryId();
                 if (strpos($fieldValue, '*') !== false) {
-                    $wildcardPermissions[] = $fieldValue;
+                    $wildcardPermissions[$fieldValue] = '~' . str_replace('*', '.*', $fieldValue) . '~';
                 }
 
                 if (($reason = $this->isHarmfulPermission($fieldValue)) !== null) {
@@ -132,9 +158,9 @@ class PermissionsForm extends RoleForm
             }
         }
 
-        foreach ($wildcardPermissions as $wildcard) {
+        foreach ($wildcardPermissions as $wildcard => $pattern) {
             foreach (array_keys($grantedPermissions) as $granted) {
-                if ($granted !== $wildcard && preg_match('~' . str_replace('*', '.*', $wildcard) . '~', $granted)) {
+                if ($granted !== $wildcard && preg_match($pattern, $granted)) {
                     unset($grantedPermissions[$granted]);
                 }
             }
@@ -145,6 +171,12 @@ class PermissionsForm extends RoleForm
             if (isset($grantedPermissions[$permission])) {
                 unset($availablePermissions[$permission]);
                 $this->addListEntry($grantedPermissions[$permission], $permission);
+            } elseif (! empty($wildcardPermissions)) {
+                foreach ($wildcardPermissions as $pattern) {
+                    if (preg_match($pattern, $permission)) {
+                        unset($availablePermissions[$permission]);
+                    }
+                }
             }
         }
 
