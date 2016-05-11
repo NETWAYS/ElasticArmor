@@ -7,6 +7,7 @@ use Icinga\Application\Config;
 use Icinga\Data\Filter\Filter;
 use Icinga\Data\Filter\FilterExpression;
 use Icinga\Repository\RepositoryQuery;
+use Icinga\Web\UrlParams;
 use Icinga\Module\Elasticsearch\Repository\ElasticsearchRepository;
 use Icinga\Module\Elasticsearch\RestApi\RestApiClient;
 
@@ -73,7 +74,7 @@ class ElasticsearchBackend extends ElasticsearchRepository
     /**
      * {@inheritdoc}
      */
-    public function insert($documentType, array $document, $refresh = true)
+    public function insert($documentType, array $document, UrlParams $params = null)
     {
         if (is_string($documentType)) {
             $documentType = explode('/', $documentType);
@@ -84,33 +85,33 @@ class ElasticsearchBackend extends ElasticsearchRepository
             unset($document['name']);
         }
 
-        return parent::insert($documentType, $document, $refresh);
+        return parent::insert($documentType, $document, $params);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function update($documentType, array $document, Filter $filter = null, $refresh = true, $fetchSource = false)
+    public function update($documentType, array $document, Filter $filter = null, UrlParams $params = null)
     {
         $newDocumentId = null;
         if (isset($document['name'])) {
             $newDocumentId = $document['name'];
             unset($document['name']);
+            if ($params === null) {
+                $params = new UrlParams();
+                $params->set('fields', '_source');
+            } elseif (! $params->has('fields')) {
+                $params->set('fields', '_source');
+            }
         }
 
-        $updatedDocument = parent::update(
-            $documentType,
-            $document,
-            $filter,
-            $refresh,
-            $newDocumentId !== null || $fetchSource
-        );
+        $updatedDocument = parent::update($documentType, $document, $filter, $params);
         if ($newDocumentId === null || $newDocumentId === $updatedDocument['_id']) {
             return $updatedDocument;
         }
 
-        $this->insert(array($documentType, $newDocumentId), $updatedDocument['get']['_source'], $refresh);
-        $this->delete(array($documentType, $updatedDocument['_id']), null, $refresh);
+        $this->insert(array($documentType, $newDocumentId), $updatedDocument['get']['_source']);
+        $this->delete(array($documentType, $updatedDocument['_id']));
         $updatedDocument['_id'] = $newDocumentId;
         return $updatedDocument;
     }
