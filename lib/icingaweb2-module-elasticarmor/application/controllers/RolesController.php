@@ -135,6 +135,43 @@ class RolesController extends AuthBackendController
     }
 
     /**
+     * Fetch and return all usergroups from all usergroup backends
+     *
+     * @return  array
+     */
+    protected function fetchUserGroups()
+    {
+        $addedGroups = $this->getConfigurationBackend()
+            ->select()
+            ->from('role_group', array('group'))
+            ->where('role', $this->params->getRequired('role'))
+            ->limit(1000) // Elasticsearch's default limit is 10, there is no efficient way to express "unlimited"
+            ->fetchColumn();
+        $filter = Filter::matchAll();
+        if (! empty($addedGroups)) {
+            $filter = Filter::expression('group_name', '!=', $addedGroups);
+        }
+
+        $groups = array();
+        foreach ($this->loadUserGroupBackends('Icinga\Data\Selectable') as $backend) {
+            try {
+                foreach ($backend->select(array('group_name'))->addFilter($filter) as $row) {
+                    $row->backend_name = $backend->getName();
+                    $groups[] = $row;
+                }
+            } catch (Exception $e) {
+                Logger::error($e);
+                Notification::warning(sprintf(
+                    $this->translate('Failed to fetch any usergroups from backend %s. Please check your log'),
+                    $backend->getName()
+                ));
+            }
+        }
+
+        return $groups;
+    }
+
+    /**
      * Return the configuration backend to use
      */
     protected function getConfigurationBackend()
