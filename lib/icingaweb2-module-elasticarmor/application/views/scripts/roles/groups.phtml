@@ -70,7 +70,7 @@
                 <?php endif ?>
                 </td>
                 <td class="icon-col" data-base-target="_self">
-                    <?php $removeForm->getElement('group_id')->setValue($member->id); echo $removeForm ?>
+                    <?php $removeForm->getElement('group_id')->setValue($member->group . '|' . $member->id); echo $removeForm ?>
                 </td>
             </tr>
         <?php endforeach ?>
