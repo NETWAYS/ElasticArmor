@@ -67,7 +67,9 @@ class PermissionsForm extends RoleForm
             );
         }
 
-        $this->setSubmitLabel($this->translate('Save'));
+        if ($this->wasSent($formData)) {
+            $this->setSubmitLabel($this->translate('Save'));
+        }
     }
 
     /**
