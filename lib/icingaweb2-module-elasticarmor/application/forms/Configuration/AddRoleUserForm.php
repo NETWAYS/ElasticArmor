@@ -172,7 +172,7 @@ class AddRoleUserForm extends Form
         if ($single) {
             Notification::success(sprintf($this->translate('User "%s" added successfully'), $user));
         } else {
-            Notification::success($this->translate('User added successfully'));
+            Notification::success($this->translate('Users added successfully'));
         }
 
         return true;
