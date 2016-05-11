@@ -89,6 +89,7 @@ class AddRoleUserForm extends Form
                 $options[$user->backend_name . '|' . $user->user_name] = $user->user_name;
             }
 
+            asort($options);
             $this->addElement(
                 'multiselect',
                 'backend_users',
