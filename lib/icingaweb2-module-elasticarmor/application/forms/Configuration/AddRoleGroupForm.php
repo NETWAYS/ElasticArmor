@@ -89,6 +89,7 @@ class AddRoleGroupForm extends Form
                 $options[$group->backend_name . '|' . $group->group_name] = $group->group_name;
             }
 
+            asort($options);
             $this->addElement(
                 'multiselect',
                 'backend_groups',
