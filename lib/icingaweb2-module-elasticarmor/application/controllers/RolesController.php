@@ -3,9 +3,13 @@
 
 namespace Icinga\Module\Elasticarmor\Controllers;
 
+use Exception;
+use Icinga\Application\Logger;
 use Icinga\Exception\NotFoundError;
-use Icinga\Web\Controller;
+use Icinga\Data\Filter\Filter;
+use Icinga\Web\Controller\AuthBackendController;
 use Icinga\Web\Form;
+use Icinga\Web\Notification;
 use Icinga\Web\Url;
 use Icinga\Web\Widget\Tabs;
 use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
@@ -14,7 +18,7 @@ use Icinga\Module\Elasticarmor\Forms\Configuration\RestrictionForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\RoleForm;
 use Icinga\Module\Elasticarmor\Web\Role\RestrictionsRenderer;
 
-class RolesController extends Controller
+class RolesController extends AuthBackendController
 {
     /**
      * Create and return the tabs for the list action
@@ -89,6 +93,43 @@ class RolesController extends Controller
         );
 
         return $tabs;
+    }
+
+    /**
+     * Fetch and return all users from all user backends
+     *
+     * @return  array
+     */
+    protected function fetchUsers()
+    {
+        $addedUsers = $this->getConfigurationBackend()
+            ->select()
+            ->from('role_user', array('user'))
+            ->where('role', $this->params->getRequired('role'))
+            ->limit(1000) // Elasticsearch's default limit is 10, there is no efficient way to express "unlimited"
+            ->fetchColumn();
+        $filter = Filter::matchAll();
+        if (! empty($addedUsers)) {
+            $filter = Filter::expression('user_name', '!=', $addedUsers);
+        }
+
+        $users = array();
+        foreach ($this->loadUserBackends('Icinga\Data\Selectable') as $backend) {
+            try {
+                foreach ($backend->select(array('user_name'))->addFilter($filter) as $row) {
+                    $row->backend_name = $backend->getName();
+                    $users[] = $row;
+                }
+            } catch (Exception $e) {
+                Logger::error($e);
+                Notification::warning(sprintf(
+                    $this->translate('Failed to fetch any users from backend %s. Please check your log'),
+                    $backend->getName()
+                ));
+            }
+        }
+
+        return $users;
     }
 
     /**
