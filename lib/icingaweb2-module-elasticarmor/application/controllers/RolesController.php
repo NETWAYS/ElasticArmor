@@ -410,7 +410,7 @@ class RolesController extends AuthBackendController
         $removeForm = new Form();
         $removeForm->setUidDisabled();
         $removeForm->setAction(
-            Url::fromPath('roles/users-remove', array('role' => $roleName))
+            Url::fromPath('elasticarmor/roles/users-remove', array('role' => $roleName))
         );
         $removeForm->addElement('hidden', 'user_id', array(
             'isArray'       => true,
