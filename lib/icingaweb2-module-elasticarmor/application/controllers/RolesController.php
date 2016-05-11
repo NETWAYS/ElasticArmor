@@ -61,6 +61,7 @@ class RolesController extends AuthBackendController
         $tabs->add(
             'restrictions',
             array(
+                'icon'      => 'eye-off',
                 'url'       => 'elasticarmor/roles/restrictions',
                 'urlParams' => array('role' => $roleName),
                 'label'     => $this->translate('Restrictions'),
@@ -70,6 +71,7 @@ class RolesController extends AuthBackendController
         $tabs->add(
             'permissions',
             array(
+                'icon'      => 'lock-open-alt',
                 'url'       => 'elasticarmor/roles/permissions',
                 'urlParams' => array('role' => $roleName),
                 'label'     => $this->translate('Permissions'),
@@ -79,6 +81,7 @@ class RolesController extends AuthBackendController
         $tabs->add(
             'users',
             array(
+                'icon'      => 'user',
                 'url'       => 'elasticarmor/roles/users',
                 'urlParams' => array('role' => $roleName),
                 'label'     => $this->translate('Users'),
@@ -88,6 +91,7 @@ class RolesController extends AuthBackendController
         $tabs->add(
             'groups',
             array(
+                'icon'      => 'users',
                 'url'       => 'elasticarmor/roles/groups',
                 'urlParams' => array('role' => $roleName),
                 'label'     => $this->translate('Groups'),
