@@ -466,6 +466,64 @@ class RolesController extends AuthBackendController
     }
 
     /**
+     * Remove one or more users from a role
+     */
+    public function usersRemoveAction()
+    {
+        $this->assertHttpMethod('POST');
+        $roleName = $this->params->getRequired('role');
+        $backend = $this->getConfigurationBackend();
+
+        $form = new Form(array(
+            'onSuccess' => function ($form) use ($roleName, $backend) {
+                foreach ($form->getValue('user_id') as $userId) {
+                    $params = new UrlParams();
+                    $params->set('parent', $roleName);
+
+                    if (strpos($userId, '|') !== false) {
+                        list($user, $id) = explode('|', $userId, 2);
+                    } else {
+                        $user = null;
+                        $id = $userId;
+                    }
+
+                    try {
+                        $backend->delete(
+                            array('role_user', $id),
+                            null,
+                            $params
+                        );
+
+                        if ($user === null) {
+                            Notification::success(mt('elasticarmor', 'User successfully removed'));
+                        } else {
+                            Notification::success(sprintf(
+                                mt('elasticarmor', 'User "%s" has been removed from role "%s"'),
+                                $user,
+                                $roleName
+                            ));
+                        }
+                    } catch (Exception $e) {
+                        Notification::error($e->getMessage());
+                    }
+                }
+
+                $redirect = $form->getValue('redirect');
+                if (! empty($redirect)) {
+                    $form->setRedirectUrl(htmlspecialchars_decode($redirect));
+                }
+
+                return true;
+            }
+        ));
+        $form->setUidDisabled();
+        $form->setSubmitLabel('btn_submit'); // Required to ensure that isSubmitted() is called
+        $form->addElement('hidden', 'user_id', array('required' => true, 'isArray' => true));
+        $form->addElement('hidden', 'redirect');
+        $form->handleRequest();
+    }
+
+    /**
      * List all groups assigned to a role
      */
     public function groupsAction()
