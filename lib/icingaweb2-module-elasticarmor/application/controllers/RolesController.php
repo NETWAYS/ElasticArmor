@@ -14,6 +14,7 @@ use Icinga\Web\Url;
 use Icinga\Web\UrlParams;
 use Icinga\Web\Widget\Tabs;
 use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
+use Icinga\Module\Elasticarmor\Forms\Configuration\AddRoleGroupForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\AddRoleUserForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\PermissionsForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\RestrictionForm;
@@ -621,5 +622,36 @@ class RolesController extends AuthBackendController
             'title'         => $this->translate('Remove this member')
         ));
         $this->view->removeForm = $removeForm;
+    }
+
+    /**
+     * Add one or more groups to a role
+     */
+    public function groupsAddAction()
+    {
+        $roleName = $this->params->getRequired('role');
+        $backend = $this->getConfigurationBackend();
+
+        $params = new UrlParams();
+        $params->set('_source', 'false');
+        if ($backend->fetchDocument('role', $roleName, null, $params) === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $form = new AddRoleGroupForm();
+        $form->setBackend($backend);
+        $form->setRoleName($roleName);
+        $form->setGroups($this->fetchUserGroups());
+        $form->setRedirectUrl(Url::fromPath('elasticarmor/roles/groups', array('role' => $roleName)));
+        $form->handleRequest();
+
+        $this->getTabs()->add('roles/groups/add', array(
+            'active'    => true,
+            'label'     => $this->translate('Add Groups'),
+            'url'       => Url::fromRequest()
+        ));
+
+        $this->view->form = $form;
+        $this->render('form');
     }
 }
