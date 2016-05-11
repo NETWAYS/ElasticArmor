@@ -6,6 +6,7 @@ namespace Icinga\Module\Elasticarmor\Configuration\Backend;
 use Icinga\Application\Config;
 use Icinga\Data\Filter\Filter;
 use Icinga\Data\Filter\FilterExpression;
+use Icinga\Exception\StatementException;
 use Icinga\Repository\RepositoryQuery;
 use Icinga\Web\UrlParams;
 use Icinga\Module\Elasticsearch\Repository\ElasticsearchRepository;
@@ -80,9 +81,25 @@ class ElasticsearchBackend extends ElasticsearchRepository
             $documentType = explode('/', $documentType);
         }
 
-        if (isset($document['name'])) {
-            $documentType[] = $document['name'];
-            unset($document['name']);
+        switch ($this->extractDocumentType($documentType)) {
+            case 'role':
+                if (isset($document['name'])) {
+                    $documentType[] = $document['name'];
+                    unset($document['name']);
+                }
+
+                break;
+            case 'role_user':
+            case 'role_group':
+                if (! isset($document['role'])) {
+                    throw new StatementException('It is required to provide a role for which to add members');
+                } elseif ($params === null) {
+                    $params = new UrlParams();
+                }
+
+                $params->set('parent', $document['role']);
+                unset($document['role']);
+                break;
         }
 
         return parent::insert($documentType, $document, $params);
