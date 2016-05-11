@@ -11,8 +11,10 @@ use Icinga\Web\Controller\AuthBackendController;
 use Icinga\Web\Form;
 use Icinga\Web\Notification;
 use Icinga\Web\Url;
+use Icinga\Web\UrlParams;
 use Icinga\Web\Widget\Tabs;
 use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
+use Icinga\Module\Elasticarmor\Forms\Configuration\AddRoleUserForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\PermissionsForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\RestrictionForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\RoleForm;
@@ -430,6 +432,37 @@ class RolesController extends AuthBackendController
             'title'         => $this->translate('Remove this member')
         ));
         $this->view->removeForm = $removeForm;
+    }
+
+    /**
+     * Add one or more users to a role
+     */
+    public function usersAddAction()
+    {
+        $roleName = $this->params->getRequired('role');
+        $backend = $this->getConfigurationBackend();
+
+        $params = new UrlParams();
+        $params->set('_source', 'false');
+        if ($backend->fetchDocument('role', $roleName, null, $params) === false) {
+            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
+        }
+
+        $form = new AddRoleUserForm();
+        $form->setBackend($backend);
+        $form->setRoleName($roleName);
+        $form->setUsers($this->fetchUsers());
+        $form->setRedirectUrl(Url::fromPath('elasticarmor/roles/users', array('role' => $roleName)));
+        $form->handleRequest();
+
+        $this->getTabs()->add('roles/users/add', array(
+            'active'    => true,
+            'label'     => $this->translate('Add Users'),
+            'url'       => Url::fromRequest()
+        ));
+
+        $this->view->form = $form;
+        $this->render('form');
     }
 
     /**
