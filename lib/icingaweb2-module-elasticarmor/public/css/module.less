@@ -1,25 +1,26 @@
-.content > dl > dt {
+.content > dl {
   margin-top: 0;
-}
 
-dl {
-  .rounded-corners(4px);
-  padding: 4px;
-  margin-top: -4px;
-  margin-left: -4px;
-  margin-bottom: 0;
+  & > dt {
+    margin-top: 0.5em;
+  }
 }
 
 dl > dt {
-  margin-top: 18px;
+  margin-top: 1em;
 }
 
 a + dl > dt:first-child {
   margin-top: 0;
 }
 
-dt:last-of-type {
-  margin-bottom: 6px;
+dd > dl {
+  .rounded-corners(0.4em);
+  padding: 0.4em;
+  padding-top: 0.8em;
+  margin-top: -0.4em;
+  margin-left: -0.4em;
+  margin-bottom: 0.4em;
 }
 
 dt {
@@ -27,46 +28,56 @@ dt {
 }
 
 dd {
-  margin-left: 12px;
+  margin-left: 1em;
 
   & > a {
     float: right;
-    margin-right: 2px;
-    color: #0095bf;
-    padding: 4px;
+    margin-right: 0.33em;
+    color: @icinga-blue;
+    padding: 0.33em;
   }
 
   & > a + dl {
     .transition(ease .3s background);
   }
 
-  & > a:hover + dl {
-    background: #eaeaea;
+  & > a:hover ~ dl {
+    background: #f3f6f9;
   }
 }
 
-dl > dd > dl > dd > a:hover ~ dl {
-  background: #f7f7f7;
+dd.restriction {
+  border-top: 1px dashed #a0a0a0;
 }
 
-dl > dd > dl > dd > dl > dd > a:hover ~ dl {
-  background: #fafafa;
+dt.scope {
+  color: green;
+  margin-bottom: 0.5em;
+
+  &.nested:before {
+    content: "\21B3";
+  }
 }
 
-.create-link {
-  display: inline-block;
+dt.property {
+  color: sienna;
+}
+
+a.create-link {
   float: none;
   color: transparent;
+  display: inline-block;
   text-decoration: none;
 
   & > i {
-    color: #0095bf;
-    margin-right: 3px;
+    color: @icinga-blue;
+    margin-right: 0.33em;
   }
 
   &:hover {
     color: inherit;
-    background: #eee;
-    border-radius: 4px;
+    background: #f3f6f9;
+    border-radius: 0.33em;
+    .transition(ease .15s background);
   }
 }

@@ -39,6 +39,13 @@ class RestrictionsRenderer
     protected $html;
 
     /**
+     * List and order of known restriction properties
+     *
+     * @var array
+     */
+    protected $properties;
+
+    /**
      * Create a new RestrictionsRenderer
      *
      * @param   string  $roleName       The role for which to render restrictions
@@ -49,6 +56,12 @@ class RestrictionsRenderer
         $this->privileges = $privileges;
         $this->roleName = $roleName;
         $this->html = array();
+
+        $this->properties = array(
+            'include'       => $this->view()->translate('Include'),
+            'exclude'       => $this->view()->translate('Exclude'),
+            'permissions'   => $this->view()->translate('Permissions')
+        );
     }
 
     /**
@@ -87,7 +100,7 @@ class RestrictionsRenderer
     {
         $this->html('<dl>');
 
-        $this->renderTerm($this->view()->translate('Indices'));
+        $this->renderTerm($this->view()->translate('Indices'), 'scope');
         if (isset($this->privileges['indices'])) {
             foreach ($this->privileges['indices'] as $id => $restriction) {
                 $this->renderIndexRestriction("indices.$id", $restriction);
@@ -96,7 +109,7 @@ class RestrictionsRenderer
         $this->renderCreateLink('indices', $this->view()->translate('Create a new index restriction'));
 
         if (isset($this->privileges['indices']) && !empty($this->privileges['indices'])) {
-            $this->renderTerm($this->view()->translate('Types'));
+            $this->renderTerm($this->view()->translate('Types'), 'scope');
             if (isset($this->privileges['types'])) {
                 foreach ($this->privileges['types'] as $id => $restriction) {
                     $this->renderTypeRestriction("types.$id", $restriction);
@@ -105,7 +118,7 @@ class RestrictionsRenderer
             $this->renderCreateLink('types', $this->view()->translate('Create a new type restriction'));
 
             if (isset($this->privileges['types']) && !empty($this->privileges['types'])) {
-                $this->renderTerm($this->view()->translate('Fields'));
+                $this->renderTerm($this->view()->translate('Fields'), 'scope');
                 if (isset($this->privileges['fields'])) {
                     foreach ($this->privileges['fields'] as $id => $restriction) {
                         $this->renderFieldRestriction("fields.$id", $restriction);
@@ -152,10 +165,11 @@ class RestrictionsRenderer
      * Render the given term
      *
      * @param   string  $term
+     * @param   string  $class
      */
-    protected function renderTerm($term)
+    protected function renderTerm($term, $class)
     {
-        $this->html('<dt>');
+        $this->html('<dt class="' . $class . '">');
         $this->html($term);
         $this->html('</dt>');
     }
@@ -252,31 +266,25 @@ class RestrictionsRenderer
      */
     protected function renderIndexRestriction($path, array $restriction)
     {
-        $this->html('<dd>');
-         $this->renderRemoveLink($path, $this->view()->translate('Remove this index restriction'));
+        $this->html('<dd class="restriction">');
+        $this->renderRemoveLink($path, $this->view()->translate('Remove this index restriction'));
         $this->renderUpdateLink($path, $this->view()->translate('Edit this index restriction'));
-        $this->html('<dl class="table-row-selectable">');
-        foreach ($restriction as $key => $values) {
-            if ($key === 'include') {
-                $this->renderTerm($this->view()->translate('Include'));
-            } elseif ($key === 'exclude') {
-                $this->renderTerm($this->view()->translate('Exclude'));
-            } elseif ($key === 'permissions') {
-                $this->renderTerm($this->view()->translate('Permissions'));
-            } else {
-                continue;
-            }
+        $this->html('<dl>');
+        foreach ($this->properties as $propertyName => $propertyTitle) {
+            if (isset($restriction[$propertyName])) {
+                $values = $restriction[$propertyName];
+                if (is_string($values)) {
+                    $values = explode(',', $values);
+                }
 
-            if (is_string($values)) {
-                $values = explode(',', $values);
-            }
-
-            foreach ($values as $description) {
-                $this->renderDescription($description);
+                $this->renderTerm($propertyTitle, 'property');
+                foreach ($values as $description) {
+                    $this->renderDescription($description);
+                }
             }
         }
 
-        $this->renderTerm($this->view()->translate('Types'));
+        $this->renderTerm($this->view()->translate('Types'), 'scope nested');
         if (isset($restriction['types'])) {
             foreach ($restriction['types'] as $id => $typeRestriction) {
                 $this->renderTypeRestriction("$path.types.$id", $typeRestriction);
@@ -296,29 +304,25 @@ class RestrictionsRenderer
      */
     protected function renderTypeRestriction($path, array $restriction)
     {
-        $this->html('<dd>');
+        $this->html('<dd class="restriction">');
         $this->renderRemoveLink($path, $this->view()->translate('Remove this type restriction'));
         $this->renderUpdateLink($path, $this->view()->translate('Edit this type restriction'));
-        $this->html('<dl class="table-row-selectable">');
-        foreach ($restriction as $key => $values) {
-            if ($key === 'include') {
-                $this->renderTerm($this->view()->translate('Include'));
-            } elseif ($key === 'permissions') {
-                $this->renderTerm($this->view()->translate('Permissions'));
-            } else {
-                continue;
-            }
+        $this->html('<dl>');
+        foreach ($this->properties as $propertyName => $propertyTitle) {
+            if ($propertyName !== 'exclude' && isset($restriction[$propertyName])) {
+                $values = $restriction[$propertyName];
+                if (is_string($values)) {
+                    $values = explode(',', $values);
+                }
 
-            if (is_string($values)) {
-                $values = explode(',', $values);
-            }
-
-            foreach ($values as $description) {
-                $this->renderDescription($description);
+                $this->renderTerm($propertyTitle, 'property');
+                foreach ($values as $description) {
+                    $this->renderDescription($description);
+                }
             }
         }
 
-        $this->renderTerm($this->view()->translate('Fields'));
+        $this->renderTerm($this->view()->translate('Fields'), 'scope nested');
         if (isset($restriction['fields'])) {
             foreach ($restriction['fields'] as $id => $typeRestriction) {
                 $this->renderFieldRestriction("$path.fields.$id", $typeRestriction);
@@ -338,27 +342,21 @@ class RestrictionsRenderer
      */
     protected function renderFieldRestriction($path, array $restriction)
     {
-        $this->html('<dd>');
+        $this->html('<dd class="restriction">');
         $this->renderRemoveLink($path, $this->view()->translate('Remove this field restriction'));
         $this->renderUpdateLink($path, $this->view()->translate('Edit this field restriction'));
         $this->html('<dl>');
-        foreach ($restriction as $key => $values) {
-            if ($key === 'include') {
-                $this->renderTerm($this->view()->translate('Include'));
-            } elseif ($key === 'exclude') {
-                $this->renderTerm($this->view()->translate('Exclude'));
-            } elseif ($key === 'permissions') {
-                $this->renderTerm($this->view()->translate('Permissions'));
-            } else {
-                continue;
-            }
+        foreach ($this->properties as $propertyName => $propertyTitle) {
+            if (isset($restriction[$propertyName])) {
+                $values = $restriction[$propertyName];
+                if (is_string($values)) {
+                    $values = explode(',', $values);
+                }
 
-            if (is_string($values)) {
-                $values = explode(',', $values);
-            }
-
-            foreach ($values as $description) {
-                $this->renderDescription($description);
+                $this->renderTerm($propertyTitle, 'property');
+                foreach ($values as $description) {
+                    $this->renderDescription($description);
+                }
             }
         }
 
