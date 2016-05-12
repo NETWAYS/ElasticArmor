@@ -17,7 +17,6 @@ use Icinga\Module\Elasticarmor\Configuration\Backend\ElasticsearchBackend;
 use Icinga\Module\Elasticarmor\Forms\Configuration\AddRoleGroupForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\AddRoleUserForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\PermissionsForm;
-use Icinga\Module\Elasticarmor\Forms\Configuration\RestrictionForm;
 use Icinga\Module\Elasticarmor\Forms\Configuration\RoleForm;
 use Icinga\Module\Elasticarmor\Web\Role\RestrictionsRenderer;
 
@@ -300,96 +299,6 @@ class RolesController extends AuthBackendController
         $this->view->role = $role;
         $this->view->restrictions = new RestrictionsRenderer($role->name, $role->privileges ?: array());
         $this->createDetailTabs($roleName)->activate('restrictions');
-    }
-
-    /**
-     * Create a new restriction
-     */
-    public function restrictionsCreateAction()
-    {
-        $roleName = $this->params->getRequired('role');
-        $restrictionPath = $this->params->getRequired('path');
-
-        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('privileges'));
-        if ($role === false) {
-            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
-        }
-
-        $form = new RestrictionForm();
-        $form->setRedirectUrl(Url::fromPath('elasticarmor/roles/restrictions', array('role' => $roleName)));
-        $form->setRepository($this->getConfigurationBackend());
-        $form->edit($roleName, $role->privileges ?: array());
-        $form->createRestriction($restrictionPath);
-        $form->handleRequest();
-
-        $this->getTabs()->add('roles/restrictions/create', array(
-            'active'    => true,
-            'label'     => $this->translate('Create Restriction'),
-            'url'       => Url::fromRequest()
-        ));
-
-        $this->view->form = $form;
-        $this->render('form');
-    }
-
-    /**
-     * Update a restriction
-     */
-    public function restrictionsUpdateAction()
-    {
-        $roleName = $this->params->getRequired('role');
-        $restrictionPath = $this->params->getRequired('path');
-
-        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('privileges'));
-        if ($role === false) {
-            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
-        }
-
-        $form = new RestrictionForm();
-        $form->setRedirectUrl(Url::fromPath('elasticarmor/roles/restrictions', array('role' => $roleName)));
-        $form->setRepository($this->getConfigurationBackend());
-        $form->edit($roleName, $role->privileges ?: array());
-        $form->updateRestriction($restrictionPath);
-        $form->handleRequest();
-
-        $this->getTabs()->add('roles/restrictions/update', array(
-            'active'    => true,
-            'label'     => $this->translate('Update Restriction'),
-            'url'       => Url::fromRequest()
-        ));
-
-        $this->view->form = $form;
-        $this->render('form');
-    }
-
-    /**
-     * Remove a restriction
-     */
-    public function restrictionsRemoveAction()
-    {
-        $roleName = $this->params->getRequired('role');
-        $restrictionPath = $this->params->getRequired('path');
-
-        $role = $this->getConfigurationBackend()->fetchDocument('role', $roleName, array('privileges'));
-        if ($role === false) {
-            $this->httpNotFound(sprintf($this->translate('Role "%s" not found'), $roleName));
-        }
-
-        $form = new RestrictionForm();
-        $form->setRedirectUrl(Url::fromPath('elasticarmor/roles/restrictions', array('role' => $roleName)));
-        $form->setRepository($this->getConfigurationBackend());
-        $form->edit($roleName, $role->privileges ?: array());
-        $form->removeRestriction($restrictionPath);
-        $form->handleRequest();
-
-        $this->getTabs()->add('roles/restrictions/remove', array(
-            'active'    => true,
-            'label'     => $this->translate('Remove Restriction'),
-            'url'       => Url::fromRequest()
-        ));
-
-        $this->view->form = $form;
-        $this->render('form');
     }
 
     /**

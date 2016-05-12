@@ -196,7 +196,7 @@ class RestrictionsRenderer
     {
         $this->renderDescription($this->view()->qlink(
             $title,
-            'elasticarmor/roles/restrictions-create',
+            'elasticarmor/restrictions/create',
             array(
                 'role'  => $this->roleName,
                 'path'  => $path
@@ -220,7 +220,7 @@ class RestrictionsRenderer
     {
         $this->html($this->view()->qlink(
             null,
-            'elasticarmor/roles/restrictions-update',
+            'elasticarmor/restrictions/update',
             array(
                 'role'  => $this->roleName,
                 'path'  => $path
@@ -244,7 +244,7 @@ class RestrictionsRenderer
     {
         $this->html($this->view()->qlink(
             null,
-            'elasticarmor/roles/restrictions-remove',
+            'elasticarmor/restrictions/remove',
             array(
                 'role'  => $this->roleName,
                 'path'  => $path
