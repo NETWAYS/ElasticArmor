@@ -1,0 +1,48 @@
+<?php
+
+switch ($scope) {
+    case 'indices':
+        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing indices and aliases:');
+        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing indices and aliases:');
+        $noMatchMessage = $this->translate('No indices discovered');
+        break;
+    case 'types':
+        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing document types:');
+        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing document types:');
+        $noMatchMessage = $this->translate('No document types discovered');
+        break;
+    case 'fields':
+        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing fields:');
+        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing fields:');
+        $noMatchMessage = $this->translate('No fields discovered');
+        break;
+}
+
+?>
+
+<?php if (empty($matches) && empty($mismatches)): ?>
+<div class="no-matches">
+    <strong><?= $this->escape($noMatchMessage) ?></strong>
+</div>
+<?php return; endif ?>
+
+<?php if (! empty($matches)): ?>
+<div class="discovered-matches">
+    <strong><?= $this->escape(sprintf($matchMessage, count($matches) / $totalResults * 100)) ?></strong>
+    <ul>
+    <?php foreach ($matches as $match): ?>
+        <li><?= $this->escape($match) ?></li>
+    <?php endforeach ?>
+    </ul>
+</div>
+<?php endif ?>
+<?php if (! empty($mismatches)): ?>
+<div class="discovered-mismatches">
+    <strong><?= $this->escape(sprintf($mismatchMessage, count($mismatches) / $totalResults * 100)) ?></strong>
+    <ul>
+    <?php foreach ($mismatches as $mismatch): ?>
+        <li><?= $this->escape($mismatch) ?></li>
+    <?php endforeach ?>
+    </ul>
+</div>
+<?php endif ?>
