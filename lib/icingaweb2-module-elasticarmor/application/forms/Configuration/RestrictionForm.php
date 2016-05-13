@@ -50,8 +50,7 @@ class RestrictionForm extends RoleForm
      */
     public function init()
     {
-        $this->setProtectIds(false);
-        $this->setName('elasticarmor_restriction_form');
+        $this->setDisableLoadDefaultDecorators(true);
     }
 
     /**
@@ -316,14 +315,6 @@ class RestrictionForm extends RoleForm
                 'value'     => Url::fromPath('elasticarmor/restrictions/discover', $discoverParams)->getAbsoluteUrl()
             )
         );
-        $this->addElement(
-            'note',
-            'discovery_result',
-            array(
-                'value'         => '<div id="discovery"></div>',
-                'decorators'    => array('ViewHelper')
-            )
-        );
 
         if (isset($formData['skip_validation']) && $formData['skip_validation']) {
             // In case another error occured and the checkbox was displayed before
@@ -425,6 +416,23 @@ class RestrictionForm extends RoleForm
         }
 
         return array('privileges' => $this->data);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function create(array $formData = array())
+    {
+        $this->setDisableLoadDefaultDecorators(false)
+            ->loadDefaultDecorators();
+        if ($this->restrictionMode !== static::MODE_DELETE) {
+            $this->setAttrib('class', 'restriction-form');
+            $this->removeDecorator('FormNotifications');
+            $this->addDecorator('FormNotifications', array('placement' => 'PREPEND'));
+            $this->addDecorator('HtmlTag', array('tag' => 'div', 'class' => 'discovery', 'placement' => 'APPEND'));
+        }
+
+        return parent::create($formData);
     }
 
     /**
