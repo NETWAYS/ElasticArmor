@@ -6,6 +6,10 @@ In case you want ElasticArmor to authenticate clients, you have the possibility 
 called backends. If multiple backends are configured, a client has authenticated itself once one of them succeeded
 with the authentication.
 
+A role can be defined for each backend which will then act as default role for all clients for which authentication
+has succeeded. To define a default role simply configure it as usual and set its name on a backend by using the
+option *default_role*.
+
 Each backend has a name which is also the name of the INI section. The type of backend is denoted by the option
 *backend* and may be followed by backend-specific options.
 
@@ -49,3 +53,4 @@ ActiveDirectory authentication backend:
     bind_dn="cn=elasticarmor,ou=services,dc=example,dc=org"
     bind_pw="p@ssw0rd"
     user_base_dn="ou=people,dc=example,dc=org"
+    default_role="people"
