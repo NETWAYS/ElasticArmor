@@ -81,3 +81,36 @@ a.create-link {
     .transition(ease .15s background);
   }
 }
+
+form.restriction-form {
+  float: left;
+}
+
+div.discovery {
+  display: none;
+  min-width: 35em;
+  padding: 0.5em;
+  padding-left: 1em;
+  overflow: hidden;
+
+  &.toggled {
+    display: inherit;
+  }
+
+  strong {
+    padding: 0.4em;
+    color: white;
+  }
+
+  div.no-matches strong {
+    background-color: @colorCritical;
+  }
+
+  div.discovered-matches strong {
+    background-color: @colorOk;
+  }
+
+  div.discovered-mismatches strong {
+    background-color: @colorWarning;
+  }
+}

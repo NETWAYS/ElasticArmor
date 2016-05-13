@@ -2,18 +2,18 @@
 
 switch ($scope) {
     case 'indices':
-        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing indices and aliases:');
-        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing indices and aliases:');
+        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing indices and aliases');
+        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing indices and aliases');
         $noMatchMessage = $this->translate('No indices discovered');
         break;
     case 'types':
-        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing document types:');
-        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing document types:');
+        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing document types');
+        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing document types');
         $noMatchMessage = $this->translate('No document types discovered');
         break;
     case 'fields':
-        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing fields:');
-        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing fields:');
+        $matchMessage = $this->translate('The restriction includes %.2f%% of all existing fields');
+        $mismatchMessage = $this->translate('The restriction excludes %.2f%% of all existing fields');
         $noMatchMessage = $this->translate('No fields discovered');
         break;
 }
