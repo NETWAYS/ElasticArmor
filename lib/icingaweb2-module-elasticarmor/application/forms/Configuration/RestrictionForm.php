@@ -187,13 +187,13 @@ class RestrictionForm extends RoleForm
         $discoverParams = array();
         if ($this->isIndexRestriction()) {
             $includeDescription = $this->translate(
-                'The indices this restriction permits access to. Use * as a wildcard'
+                'The indices this restriction permits access to. Use * as a wildcard.'
             );
             $excludeDescription = $this->translate(
-                'The indices to which this restriction explicitly forbids access. Use * as a wildcard'
+                'The indices to which this restriction explicitly forbids access. Use * as a wildcard.'
             );
         } elseif ($this->isTypeRestriction()) {
-            $includeDescription = $this->translate('The document types this restriction permits access to');
+            $includeDescription = $this->translate('The document types this restriction permits access to.');
             $discoverParams['indexFilter'] = $this->createFilterString(
                 $this->restrictionMode === static::MODE_INSERT
                     ? array_slice($this->restrictionPath, 0, -1)
@@ -202,10 +202,10 @@ class RestrictionForm extends RoleForm
             );
         } elseif ($this->isFieldRestriction()) {
             $includeDescription = $this->translate(
-                'The fields this restriction permits access to. Use * as a wildcard'
+                'The fields this restriction permits access to. Use * as a wildcard.'
             );
             $excludeDescription = $this->translate(
-                'The fields to which this restriction explicitly forbids access. Use * as a wildcard'
+                'The fields to which this restriction explicitly forbids access. Use * as a wildcard.'
             );
             $discoverParams['indexFilter'] = $this->createFilterString(
                 $this->restrictionMode === static::MODE_INSERT
@@ -221,7 +221,7 @@ class RestrictionForm extends RoleForm
             );
         }
 
-        $this->addElement( // TODO: Validator
+        $this->addElement(
             'text',
             'include',
             array(
@@ -237,7 +237,7 @@ class RestrictionForm extends RoleForm
         )->getElement('include')->setAttrib('class', 'include');
 
         if (! $this->isTypeRestriction()) {
-            $this->addElement( // TODO: Validator
+            $this->addElement(
                 'text',
                 'exclude',
                 array(
@@ -251,6 +251,44 @@ class RestrictionForm extends RoleForm
                     'description'       => $excludeDescription
                 )
             )->getElement('exclude')->setAttrib('class', 'exclude');
+            if ($this->isFieldRestriction()) {
+                $validatorOptions = array(
+                    'callback'  => function ($v) {
+                        foreach (explode(',', $v) as $p) {
+                            if (substr(trim($p), 0, 1) === '*') {
+                                return false;
+                            }
+                        }
+                        return true;
+                    },
+                    'messages'  => array(
+                        'callbackValue' => $this->translate('One ore more patterns contain a leading wildcard.')
+                    )
+                );
+
+                $this->getElement('include')
+                    ->setAttrib('requirement', $this->translate('Leading wildcards are not supported.'))
+                    ->addValidator('Callback', false, $validatorOptions);
+                $this->getElement('exclude')
+                    ->setAttrib('requirement', $this->translate('Leading wildcards are not supported.'))
+                    ->addValidator('Callback', false, $validatorOptions);
+            }
+        } else {
+            $this->getElement('include')
+                ->setAttrib('requirement', $this->translate('Wildcards are not supported.'))
+                ->addValidator('Callback', false, array(
+                    'callback'  => function ($v) {
+                        foreach (explode(',', $v) as $p) {
+                            if (strpos($p, '*') !== false) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    },
+                    'messages'  => array(
+                        'callbackValue' => $this->translate('One ore more patterns contain a wildcard.')
+                    )
+                ));
         }
 
         $availablePermissions = $this->identifyPermissions();
@@ -265,7 +303,7 @@ class RestrictionForm extends RoleForm
                 'label'         => $this->translate('Permissions'),
                 'description'   => $this->translate(
                     'The permissions this restriction grants within its scope. '
-                    . 'Leave empty to inherit permissions from the parent scope'
+                    . 'Leave empty to inherit permissions from the parent scope.'
                 )
             )
         );
