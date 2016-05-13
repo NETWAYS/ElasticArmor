@@ -35,6 +35,7 @@ class RoleForm extends RepositoryForm
      * @var array
      */
     protected $availablePermissions = array(
+        '*'                             => 'cluster',
         'config/*'                      => 'cluster',
         'config/authorization'          => 'cluster',
         'api/*'                         => 'cluster',
@@ -231,6 +232,7 @@ class RoleForm extends RepositoryForm
     {
         switch ($permission)
         {
+            case '*':
             case 'api/*':
                 return $this->translate(
                     'This opens up the entire API, including endpoints which'
