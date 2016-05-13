@@ -166,6 +166,22 @@ class ElasticObject(LoggingAware, object):
         return requests.Request(**kwargs)
 
     @classmethod
+    def get_source(cls, id):
+        """Create and return a new get request to fetch the given document's source."""
+        return cls.request(id + '/_source', method='GET')
+
+    @classmethod
+    def from_source(cls, id, source):
+        """Create and return a new instance of this class using
+        the given id and source from a previous get request.
+
+        """
+        try:
+            return cls(id, **source)
+        except TypeError:
+            raise ElasticSearchError('Source of document "{0}" is missing one or more fields'.format(id))
+
+    @classmethod
     def from_search_result(cls, result):
         """Create and return a new instance of this class using the given result from a previous search request.
 
