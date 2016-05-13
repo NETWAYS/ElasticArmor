@@ -54,6 +54,7 @@ class Auth(LoggingAware, object):
                     try:
                         if backend.authenticate(client):
                             client.authenticated = True
+                            client.default_role = backend.default_role
                             break
                     except LDAPError as error:
                         self.log.error('Failed to authenticate client "%s" using backend "%s". %s.',

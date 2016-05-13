@@ -32,7 +32,8 @@ class Settings(LoggingAware, object):
         'elasticsearch': DEFAULT_NODE,
         'address': DEFAULT_ADDRESS,
         'port': DEFAULT_PORT,
-        'secured': 'false'
+        'secured': 'false',
+        'default_role': None
     }
 
     default_authentication_config = {
@@ -356,7 +357,9 @@ class Settings(LoggingAware, object):
                     else:
                         self._exit('Missing "%s" option in authentication backend "%s".', option_name, section_name)
 
-            backends.append(backend_type(section_name, get_option))
+            backend = backend_type(section_name, get_option)
+            backend.default_role = self.authentication.get(section_name, 'default_role')
+            backends.append(backend)
 
         return backends
 

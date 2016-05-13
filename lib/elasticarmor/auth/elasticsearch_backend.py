@@ -32,4 +32,14 @@ class ElasticsearchRoleBackend(LoggingAware, object):
             except ElasticSearchError as error:
                 self.log.warning('Failed to create role from search result. An error occurred: %s', error)
 
+        if client.default_role is not None and not any(role.id == client.default_role for role in roles):
+            response = self.connection.process(Role.get_source(client.default_role))
+            if response is not None and response.ok:
+                try:
+                    roles.append(Role.from_source(client.default_role, response.json()))
+                except ElasticSearchError as error:
+                    self.log.warning('Failed to create role from source. An error occurred: %s', error)
+            else:
+                self.log.warning('Unable to retrieve default role "%s" for client "%s".', client.default_role, client)
+
         return roles
