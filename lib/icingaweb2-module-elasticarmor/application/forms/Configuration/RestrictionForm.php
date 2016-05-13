@@ -4,6 +4,7 @@
 namespace Icinga\Module\Elasticarmor\Forms\Configuration;
 
 use UnexpectedValueException;
+use Icinga\Web\Url;
 
 /**
  * @todo    We're playing with list indices here which may have changed.
@@ -43,6 +44,15 @@ class RestrictionForm extends RoleForm
      * @var array
      */
     protected $restrictionData;
+
+    /**
+     * {@inheritdoc}
+     */
+    public function init()
+    {
+        $this->setProtectIds(false);
+        $this->setName('elasticarmor_restriction_form');
+    }
 
     /**
      * Return the context of the restriction
@@ -174,24 +184,58 @@ class RestrictionForm extends RoleForm
      */
     protected function createInsertRestrictionElements(array $formData)
     {
+        $discoverParams = array();
+        if ($this->isIndexRestriction()) {
+        } elseif ($this->isTypeRestriction()) {
+            $discoverParams['indexFilter'] = $this->createFilterString(
+                $this->restrictionMode === static::MODE_INSERT
+                    ? array_slice($this->restrictionPath, 0, -1)
+                    : $this->restrictionPath,
+                static::INDEX_CONTEXT
+            );
+        } elseif ($this->isFieldRestriction()) {
+            $discoverParams['indexFilter'] = $this->createFilterString(
+                $this->restrictionMode === static::MODE_INSERT
+                    ? array_slice($this->restrictionPath, 0, -3)
+                    : array_slice($this->restrictionPath, 0, -2),
+                static::INDEX_CONTEXT
+            );
+            $discoverParams['typeFilter'] = $this->createFilterString(
+                $this->restrictionMode === static::MODE_INSERT
+                    ? array_slice($this->restrictionPath, 0, -1)
+                    : $this->restrictionPath,
+                static::TYPE_CONTEXT
+            );
+        }
+
         $this->addElement( // TODO: Validator
             'text',
             'include',
             array(
-                'required'  => true,
-                'label'     => $this->translate('Include')
+                'required'          => true,
+                'autosubmit'        => true,
+                'autocomplete'      => 'off',
+                'autocorrect'       => 'off',
+                'autocapitalize'    => 'off',
+                'spellcheck'        => 'false',
+                'label'             => $this->translate('Include'),
             )
-        );
+        )->getElement('include')->setAttrib('class', 'include');
 
         if (! $this->isTypeRestriction()) {
             $this->addElement( // TODO: Validator
                 'text',
                 'exclude',
                 array(
-                    'allowEmpty'    => true,
-                    'label'         => $this->translate('Exclude')
+                    'allowEmpty'        => true,
+                    'autosubmit'        => true,
+                    'autocomplete'      => 'off',
+                    'autocorrect'       => 'off',
+                    'autocapitalize'    => 'off',
+                    'spellcheck'        => 'false',
+                    'label'             => $this->translate('Exclude'),
                 )
-            );
+            )->getElement('exclude')->setAttrib('class', 'exclude');
         }
 
         $availablePermissions = $this->identifyPermissions();
@@ -204,6 +248,21 @@ class RestrictionForm extends RoleForm
                     : static::MULTISELECT_MAX_SIZE,
                 'multiOptions'  => array_combine($availablePermissions, $availablePermissions),
                 'label'         => $this->translate('Permissions')
+
+        $this->addElement(
+            'hidden',
+            'discover_url',
+            array(
+                'disabled'  => 'disabled',
+                'value'     => Url::fromPath('elasticarmor/restrictions/discover', $discoverParams)->getAbsoluteUrl()
+            )
+        );
+        $this->addElement(
+            'note',
+            'discovery_result',
+            array(
+                'value'         => '<div id="discovery"></div>',
+                'decorators'    => array('ViewHelper')
             )
         );
 
@@ -352,5 +411,56 @@ class RestrictionForm extends RoleForm
             unset($data[$key]);
             $data = array_values($data);
         }
+    }
+
+    /**
+     * Create and return a filter string
+     *
+     * @param   array   $path           The path to the restriction the filter string should apply to
+     * @param   string  $desiredScope   The desired restriction scope
+     *
+     * @return  string
+     */
+    protected function createFilterString(array $path, $desiredScope)
+    {
+        if (! empty($path)) {
+            $restrictions = array($this->extract($this->data, $path));
+        } else {
+            $restrictions = $this->data[$desiredScope];
+        }
+
+        $parts = array();
+        foreach ($restrictions as $restriction) {
+            if (is_array($restriction['include'])) {
+                $parts = array_merge($parts, $restriction['include']);
+            } else {
+                $parts = array_merge(
+                    $parts,
+                    array_map('trim', explode(',', $restriction['include']))
+                );
+            }
+
+            if (isset($restriction['exclude'])) {
+                if (is_array($restriction['exclude'])) {
+                    $parts = array_merge(
+                        $restriction['include'],
+                        array_map(
+                            function ($exclude) { return '-' . $exclude; },
+                            $restriction['exclude']
+                        )
+                    );
+                } else {
+                    $parts = array_merge(
+                        $parts,
+                        array_map(
+                            function ($exclude) { return '-' . trim($exclude); },
+                            explode(',', $restriction['exclude'])
+                        )
+                    );
+                }
+            }
+        }
+
+        return join(',', $parts);
     }
 }
