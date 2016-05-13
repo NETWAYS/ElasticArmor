@@ -12,7 +12,12 @@ _pattern_cache = {}
 
 def format_ldap_error(error):
     """Return a string representation of the given LDAPError."""
-    if 'desc' in error.args[0] and 'info' in error.args[0]:
+    if len(error.args) == 2:
+        if error.args[0] == 0:
+            error_message = 'Connection failed'
+        else:
+            error_message = 'Unknown error: {0}'.format(error.args[0])
+    elif 'desc' in error.args[0] and 'info' in error.args[0]:
         error_message = '{0} ({1})'.format(error.args[0]['desc'], error.args[0]['info'])
     elif 'desc' in error.args[0]:
         error_message = error.args[0]['desc']
