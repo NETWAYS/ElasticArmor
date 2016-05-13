@@ -325,6 +325,11 @@ class RestrictionForm extends RoleForm
             )
         );
 
+        if (isset($formData['skip_validation']) && $formData['skip_validation']) {
+            // In case another error occured and the checkbox was displayed before
+            $this->addSkipValidationCheckbox();
+        }
+
         $this->setSubmitLabel($this->translate('Create Restriction'));
     }
 
@@ -347,6 +352,56 @@ class RestrictionForm extends RoleForm
     public function createDeleteRestrictionElements(array $formData)
     {
         $this->setSubmitLabel($this->translate('Remove Restriction'));
+    }
+
+    /**
+     * Add a checkbox to the form by which the user can skip the permission safety measures
+     */
+    protected function addSkipValidationCheckbox()
+    {
+        $this->addElement(
+            'checkbox',
+            'skip_validation',
+            array(
+                'order'         => 0,
+                'ignore'        => true,
+                'required'      => true,
+                'label'         => $this->translate('Confirm'),
+                'description'   => $this->translate('Check this box to confirm the use of these permissions.')
+            )
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isValid($formData)
+    {
+        if (! parent::isValid($formData)) {
+            return false;
+        }
+
+        if (($el = $this->getElement('skip_validation')) === null || !$el->isChecked()) {
+            if (isset($formData['permissions']) && !empty($formData['permissions'])) {
+                foreach ($formData['permissions'] as $permission) {
+                    if (($reason = $this->isHarmfulPermission($permission)) !== null) {
+                        $this->warning(
+                            sprintf($this->translate('Permission "%s" is possibly harmful: %s'), $permission, $reason)
+                        );
+                    }
+                }
+
+                if ($this->hasErrors()) {
+                    if ($el === null) {
+                        $this->addSkipValidationCheckbox();
+                    }
+
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
