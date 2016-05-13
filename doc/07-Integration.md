@@ -68,8 +68,8 @@ privileges:
         - api/cluster/health
         - api/indices/refresh
         - api/indices/create/index
-        - api/indices/create/mapping
-        - api/indices/get/mapping
+        - api/indices/create/mappings
+        - api/indices/get/mappings
         - api/documents/get
         - api/documents/index
         - api/documents/delete
@@ -101,8 +101,8 @@ privileges:
         - api/cluster/health
         - api/indices/refresh
         - api/indices/create/index
-        - api/indices/create/mapping
-        - api/indices/get/mapping
+        - api/indices/create/mappings
+        - api/indices/get/mappings
         - api/documents/get
         - api/documents/index
         - api/documents/delete
