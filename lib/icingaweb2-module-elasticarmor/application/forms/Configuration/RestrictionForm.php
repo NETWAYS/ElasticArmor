@@ -186,7 +186,14 @@ class RestrictionForm extends RoleForm
     {
         $discoverParams = array();
         if ($this->isIndexRestriction()) {
+            $includeDescription = $this->translate(
+                'The indices this restriction permits access to. Use * as a wildcard'
+            );
+            $excludeDescription = $this->translate(
+                'The indices to which this restriction explicitly forbids access. Use * as a wildcard'
+            );
         } elseif ($this->isTypeRestriction()) {
+            $includeDescription = $this->translate('The document types this restriction permits access to');
             $discoverParams['indexFilter'] = $this->createFilterString(
                 $this->restrictionMode === static::MODE_INSERT
                     ? array_slice($this->restrictionPath, 0, -1)
@@ -194,6 +201,12 @@ class RestrictionForm extends RoleForm
                 static::INDEX_CONTEXT
             );
         } elseif ($this->isFieldRestriction()) {
+            $includeDescription = $this->translate(
+                'The fields this restriction permits access to. Use * as a wildcard'
+            );
+            $excludeDescription = $this->translate(
+                'The fields to which this restriction explicitly forbids access. Use * as a wildcard'
+            );
             $discoverParams['indexFilter'] = $this->createFilterString(
                 $this->restrictionMode === static::MODE_INSERT
                     ? array_slice($this->restrictionPath, 0, -3)
@@ -219,6 +232,7 @@ class RestrictionForm extends RoleForm
                 'autocapitalize'    => 'off',
                 'spellcheck'        => 'false',
                 'label'             => $this->translate('Include'),
+                'description'       => $includeDescription
             )
         )->getElement('include')->setAttrib('class', 'include');
 
@@ -234,6 +248,7 @@ class RestrictionForm extends RoleForm
                     'autocapitalize'    => 'off',
                     'spellcheck'        => 'false',
                     'label'             => $this->translate('Exclude'),
+                    'description'       => $excludeDescription
                 )
             )->getElement('exclude')->setAttrib('class', 'exclude');
         }
@@ -247,7 +262,13 @@ class RestrictionForm extends RoleForm
                     ? count($availablePermissions)
                     : static::MULTISELECT_MAX_SIZE,
                 'multiOptions'  => array_combine($availablePermissions, $availablePermissions),
-                'label'         => $this->translate('Permissions')
+                'label'         => $this->translate('Permissions'),
+                'description'   => $this->translate(
+                    'The permissions this restriction grants within its scope. '
+                    . 'Leave empty to inherit permissions from the parent scope'
+                )
+            )
+        );
 
         $this->addElement(
             'hidden',
