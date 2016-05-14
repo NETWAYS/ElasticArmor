@@ -9,7 +9,7 @@ not be able to utilize new or removed features. Though, changes in functionality
 means that features that were previously considered being not security relevant now are. Thus you will need to take
 extra care when upgrading to any new version of Elasticsearch.
 
-The following versions are currently supported:
+The following versions are currently supported and are known to work well with ElasticArmor:
 
 * 1.7.x
 
