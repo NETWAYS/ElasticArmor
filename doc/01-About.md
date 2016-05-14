@@ -27,10 +27,11 @@ See [here](03-Configuration.md#configuration) for how to configure ElasticArmor.
 
 ## <a id="about-authentication"></a> Authentication
 
-By default ElasticArmor considers any request with basic authentication credentials as being authenticated. This
-allows another reverse proxy being placed in front of ElasticArmor that is performing the actual authentication.
-But it is also possible to have ElasticArmor performing the authentication by configuring one or more
-authentication mechanisms.
+While ElasticArmor can *run* without any configuration, it does not authenticate clients without further ado. If
+you have another reverse proxy placed in front of ElasticArmor that is performing the actual authentication, you
+need to define it as [trusted proxy](03-Configuration.md#configuration-proxy-trusted-proxies) in order to make
+ElasticArmor blindly trust a request's credentials. If you want ElasticArmor to perform the authentication, it
+is possible to configure one or more mechanisms to accomplish this.
 
 See [here](04-Authentication.md#authentication) for how to configure authentication.
 

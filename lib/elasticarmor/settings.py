@@ -246,14 +246,21 @@ class Settings(LoggingAware, object):
 
     @property
     def allow_from(self):
-        allow_from = {}
-
         try:
-            value = self.config.get('proxy', 'allow_from')
+            return self._create_network_map(self.config.get('proxy', 'allow_from'))
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            return allow_from
+            return {}
 
-        for host_and_port in value.split(','):
+    @property
+    def trusted_proxies(self):
+        try:
+            return self._create_network_map(self.config.get('proxy', 'trusted_proxies'))
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            return {}
+
+    def _create_network_map(self, hosts):
+        network_map = {}
+        for host_and_port in hosts.split(','):
             try:
                 host, port = host_and_port.split(':')
             except ValueError:
@@ -268,18 +275,18 @@ class Settings(LoggingAware, object):
                 self.log.warning('Failed to resolve hostname "%s". An error occurred: %s', host, error)
             else:
                 for ip in ip_list:
-                    if ip not in allow_from:
+                    if ip not in network_map:
                         if port:
-                            allow_from[ip] = [port]
+                            network_map[ip] = [port]
                         else:
-                            allow_from[ip] = None
-                    elif allow_from[ip] is not None:
+                            network_map[ip] = None
+                    elif network_map[ip] is not None:
                         if port:
-                            allow_from[ip].append(port)
+                            network_map[ip].append(port)
                         else:
-                            allow_from[ip] = None
+                            network_map[ip] = None
 
-        return allow_from
+        return network_map
 
     @property
     @propertycache

@@ -259,13 +259,16 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         if self._client is not None:
             return self._client
 
-        client_address = client_port = None
+        client_address, client_port = self.client_address
         if self._context is not None:
-            client_address, client_port = self._context.forwarded_for
-        if client_address is None:
-            client_address, client_port = self.client_address
+            trusted_ports = self.server.auth.trusted_proxies.get(client_address, [])
+            if trusted_ports is None or client_port in trusted_ports:
+                forwarded_address, forwarded_port = self._context.forwarded_for
+                if forwarded_address is not None:
+                    client_address, client_port = forwarded_address, forwarded_port
 
         self._client = Client(client_address, client_port)
+        self._client.peer_address, self._client.peer_port = self.client_address
 
         try:
             header_value = self.headers['Authorization']

@@ -26,6 +26,7 @@ class Auth(LoggingAware, object):
         self.role_backend = settings.role_backend
         self.auth_backends = settings.auth_backends
         self.group_backends = settings.group_backends
+        self.trusted_proxies = settings.trusted_proxies
 
     def authenticate(self, client, populate=True):
         """Authenticate the given client and return whether it succeeded or not."""
@@ -60,7 +61,8 @@ class Auth(LoggingAware, object):
                         self.log.error('Failed to authenticate client "%s" using backend "%s". %s.',
                                        client, backend.name, format_ldap_error(error))
             else:
-                client.authenticated = True
+                trusted_ports = self.trusted_proxies.get(client.peer_address, [])
+                client.authenticated = trusted_ports is None or client.peer_port in trusted_ports
 
         if client.authenticated and populate:
             self.populate(client)
@@ -171,8 +173,12 @@ class Client(LoggingAware, object):
         self.address = address
         self.port = port
 
+        self.peer_address = None
+        self.peer_port = None
+
         self.name = None
         self.authenticated = False
+        self.default_role = None
         self.username = None
         self.password = None
         self.groups = None

@@ -55,6 +55,38 @@ You can set a list of host[:port] combinations separated by comma on the option 
     ...
     allow_from="localhost, name.example.com, 10.20.30.40:1234"
 
+### <a id="configuration-proxy-trusted-proxies"></a> Trusted Proxies
+
+Proxies configured as being trusted allow ElasticArmor to utilize a request's HTTP headers for authorization.
+
+You can set a list of host[:port] combinations separated by comma on the option *trusted_proxies*:
+
+    [proxy]
+    ...
+    trusted_proxies="localhost, name.example.com, 10.20.30.40:1234"
+
+The HTTP headers utilized by ElasticArmor for authorization are as follows:
+
+#### <a id="configuration-proxy-trusted-proxies-authorization"></a> Authorization
+
+In case ElasticArmor does not authenticate clients on its own, the *Authorization* header is only used for
+identification purposes. This means that requests containing authentication credentials received from a
+trusted proxy are considered as being successfully authenticated.
+
+> **Note:**
+>
+> In case ElasticArmor authenticates clients on its own, they still need to authenticate with the configured
+> mechanisms regardless from whom the request has been received.
+
+#### <a id="configuration-proxy-trusted-proxies-x-forwarded-for"></a> X-Forwarded-For
+
+The XFF header is used to replace a request's origin address and port with the very first entry supplied with
+this header.
+
+> **Note:**
+>
+> If you have anonymous access configured, the extracted entry is subject to authorization instead.
+
 ### <a id="configuration-proxy-fallback-nodes"></a> Fallback Nodes
 
 It is possible to define multiple Elasticsearch nodes, each separated by comma:
