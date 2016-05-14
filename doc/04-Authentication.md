@@ -33,6 +33,12 @@ user_base_dn        | The base dn where to search for users
 user_object_class   | The object class of a user
 user_name_attribute | The name of the attribute where a user's name is stored
 
+The remaining options listed below can be additionally set to customize authentication:
+
+Option              | Description
+--------------------|---------------------------------------------------------------------------
+user_object_filter  | A native search filter used to limit the set of users able to authenticate
+
 ### <a id="authentication-ldap-ad"></a> ActiveDirectory
 
 If you want to authenticate clients by using ActiveDirectory, you can use the `msldap` type to utilize

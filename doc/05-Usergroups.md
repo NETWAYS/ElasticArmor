@@ -33,6 +33,13 @@ group_object_class          | The object class of a group
 group_name_attribute        | The name of the attribute where a group's name is stored
 group_membership_attribute  | The name of the attribute where a group's members are stored
 
+The remaining options listed below can be additionally set to customize usergroup retrieval:
+
+Option              | Description
+--------------------|----------------------------------------------------------------------------------
+user_object_filter  | A native search filter used to limit the set of users for which to provide groups
+group_object_filter | A native search filter used to limit the available set of groups
+
 ### <a id="usergroups-ldap-ad"></a> ActiveDirectory
 
 If you want to authenticate clients by using ActiveDirectory, you can use the `msldap` type to utilize

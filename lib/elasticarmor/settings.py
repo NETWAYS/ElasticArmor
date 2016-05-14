@@ -355,12 +355,14 @@ class Settings(LoggingAware, object):
 
             defaults = self.default_authentication_config.get(backend_type_name, {})
 
-            def get_option(option_name):
+            def get_option(option_name, **kwargs):
                 try:
                     return self.authentication.get(section_name, option_name)
                 except ConfigParser.NoOptionError:
                     if option_name in defaults:
                         return defaults[option_name]
+                    elif 'default' in kwargs:
+                        return kwargs['default']
                     else:
                         self._exit('Missing "%s" option in authentication backend "%s".', option_name, section_name)
 

@@ -70,20 +70,13 @@ class LdapBackend(object):
 
         self._local.connection = None
 
-    def search(self, base_dn, search_filter, attributes=None):
+    def search(self, base_dn, search_string, attributes=None):
         """Send a search request to the LDAP server and return the result.
 
-        The given filter must be a shallow dictionary and is sent as AND filter. You may pass a list of attributes
-        you want to retrieve or an empty list to return none, otherwise all attributes are retrieved.
+        You may pass a list of attributes you want to retrieve or an empty
+        list to return none, otherwise all attributes are retrieved.
 
         """
-        if len(search_filter) > 1:
-            search_string = '(&(' + ')('.join('{0}={1}'.format(k, v) for k, v in search_filter.iteritems()) + '))'
-        elif search_filter:
-            search_string = '({0}={1})'.format(*search_filter.items()[0])
-        else:
-            search_string = '(objectClass=*)'
-
         attrsonly = 0
         if attributes is not None and not attributes:
             # This is actually quite dirty as I was not able to find a way to select "nothing". This will now
@@ -92,20 +85,33 @@ class LdapBackend(object):
 
         return self.connection.search_s(base_dn, ldap.SCOPE_SUBTREE, search_string, attributes, attrsonly)
 
-    def fetch_dn(self, base_dn, filter):
+    def fetch_dn(self, base_dn, search_string):
         """Fetch and return a single DN. Raises either ldap.NO_RESULTS_RETURNED
         if no DN could be found or ldap.LDAPError if multiple DNs were found.
 
         """
-        result = self.search(base_dn, filter, [])
+        result = self.search(base_dn, search_string, [])
         if not result:
             raise ldap.NO_RESULTS_RETURNED(
-                {'desc': 'No DN found with filter {0!r} in base DN {1}'.format(filter, base_dn)})
+                {'desc': 'No DN found with filter {0} in base DN {1}'.format(search_string, base_dn)})
         elif len(result) > 1:
             raise ldap.LDAPError(
-                {'desc': 'Multiple DNs found with filter {0!r} in base DN {1}'.format(filter, base_dn)})
+                {'desc': 'Multiple DNs found with filter {0} in base DN {1}'.format(search_string, base_dn)})
 
         return result[0][0]
+
+    def render_search_filter(self, search_filter):
+        """Render and return the given search filter as string.
+
+        The given filter must be a shallow dictionary and is rendered as AND filter.
+
+        """
+        if len(search_filter) > 1:
+            return '(&(' + ')('.join('{0}={1}'.format(k, v) for k, v in search_filter.iteritems()) + '))'
+        elif search_filter:
+            return '({0}={1})'.format(*search_filter.items()[0])
+        else:
+            return '(objectClass=*)'
 
 
 class LdapUserBackend(LdapBackend):
@@ -118,12 +124,21 @@ class LdapUserBackend(LdapBackend):
         self.user_object_class = get_option('user_object_class')
         self.user_name_attribute = get_option('user_name_attribute')
 
+        self.user_object_filter = get_option('user_object_filter', default=None)
+        if self.user_object_filter is not None and self.user_object_filter.startswith('('):
+            self.user_object_filter = self.user_object_filter[1:-1]
+
     def authenticate(self, client):
         """Authenticate the given client and return whether it succeeded or not."""
         try:
             self.bind()
-            user_dn = self.fetch_dn(self.user_base_dn, {'objectClass': self.user_object_class,
-                                                        self.user_name_attribute: client.name})
+            user_filter = self.render_search_filter({'objectClass': self.user_object_class,
+                                                     self.user_name_attribute: client.name})
+            if self.user_object_filter is not None:
+                user_filter = '(&({0}){1})'.format(self.user_object_filter, user_filter)
+
+            user_dn = self.fetch_dn(self.user_base_dn, user_filter)
+
             try:
                 self.unbind()
                 self.bind(user_dn, client.password)
@@ -151,6 +166,14 @@ class LdapUsergroupBackend(LdapBackend):
         self.group_name_attribute = get_option('group_name_attribute')
         self.group_membership_attribute = get_option('group_membership_attribute')
 
+        self.user_object_filter = get_option('user_object_filter', default=None)
+        if self.user_object_filter is not None and self.user_object_filter.startswith('('):
+            self.user_object_filter = self.user_object_filter[1:-1]
+
+        self.group_object_filter = get_option('group_object_filter', default=None)
+        if self.group_object_filter is not None and self.group_object_filter.startswith('('):
+            self.group_object_filter = self.group_object_filter[1:-1]
+
     def clear_cache(self):
         """Clear the internal group membership cache."""
         with self._cache_lock.writeContext:
@@ -167,9 +190,17 @@ class LdapUsergroupBackend(LdapBackend):
         else:
             with self._cache_lock.writeContext:
                 self.bind()
-                user_dn = self.fetch_dn(
-                    self.user_base_dn, {'objectClass': self.user_object_class, self.user_name_attribute: client.name})
-                group_filter = {'objectClass': self.group_object_class, self.group_membership_attribute: user_dn}
+                user_filter = self.render_search_filter({'objectClass': self.user_object_class,
+                                                         self.user_name_attribute: client.name})
+                if self.user_object_filter is not None:
+                    user_filter = '(&({0}){1})'.format(self.user_object_filter, user_filter)
+
+                user_dn = self.fetch_dn(self.user_base_dn, user_filter)
+                group_filter = self.render_search_filter({'objectClass': self.group_object_class,
+                                                          self.group_membership_attribute: user_dn})
+                if self.group_object_filter is not None:
+                    group_filter = '(&({0}){1})'.format(self.group_object_filter, group_filter)
+
                 results = self.search(self.group_base_dn, group_filter, [self.group_name_attribute])
                 memberships = []
                 for result in (r for r in results if self.group_name_attribute in r[1]):
