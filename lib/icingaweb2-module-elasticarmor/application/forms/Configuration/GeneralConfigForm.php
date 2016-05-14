@@ -25,6 +25,7 @@ class GeneralConfigForm extends ConfigForm
             'text',
             'backend_index',
             array(
+                'required'      => true,
                 'placeholder'   => '.elasticarmor',
                 'label'         => $this->translate('Configuration Index'),
                 'description'   => $this->translate(
