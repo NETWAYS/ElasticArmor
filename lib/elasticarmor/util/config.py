@@ -2,6 +2,8 @@
 
 import ConfigParser
 
+from elasticarmor.util import strip_quotes
+
 
 class Parser(ConfigParser.RawConfigParser):
     """INI Parser derived from ConfigParser.RawConfigParser which is
@@ -15,9 +17,14 @@ class Parser(ConfigParser.RawConfigParser):
         """
 
         try:
-            return ConfigParser.RawConfigParser.get(self, section, option)
+            value = ConfigParser.RawConfigParser.get(self, section, option)
         except ConfigParser.NoSectionError as error:
             try:
                 return self._defaults[self.optionxform(option)]
             except KeyError:
                 raise error
+        else:
+            try:
+                return strip_quotes(value)
+            except TypeError:
+                return value

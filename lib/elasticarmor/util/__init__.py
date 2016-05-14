@@ -4,7 +4,7 @@ import re
 from distutils.version import StrictVersion
 
 __all__ = ['format_ldap_error', 'format_elasticsearch_error', 'compare_major_and_minor_version',
-           'pattern_match', 'pattern_compare', 'classproperty', 'propertycache']
+           'pattern_match', 'pattern_compare', 'classproperty', 'propertycache', 'strip_quotes']
 
 CACHE_MAX_SIZE = 1000
 _pattern_cache = {}
@@ -190,3 +190,16 @@ class propertycache(object):
             self.result = self.func(instance)
 
         return self.result
+
+
+def strip_quotes(buf):
+    """Remove leading and trailing quotes from the given string and return only the enclosed content."""
+    try:
+        if buf.startswith("'") or buf.startswith('"'):
+            buf = buf[1:]
+        if buf.endswith("'") or buf.endswith('"'):
+            buf = buf[:-1]
+    except AttributeError:
+        raise TypeError('Expected type string, got %s instead' % type(buf))
+
+    return buf
