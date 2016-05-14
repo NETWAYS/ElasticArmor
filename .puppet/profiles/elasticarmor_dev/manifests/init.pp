@@ -37,10 +37,20 @@ class elasticarmor_dev {
         unless      => 'curl -sf -XHEAD localhost:9200/.elasticarmor/role/kibana-server',
         command     => 'curl -XPOST localhost:9200/.elasticarmor/role/kibana-server?refresh -d @/vagrant/.puppet/files/elasticarmor/kibana-server.json'
     }
-    -> exec { 'user-role':
+    -> exec { 'server-user':
+        provider    => shell,
+        unless      => 'curl -sf localhost:9200/.elasticarmor/role_user/_search/exists?q=name:localhost%20AND%20_parent:kibana-server',
+        command     => 'curl -XPOST localhost:9200/.elasticarmor/role_user?parent=kibana-user -d \'{"name": "localhost"}\''
+    }
+    -> exec { 'client-role':
         provider    => shell,
         unless      => 'curl -sf -XHEAD localhost:9200/.elasticarmor/role/kibana-user',
         command     => 'curl -XPOST localhost:9200/.elasticarmor/role/kibana-user?refresh -d @/vagrant/.puppet/files/elasticarmor/kibana-user.json'
+    }
+    -> exec { 'client-user':
+        provider    => shell,
+        unless      => 'curl -sf localhost:9200/.elasticarmor/role_user/_search/exists?q=name:kibana%20AND%20_parent:kibana-user',
+        command     => 'curl -XPOST localhost:9200/.elasticarmor/role_user?parent=kibana-user -d \'{"name": "kibana"}\''
     }
 
     package { 'python-ldap': }

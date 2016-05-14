@@ -1,31 +1,53 @@
 {
-    "settings": {
-        "analysis": {
-            "analyzer": {
-                "lowercase_keyword": {
-                    "type": "custom",
-                    "filter": "lowercase",
-                    "tokenizer": "keyword"
-                }
-            }
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "lowercase_keyword": {
+          "type": "custom",
+          "filter": "lowercase",
+          "tokenizer": "keyword"
         }
-    },
-    "mappings": {
-        "role": {
-            "properties": {
-                "users": {
-                    "type": "string",
-                    "analyzer": "lowercase_keyword"
-                },
-                "groups": {
-                    "type": "string",
-                    "analyzer": "lowercase_keyword"
-                },
-                "privileges": {
-                    "type": "object",
-                    "enabled": false
-                }
-            }
-        }
+      }
     }
+  },
+  "mappings": {
+    "role": {
+      "properties": {
+        "privileges": {
+          "type": "object",
+          "enabled": false
+        }
+      }
+    },
+    "role_user": {
+      "_parent": {
+        "type": "role"
+      },
+      "properties": {
+        "name": {
+          "type": "string",
+          "analyzer": "lowercase_keyword"
+        },
+        "backend": {
+          "type": "string",
+          "analyzer": "lowercase_keyword"
+        }
+      }
+    },
+    "role_group": {
+      "_parent": {
+        "type": "role"
+      },
+      "properties": {
+        "name": {
+          "type": "string",
+          "analyzer": "lowercase_keyword"
+        },
+        "backend": {
+          "type": "string",
+          "analyzer": "lowercase_keyword"
+        }
+      }
+    }
+  }
 }
