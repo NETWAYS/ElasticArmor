@@ -383,7 +383,9 @@ class Client(LoggingAware, object):
             return fields_filter or FieldsFilter()  # Not a single restriction, congratulations!
 
         # A fields filter has no idea of excludes, so we can only use includes which do not have any
-        fields = [include for include in filters if not filters[include]]
+        # or where all excludes are unnecessary as the client does restrict itself already far enough
+        fields = [include for include in filters
+                  if not filters[include] or not any(p >= e for p in fields_filter for e in filters[include])]
         if not fields:
             return  # But if all available filters have excludes, we can't provide the client with a fields filter
 
