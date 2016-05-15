@@ -196,7 +196,7 @@ class RestrictionForm extends RoleForm
             $discoverParams['indexFilter'] = $this->createFilterString(
                 $this->restrictionMode === static::MODE_INSERT
                     ? array_slice($this->restrictionPath, 0, -1)
-                    : $this->restrictionPath,
+                    : array_slice($this->restrictionPath, 0, -2),
                 static::INDEX_CONTEXT
             );
         } elseif ($this->isFieldRestriction()) {
@@ -209,13 +209,13 @@ class RestrictionForm extends RoleForm
             $discoverParams['indexFilter'] = $this->createFilterString(
                 $this->restrictionMode === static::MODE_INSERT
                     ? array_slice($this->restrictionPath, 0, -3)
-                    : array_slice($this->restrictionPath, 0, -2),
+                    : array_slice($this->restrictionPath, 0, -4),
                 static::INDEX_CONTEXT
             );
             $discoverParams['typeFilter'] = $this->createFilterString(
                 $this->restrictionMode === static::MODE_INSERT
                     ? array_slice($this->restrictionPath, 0, -1)
-                    : $this->restrictionPath,
+                    : array_slice($this->restrictionPath, 0, -2),
                 static::TYPE_CONTEXT
             );
         }
@@ -311,6 +311,7 @@ class RestrictionForm extends RoleForm
             'hidden',
             'discover_url',
             array(
+                'ignore'    => true,
                 'disabled'  => 'disabled',
                 'value'     => Url::fromPath('elasticarmor/restrictions/discover', $discoverParams)->getAbsoluteUrl()
             )
