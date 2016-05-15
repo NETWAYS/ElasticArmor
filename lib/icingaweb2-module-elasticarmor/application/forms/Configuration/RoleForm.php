@@ -265,6 +265,17 @@ class RoleForm extends RepositoryForm
                     'While it is possible to regulate the starting point of the More Like This'
                     . ' API/Query, it is not possible to regulate what is being returned.'
                 );
+            case 'api/indices/create/aliases':
+            case 'api/indices/delete/aliases':
+            case 'api/indices/create/warmers':
+            case 'api/indices/delete/warmers':
+            case 'api/indices/stats':
+            case 'api/documents/termVector':
+            case 'api/search/shards':
+            case 'api/search/suggest':
+            case 'api/search/explain':
+            case 'api/search/percolate':
+            case 'api/search/fieldStats':
             case 'api/feature/notImplemented':
                 return $this->translate(
                     'API endpoints which are not yet inspected allow the user'
