@@ -130,7 +130,57 @@ class ElasticsearchBackend extends ElasticsearchRepository
         }
 
         $this->insert(array($documentType, $newDocumentId), $updatedDocument['get']['_source']);
-        $this->delete(array($documentType, $updatedDocument['_id']));
+        $failedUpdates = false;
+
+        $userQuery = $this
+            ->select()
+            ->from('role_user', array('id', 'user', 'backend'))
+            ->where('role', $updatedDocument['_id'])
+            ->limit(1000);
+        foreach ($userQuery as $user) {
+            try {
+                # TODO: Use bulk deletion/updates instead
+                $this->insert('role_user', array(
+                    'role'      => $newDocumentId,
+                    'user'      => $user->user,
+                    'backend'   => $user->backend
+                ));
+                $this->delete(array('role_user', $user->id));
+            } catch (StatementException $e) {
+                $failedUpdates = true;
+                Logger::error('Failed to update user membership of role %s: %s', $newDocumentId, $e);
+            }
+        }
+
+        $groupQuery = $this
+            ->select()
+            ->from('role_group', array('id', 'group', 'backend'))
+            ->where('role', $updatedDocument['_id'])
+            ->limit(1000);
+        foreach ($groupQuery as $group) {
+            try {
+                # TODO: Use bulk deletion/updates instead
+                $this->insert('role_group', array(
+                    'role'      => $newDocumentId,
+                    'group'     => $group->group,
+                    'backend'   => $group->backend
+                ));
+                $this->delete(array('role_group', $group->id));
+            } catch (StatementException $e) {
+                $failedUpdates = true;
+                Logger::error('Failed to update group membership of role %s: %s', $newDocumentId, $e);
+            }
+        }
+
+        if ($failedUpdates) {
+            Notification::error(sprintf(
+                'Failed to update all memberships of role %s. Please see the log for details.',
+                $newDocumentId
+            ));
+        } else {
+            $this->delete(array($documentType, $updatedDocument['_id']));
+        }
+
         $updatedDocument['_id'] = $newDocumentId;
         return $updatedDocument;
     }
