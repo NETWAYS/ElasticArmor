@@ -325,7 +325,9 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
             for name, value in headers.iteritems():
                 self.send_header(name, value)
 
-        content = self.error_message_format % {'app': APP_NAME, 'code': code, 'message': message, 'explain': explain}
+        # TODO: .replace('"', "'") should not be necessary, actually, consider to remove this..
+        content = self.error_message_format % \
+                  {'app': APP_NAME, 'code': code, 'message': message, 'explain': explain.replace('"', "'")}
         self.send_header('Content-Type', self.error_content_type)
         self.send_header('Content-Length', len(content))
 
@@ -444,6 +446,7 @@ class ElasticRequestHandler(LoggingAware, BaseHTTPRequestHandler):
         if request is None:
             return
 
+        # TODO: Is this really required for *every* request??
         self.server.auth._apply_system_defaults(self.client)
 
         try:
