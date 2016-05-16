@@ -24,8 +24,16 @@ Requires(post):     /sbin/chkconfig
 Requires(preun):    /sbin/chkconfig
 Requires(postun):   /sbin/service
 Requires(preun):    /sbin/service
+Requires:           python < 3
 Requires:           python-ldap
 Requires:           python-requests
+
+%if 0%{?rhel} == 6
+Requires:           python >= 2.6
+Requires:           python-simplejson >= 2.1
+%else
+Requires:           python >= 2.7
+%endif
 
 %define configdir %{_sysconfdir}/%{name}
 
