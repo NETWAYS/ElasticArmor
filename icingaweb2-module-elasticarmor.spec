@@ -24,6 +24,7 @@ This module provides a graphical user-interface to configure ElasticArmor.
 
 %files
 %defattr(-,root,root)
+%doc AUTHORS COPYING doc
 %{basedir}/application
 %{basedir}/configuration.php
 %{basedir}/doc
