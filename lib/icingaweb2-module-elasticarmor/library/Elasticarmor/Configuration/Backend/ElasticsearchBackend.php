@@ -4,10 +4,12 @@
 namespace Icinga\Module\Elasticarmor\Configuration\Backend;
 
 use Icinga\Application\Config;
+use Icinga\Application\Logger;
 use Icinga\Data\Filter\Filter;
 use Icinga\Data\Filter\FilterExpression;
 use Icinga\Exception\StatementException;
 use Icinga\Repository\RepositoryQuery;
+use Icinga\Web\Notification;
 use Icinga\Web\UrlParams;
 use Icinga\Module\Elasticsearch\Repository\ElasticsearchRepository;
 use Icinga\Module\Elasticsearch\RestApi\RestApiClient;
@@ -131,6 +133,56 @@ class ElasticsearchBackend extends ElasticsearchRepository
         $this->delete(array($documentType, $updatedDocument['_id']));
         $updatedDocument['_id'] = $newDocumentId;
         return $updatedDocument;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function delete($documentType, Filter $filter = null, UrlParams $params = null)
+    {
+        $result = parent::delete($documentType, $filter, $params);
+        if ($result['found'] && $this->extractDocumentType($documentType) === 'role') {
+            $failedDeletions = false;
+
+            $userQuery = $this
+                ->select()
+                ->from('role_user', array('id'))
+                ->where('role', $result['_id'])
+                ->limit(1000);
+            foreach ($userQuery as $user) {
+                try {
+                    # TODO: Use bulk deletion instead
+                    $this->delete(array('role_user', $user->id));
+                } catch (StatementException $e) {
+                    $failedDeletions = true;
+                    Logger::error('Failed to drop user membership of role %s: %s', $result['_id'], $e);
+                }
+            }
+
+            $groupQuery = $this
+                ->select()
+                ->from('role_group', array('id'))
+                ->where('role', $result['_id'])
+                ->limit(1000);
+            foreach ($groupQuery as $group) {
+                try {
+                    # TODO: Use bulk deletion instead
+                    $this->delete(array('role_group', $group->id));
+                } catch (StatementException $e) {
+                    $failedDeletions = true;
+                    Logger::error('Failed to drop group membership of role %s: %s', $result['_id'], $e);
+                }
+            }
+
+            if ($failedDeletions) {
+                Notification::error(sprintf(
+                    'Failed to drop all memberships of role %s. Please see the log for details.',
+                    $result['_id']
+                ));
+            }
+        }
+
+        return $result;
     }
 
     /**
