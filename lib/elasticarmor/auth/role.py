@@ -229,19 +229,19 @@ class Role(ElasticRole):
 
         """
         if field is not None:
-            field_match = self._grants_permission(permission, self._privileges['fields'],
+            field_match = self._grants_permission(permission, self.get_restrictions(index, document_type),
                                                   Pattern.from_context(index, document_type, field))
             if field_match is not None:
                 return field_match
 
         if document_type is not None:
-            type_match = self._grants_permission(permission, self._privileges['types'],
+            type_match = self._grants_permission(permission, self.get_restrictions(index),
                                                  Pattern.from_context(index, document_type))
             if type_match is not None:
                 return type_match
 
         if index is not None:
-            index_match = self._grants_permission(permission, self._privileges['indices'],
+            index_match = self._grants_permission(permission, self.get_restrictions(),
                                                   Pattern.from_context(index))
             if index_match is not None:
                 return index_match
