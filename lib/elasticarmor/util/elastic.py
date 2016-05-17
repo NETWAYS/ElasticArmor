@@ -169,7 +169,7 @@ class ElasticObject(LoggingAware, object):
     @classmethod
     def get_source(cls, id):
         """Create and return a new get request to fetch the given document's source."""
-        return cls.request(id + '/_source', method='GET')
+        return cls.request(urllib.quote(id, '') + '/_source', method='GET')
 
     @classmethod
     def from_source(cls, id, source):
