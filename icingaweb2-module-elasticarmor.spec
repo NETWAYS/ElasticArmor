@@ -1,11 +1,11 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
 %define revision    1
+%define pre_release_tag rc1
 %define basedir     %{_datadir}/icingaweb2/modules/elasticarmor
 
 Name:       icingaweb2-module-elasticarmor
-Version:    0.9
-Release:    %{revision}%{?dist}
+Version:    1.0
 Summary:    ElasticArmor Configuration Module
 Group:      Applications/System
 License:    GPLv2+
@@ -40,7 +40,7 @@ This module provides a graphical user-interface to configure ElasticArmor.
 
 
 %prep
-%setup -q -n ElasticArmor-%{version}
+%setup -q -n ElasticArmor-v%{version}%{?pre_release_tag}
 
 %build
 

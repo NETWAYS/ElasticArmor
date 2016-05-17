@@ -1,6 +1,6 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
-VERSION = '0.9'
+VERSION = '1.0rc1'
 APP_NAME = 'ElasticArmor'
 SYSLOG_DATE_FORMAT = '%b %e %H:%M:%S'
 SYSLOG_FORMAT ='%(asctime)s %(name)s: %(message)s'

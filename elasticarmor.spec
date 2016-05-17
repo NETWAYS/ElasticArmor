@@ -4,10 +4,10 @@
 %{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 %define revision 1
+%define pre_release_tag rc1
 
 Name:       elasticarmor
-Version:    0.9
-Release:    %{revision}%{?dist}
+Version:    1.0
 Summary:    HTTP reverse proxy to secure Elasticsearch.
 Group:      System Environment/Daemons
 License:    GPLv2+
@@ -55,7 +55,7 @@ Elasticsearch to regulate access to its REST api.
 
 
 %prep
-%setup -q -n ElasticArmor-v%{version}
+%setup -q -n ElasticArmor-v%{version}%{?pre_release_tag}
 
 %build
 
