@@ -11,7 +11,7 @@ from logging.handlers import SysLogHandler
 import requests
 
 from elasticarmor import *
-from elasticarmor.auth.elasticsearch_backend import ElasticsearchRoleBackend
+from elasticarmor.auth.elasticsearch_backend import ElasticsearchRoleBackend, ElasticsearchUserBackend
 from elasticarmor.auth.ldap_backend import LdapUserBackend, LdapUsergroupBackend
 from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version, propertycache
 from elasticarmor.util.config import Parser
@@ -352,6 +352,8 @@ class Settings(LoggingAware, object):
 
             if backend_type_name in ('ldap', 'msldap'):
                 backend_type = LdapUserBackend
+            elif backend_type_name == 'elasticsearch':
+                backend_type = ElasticsearchUserBackend
             else:
                 self._exit('Unknown type declaration in authentication backend "%s".', section_name)
 
@@ -368,7 +370,8 @@ class Settings(LoggingAware, object):
                     else:
                         self._exit('Missing "%s" option in authentication backend "%s".', option_name, section_name)
 
-            backend = backend_type(section_name, get_option)
+            # TODO: Can't help myself, but passing self AND get_option seems a bit overkill to me..
+            backend = backend_type(section_name, get_option, self)
             backend.default_role = self.authentication.get(section_name, 'default_role')
             backends.append(backend)
 
@@ -399,7 +402,8 @@ class Settings(LoggingAware, object):
                     else:
                         self._exit('Missing "%s" option in group backend "%s".', option_name, section_name)
 
-            backends.append(backend_type(section_name, get_option))
+            # TODO: Can't help myself, but passing self AND get_option seems a bit overkill to me..
+            backends.append(backend_type(section_name, get_option, self))
 
         return backends
 

@@ -10,6 +10,7 @@ SUPPORTED_ELASTICSEARCH_VERSIONS = ['1.7']
 
 CONFIGURATION_INDEX = '.elasticarmor'
 CONFIGURATION_TYPE_ROLE = 'role'
+CONFIGURATION_TYPE_USER = 'user'
 CONFIGURATION_TYPE_ROLE_USER = 'role_user'
 CONFIGURATION_TYPE_ROLE_GROUP = 'role_group'
 CONFIGURATION_INDEX_SETTINGS = {
@@ -25,6 +26,13 @@ CONFIGURATION_INDEX_SETTINGS = {
         }
     },
     "mappings": {
+        CONFIGURATION_TYPE_USER: {
+            "properties": {
+                "password_hash": {
+                    "type": "binary"
+                }
+            }
+        },
         CONFIGURATION_TYPE_ROLE: {
             "properties": {
                 "privileges": {

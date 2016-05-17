@@ -1,5 +1,6 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
+import base64
 import time
 import urllib
 import threading
@@ -253,6 +254,21 @@ class ElasticRole(ElasticObject):
         }
 
         return cls.request('_search', method='GET', params=query_params, json=data)
+
+
+class ElasticUser(ElasticObject):
+    """ElasticUser object representing a user account."""
+    document_type = CONFIGURATION_TYPE_USER
+
+    def __init__(self, id, password_hash):
+        super(ElasticUser, self).__init__(id)
+        self.password_hash = password_hash
+
+    @classmethod
+    def from_source(cls, id, source):
+        user = super(ElasticUser, cls).from_source(id, source)
+        user.password_hash = base64.b64decode(user.password_hash.encode())
+        return user
 
 
 # TODO: Be more strict if it's about irrelevant top-level keywords!

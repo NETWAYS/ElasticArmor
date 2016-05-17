@@ -117,7 +117,7 @@ class LdapBackend(object):
 class LdapUserBackend(LdapBackend):
     """LDAP backend class providing user account related operations."""
 
-    def __init__(self, name, get_option):
+    def __init__(self, name, get_option, settings):
         super(LdapUserBackend, self).__init__(name, get_option)
 
         self.user_base_dn = get_option('user_base_dn')
@@ -153,7 +153,7 @@ class LdapUserBackend(LdapBackend):
 class LdapUsergroupBackend(LdapBackend):
     """LDAP backend class providing usergroup related operations."""
 
-    def __init__(self, name, get_option):
+    def __init__(self, name, get_option, settings):
         super(LdapUsergroupBackend, self).__init__(name, get_option)
         self._group_cache = {}
         self._cache_lock = ReadWriteLock()

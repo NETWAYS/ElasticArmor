@@ -60,6 +60,9 @@ class Auth(LoggingAware, object):
                     except LDAPError as error:
                         self.log.error('Failed to authenticate client "%s" using backend "%s". %s.',
                                        client, backend.name, format_ldap_error(error))
+                    except requests.RequestException as error:
+                        self.log.error('Failed to authenticate client "%s" using backend "%s". Error: %s.',
+                                       client, backend.name, format_elasticsearch_error(error))
             else:
                 trusted_ports = self.trusted_proxies.get(client.peer_address, [])
                 client.authenticated = trusted_ports is None or client.peer_port in trusted_ports
