@@ -32,11 +32,13 @@ class Settings(LoggingAware, object):
         'elasticsearch': DEFAULT_NODE,
         'address': DEFAULT_ADDRESS,
         'port': DEFAULT_PORT,
-        'secured': 'false',
-        'default_role': None
+        'secured': 'false'
     }
 
     default_authentication_config = {
+        'global': {
+            'default_role': None
+        },
         'msldap': {
             'user_object_class': 'user',
             'user_name_attribute': 'sAMAccountName'
@@ -100,7 +102,7 @@ class Settings(LoggingAware, object):
         try:
             return Settings.__authentication
         except AttributeError:
-            parser = Parser()
+            parser = Parser(self.default_authentication_config['global'])
             authentication_ini = os.path.join(self.options.config, 'authentication.ini')
             if self._check_file_permissions(authentication_ini, 'r', suppress_errors=True):
                 with open(authentication_ini) as f:
