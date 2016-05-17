@@ -16,6 +16,12 @@ Source0:    https://github.com/NETWAYS/ElasticArmor/archive/v%{version}.tar.gz
 Vendor:     NETWAYS GmbH <info@netways.de>
 Packager:   NETWAYS GmbH <info@netways.de>
 
+%if 0%{?pre_release_tag}
+Release:    0.%{revision}.%{pre_release_tag}%{?dist}
+%else
+Release:    %{revision}%{?dist}
+%endif
+
 BuildArch:      noarch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}
 BuildRequires:  python-setuptools
