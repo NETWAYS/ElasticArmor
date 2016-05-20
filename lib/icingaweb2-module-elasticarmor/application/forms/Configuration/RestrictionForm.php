@@ -495,7 +495,11 @@ class RestrictionForm extends RoleForm
         if (! empty($path)) {
             $this->inject($data[$key], $path, $restriction);
         } elseif (is_numeric($key)) {
-            $data[$key] = $restriction;
+            if (isset($data[$key])) {
+                $data[$key] = array_merge($data[$key], $restriction);
+            } else {
+                $data[$key] = $restriction;
+            }
         } else {
             $data[$key][] = $restriction;
         }
