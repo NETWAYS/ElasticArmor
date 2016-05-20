@@ -14,7 +14,7 @@ Source0:    https://github.com/NETWAYS/ElasticArmor/archive/v%{version}%{?pre_re
 Vendor:     NETWAYS GmbH <info@netways.de>
 Packager:   NETWAYS GmbH <info@netways.de>
 
-%if 0%{?pre_release_tag}
+%if %{?pre_release_tag}
 Release:    0.%{revision}.%{pre_release_tag}%{?dist}
 %else
 Release:    %{revision}%{?dist}
