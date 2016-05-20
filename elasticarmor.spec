@@ -12,7 +12,7 @@ Summary:    HTTP reverse proxy to secure Elasticsearch.
 Group:      System Environment/Daemons
 License:    GPLv2+
 URL:        https://www.netways.org/projects/elasticarmor
-Source0:    https://github.com/NETWAYS/ElasticArmor/archive/v%{version}.tar.gz
+Source0:    https://github.com/NETWAYS/ElasticArmor/archive/v%{version}%{?pre_release_tag}.tar.gz
 Vendor:     NETWAYS GmbH <info@netways.de>
 Packager:   NETWAYS GmbH <info@netways.de>
 
