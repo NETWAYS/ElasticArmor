@@ -40,7 +40,7 @@ This module provides a graphical user-interface to configure ElasticArmor.
 
 
 %prep
-%setup -q -n ElasticArmor-v%{version}%{?pre_release_tag}
+%setup -q -n ElasticArmor-%{version}%{?pre_release_tag}
 
 %build
 
