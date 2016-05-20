@@ -55,7 +55,7 @@ Elasticsearch to regulate access to its REST api.
 
 
 %prep
-%setup -q -n ElasticArmor-v%{version}%{?pre_release_tag}
+%setup -q -n ElasticArmor-%{version}%{?pre_release_tag}
 
 %build
 
