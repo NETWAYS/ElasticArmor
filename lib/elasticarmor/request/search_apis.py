@@ -11,6 +11,12 @@ from elasticarmor.util.elastic import (SourceFilter, FilterString, QueryDslParse
 
 
 class SearchApiRequest(ElasticRequest):
+    before = [
+        'GetIndexApiRequest',
+        'IndexApiRequest',
+        'GetApiRequest'
+    ]
+
     locations = {
         'GET': [
             '/_search',
@@ -378,6 +384,7 @@ class SearchTemplateApiRequest(ElasticRequest):
 
 
 class SearchShardsApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
     locations = {
         'GET': '/{indices}/_search_shards',
         'POST': '/{indices}/_search_shards'
@@ -401,6 +408,12 @@ class SuggestApiRequest(ElasticRequest):
 
 class MultiSearchApiRequest(SearchApiRequest):
     _errors = None
+
+    before = [
+        'GetIndexApiRequest',
+        'IndexApiRequest',
+        'GetApiRequest'
+    ]
 
     locations = {
         'GET': [
@@ -523,6 +536,12 @@ class MultiSearchApiRequest(SearchApiRequest):
 
 
 class CountApiRequest(SearchApiRequest):
+    before = [
+        'GetIndexApiRequest',
+        'IndexApiRequest',
+        'GetApiRequest'
+    ]
+
     locations = {
         'GET': [
             '/_count',
@@ -636,6 +655,11 @@ class ExplainApiRequest(ElasticRequest):
 
 
 class PercolateApiRequest(ElasticRequest):
+    before = [
+        'IndexApiRequest',
+        'GetApiRequest'
+    ]
+
     locations = {
         'GET': [
             '/{index}/{document}/_percolate',
@@ -653,6 +677,12 @@ class PercolateApiRequest(ElasticRequest):
 
 
 class MultiPercolateApiRequest(ElasticRequest):
+    before = [
+        'GetIndexApiRequest',
+        'IndexApiRequest',
+        'GetApiRequest'
+    ]
+
     locations = {
         'GET': [
             '/_mpercolate',
@@ -684,6 +714,7 @@ class MoreLikeThisApiRequest(ElasticRequest):
 
 
 class FieldStatsApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
     locations = {
         'GET': '/{indices}/_field_stats'
     }
