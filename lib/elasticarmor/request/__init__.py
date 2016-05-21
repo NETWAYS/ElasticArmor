@@ -52,14 +52,20 @@ class _RequestRegistry(type):
         if handler.priority is None:
             try:
                 if handler.before is not None:
-                    handler.priority = cls._get_priority(cls.type_map[handler.before]) + 1
+                    if not isinstance(handler.before, list):
+                        handler.before = [handler.before]
+
+                    handler.priority = max(cls._get_priority(cls.type_map[c]) for c in handler.before) + 1
                 elif handler.after is not None:
-                    handler.priority = cls._get_priority(cls.type_map[handler.after]) - 1
+                    if not isinstance(handler.after, list):
+                        handler.after = [handler.after]
+
+                    handler.priority = min(cls._get_priority(cls.type_map[c]) for c in handler.after) - 1
                 else:
                     handler.priority = 0
-            except KeyError:
+            except KeyError as error:
                 raise AssertionError('Request handler {0} of module {1} defines an invalid dependency: {2}'
-                                     ''.format(handler.__name__, handler.__module__, handler.before or handler.after))
+                                     ''.format(handler.__name__, handler.__module__, error.args[0]))
 
         return handler.priority
 
