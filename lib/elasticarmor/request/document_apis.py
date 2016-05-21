@@ -142,7 +142,12 @@ class UpdateApiRequest(ElasticRequest):
 class MultiGetApiRequest(ElasticRequest):
     _errors = None
 
-    before = 'UpdateApiRequest'
+    before = [
+        'GetIndexApiRequest',
+        'IndexApiRequest',
+        'GetApiRequest'
+    ]
+
     locations = {
         'GET': [
             '/_mget',
@@ -275,6 +280,7 @@ class MultiGetApiRequest(ElasticRequest):
 
 
 class BulkApiRequest(ElasticRequest):
+    before = 'IndexApiRequest'
     locations = {
         'POST': [
             '/_bulk',
@@ -305,6 +311,7 @@ class DeleteByQueryApiRequest(ElasticRequest):
 
 
 class TermVectorApiRequest(ElasticRequest):
+    before = 'GetApiRequest'
     locations = {
         'GET': [
             '/{index}/{document}/_termvector{s}',
@@ -318,6 +325,11 @@ class TermVectorApiRequest(ElasticRequest):
 
 
 class MultiTermVectorApiRequest(ElasticRequest):
+    before = [
+        'GetIndexApiRequest',
+        'GetApiRequest'
+    ]
+
     locations = {
         'GET': [
             '/_mtermvectors',
