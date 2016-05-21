@@ -231,6 +231,7 @@ class GetFieldMappingApiRequest(ElasticRequest):
 
 
 class DeleteMappingApiRequest(ElasticRequest):
+    before = 'DeleteApiRequest'
     locations = {
         'DELETE': [
             '/{indices}/_mapping{s}',
@@ -266,6 +267,7 @@ class DeleteAliasApiRequest(ElasticRequest):
 
 
 class GetAliasApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
     locations = {
         'GET': [
             '/_alias',
@@ -303,7 +305,6 @@ class UpdateIndexSettingsApiRequest(ElasticRequest):
 
 class GetIndexSettingsApiRequest(ElasticRequest):
     before = 'GetIndexApiRequest'
-
     locations = {
         'GET': [
             '/_settings',
@@ -322,6 +323,7 @@ class GetIndexSettingsApiRequest(ElasticRequest):
 
 
 class AnalyzeApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
     locations = {
         'GET': [
             '/_analyze',
@@ -397,7 +399,6 @@ class DeleteIndexWarmerApiRequest(ElasticRequest):
 
 class GetIndexWarmerApiRequest(ElasticRequest):
     before = 'GetIndexApiRequest'
-
     locations = {
         'GET': [
             '/_warmer{s}/{identifiers}',
@@ -415,6 +416,7 @@ class GetIndexWarmerApiRequest(ElasticRequest):
 
 
 class IndexStatsApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
     locations = {
         'GET': [
             '/_stats',
@@ -428,6 +430,7 @@ class IndexStatsApiRequest(ElasticRequest):
 
 
 class IndexSegmentsApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
     locations = {
         'GET': [
             '/_segments',
@@ -441,6 +444,7 @@ class IndexSegmentsApiRequest(ElasticRequest):
 
 
 class IndexRecoveryApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
     locations = {
         'GET': [
             '/_recovery',
@@ -512,6 +516,7 @@ class IndexOptimizeApiRequest(ElasticRequest):
 
 
 class IndexUpgradeApiRequest(ElasticRequest):
+    before = 'GetIndexApiRequest'
     locations = {
         'GET': '/{index}/_upgrade',
         'POST': '/{index}/_upgrade'
