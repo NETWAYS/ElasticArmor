@@ -323,12 +323,7 @@ class Restriction(object):
     @classmethod
     def from_json(cls, data, parent=None):
         """Create and return a new instance of Restriction using the given JSON data."""
-        type_restriction = field_restriction = False
-        if parent is not None:
-            if parent.parent is None:
-                type_restriction = True
-            else:
-                field_restriction = True
+        type_restriction = parent is not None and parent.parent is None
 
         try:
             raw_includes = data.get('include', '').split(',')
@@ -341,9 +336,6 @@ class Restriction(object):
         for pattern in filter(None, (p.strip() for p in raw_includes)):
             if type_restriction and '*' in pattern:
                 raise RestrictionError('Type includes with wildcards are not supported'
-                                       ' ("{0}")'.format(pattern))
-            elif field_restriction and len(pattern) > 1 and pattern.startswith('*'):
-                raise RestrictionError('Field includes with leading wildcards are not supported'
                                        ' ("{0}")'.format(pattern))
 
             includes.append(Pattern(pattern, parent))
@@ -363,9 +355,6 @@ class Restriction(object):
         for pattern in filter(None, (p.strip() for p in raw_excludes)):
             if type_restriction and '*' in pattern:
                 raise RestrictionError('Type excludes with wildcards are not supported'
-                                       ' ("{0}")'.format(pattern))
-            elif field_restriction and len(pattern) > 1 and pattern.startswith('*'):
-                raise RestrictionError('Field excludes with leading wildcards are not supported'
                                        ' ("{0}")'.format(pattern))
 
             excludes.append(Pattern(pattern, parent))

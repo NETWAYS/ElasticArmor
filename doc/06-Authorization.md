@@ -44,7 +44,7 @@ Type restrictions only support includes by explicit names. No wildcards.
 
 #### <a id="authorization-privileges-restrictions-fields"></a> Field Restrictions
 
-Field restrictions are much like index restrictions, except that they **must not** have a leading `*` wildcard.
+Field restrictions are like index restrictions with support for in- and excludes as well as optional `*` wildcards.
 
 ### <a id="authorization-privileges-permissions"></a> Permissions
 

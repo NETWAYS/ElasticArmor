@@ -250,28 +250,6 @@ class RestrictionForm extends RoleForm
                     'description'       => $excludeDescription
                 )
             )->getElement('exclude')->setAttrib('class', 'exclude');
-            if ($this->isFieldRestriction()) {
-                $validatorOptions = array(
-                    'callback'  => function ($v) {
-                        foreach (explode(',', $v) as $p) {
-                            if (substr(trim($p), 0, 1) === '*') {
-                                return false;
-                            }
-                        }
-                        return true;
-                    },
-                    'messages'  => array(
-                        'callbackValue' => $this->translate('One ore more patterns contain a leading wildcard.')
-                    )
-                );
-
-                $this->getElement('include')
-                    ->setAttrib('requirement', $this->translate('Leading wildcards are not supported.'))
-                    ->addValidator('Callback', false, $validatorOptions);
-                $this->getElement('exclude')
-                    ->setAttrib('requirement', $this->translate('Leading wildcards are not supported.'))
-                    ->addValidator('Callback', false, $validatorOptions);
-            }
         } else {
             $this->getElement('include')
                 ->setAttrib('requirement', $this->translate('Wildcards are not supported.'))
