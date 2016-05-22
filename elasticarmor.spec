@@ -3,8 +3,8 @@
 %{!?__python2: %global __python2 /usr/bin/python2}
 %{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
-%define revision 1
-%define pre_release_tag rc1
+%define revision 2
+%define pre_release_tag rc2
 
 Name:       elasticarmor
 Version:    1.0

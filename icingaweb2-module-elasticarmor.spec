@@ -1,7 +1,7 @@
 # ElasticArmor | (c) 2016 NETWAYS GmbH | GPLv2+
 
-%define revision    1
-%define pre_release_tag rc1
+%define revision    2
+%define pre_release_tag rc2
 %define basedir     %{_datadir}/icingaweb2/modules/elasticarmor
 
 Name:       icingaweb2-module-elasticarmor

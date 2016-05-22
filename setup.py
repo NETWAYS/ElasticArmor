@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='elasticarmor',
-    version='1.0rc1',
+    version='1.0rc2',
     license='GPLv2+',
     author='NETWAYS GmbH',
     author_email='info@netways.de',
