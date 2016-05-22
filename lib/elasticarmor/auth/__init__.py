@@ -390,9 +390,12 @@ class Client(LoggingAware, object):
         fields = [include for include in filters
                   if not filters[include] or not any(p >= e for p in fields_filter for e in filters[include])]
         if not fields:
-            return  # But if all available filters have excludes, we can't provide the client with a fields filter
-
-        if fields_filter.combine(FieldsFilter(fields)):
+            # But if all available filters have required excludes, we can't provide the client with a fields filter
+            if fields_filter.requires_source and (len(fields_filter) == 0 or fields_filter[0] == '*'):
+                # Except if "_source" is given and the client doesn't specify which stored fields are desired, in which
+                # case we're at least able to provide source fields and to pretend that no stored fields are available
+                return FieldsFilter(source=True)
+        elif fields_filter.combine(FieldsFilter(fields)):
             return fields_filter
 
     def _collect_filters(self, permission, filter_string=None, index=None, document_type=None):

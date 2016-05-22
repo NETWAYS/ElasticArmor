@@ -2143,10 +2143,13 @@ class _Pattern(object):
 
 class FieldsFilter(object):
     def __init__(self, fields=None, source=False):
-        self._fields = fields
+        self._fields = fields or []
         self._source = source
 
         self.combined = []
+
+    def __len__(self):
+        return len(self._fields)
 
     def __iter__(self):
         return iter(self._fields)
@@ -2168,7 +2171,7 @@ class FieldsFilter(object):
         return repr(self.as_json()) if self else 'None'
 
     def __nonzero__(self):
-        return self._fields is not None
+        return bool(self._fields) or self.requires_source
 
     @property
     def requires_source(self):
