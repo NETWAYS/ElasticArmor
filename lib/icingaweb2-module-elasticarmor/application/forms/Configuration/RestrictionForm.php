@@ -391,6 +391,14 @@ class RestrictionForm extends RoleForm
                 $values['exclude'] = array_map('trim', explode(',', $values['exclude']));
             }
 
+            if ($this->restrictionMode === static::MODE_UPDATE) {
+                $currentState = $this->extract($this->data, $this->restrictionPath);
+                unset($currentState['include']);
+                unset($currentState['exclude']);
+                unset($currentState['permissions']);
+                $values = array_merge($currentState, $values);
+            }
+
             $this->inject($this->data, $this->restrictionPath, $values);
         }
 
@@ -473,11 +481,7 @@ class RestrictionForm extends RoleForm
         if (! empty($path)) {
             $this->inject($data[$key], $path, $restriction);
         } elseif (is_numeric($key)) {
-            if (isset($data[$key])) {
-                $data[$key] = array_merge($data[$key], $restriction);
-            } else {
-                $data[$key] = $restriction;
-            }
+            $data[$key] = $restriction;
         } else {
             $data[$key][] = $restriction;
         }
