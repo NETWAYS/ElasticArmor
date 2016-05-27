@@ -37,6 +37,7 @@ class RoleForm extends RepositoryForm
     protected $availablePermissions = array(
         '*'                             => 'cluster',
         'config/*'                      => 'cluster',
+        'config/authentication'         => 'cluster',
         'config/authorization'          => 'cluster',
         'api/*'                         => 'cluster',
         'api/cluster/*'                 => 'cluster',

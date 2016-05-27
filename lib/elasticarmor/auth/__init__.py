@@ -107,12 +107,12 @@ class Auth(LoggingAware, object):
     # TODO: Provide a more sophisticated solution, this can't be the only one..
     def _apply_system_defaults(self, client):
         permitted_config_types = []
+        if client.can('config/authentication'):
+            permitted_config_types.append(CONFIGURATION_TYPE_USER)
         if client.can('config/authorization'):
-            permitted_config_types.append({'include': [
-                CONFIGURATION_TYPE_ROLE,
-                CONFIGURATION_TYPE_ROLE_USER,
-                CONFIGURATION_TYPE_ROLE_GROUP
-            ]})
+            permitted_config_types.append(CONFIGURATION_TYPE_ROLE)
+            permitted_config_types.append(CONFIGURATION_TYPE_ROLE_USER)
+            permitted_config_types.append(CONFIGURATION_TYPE_ROLE_GROUP)
 
         if permitted_config_types:
             from elasticarmor.auth.role import Role
@@ -121,7 +121,7 @@ class Auth(LoggingAware, object):
                     'indices': [{
                         'permissions': '*',
                         'include': CONFIGURATION_INDEX,
-                        'types': permitted_config_types
+                        'types': [{'include': permitted_config_types}]
                     }]
                 }))
             else:
@@ -134,7 +134,7 @@ class Auth(LoggingAware, object):
                         {
                             'permissions': '*',
                             'include': CONFIGURATION_INDEX,
-                            'types': permitted_config_types
+                            'types': [{'include': permitted_config_types}]
                         }
                     ]
                 }))

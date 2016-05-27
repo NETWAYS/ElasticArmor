@@ -58,6 +58,7 @@ the index and its configuration one of the following cluster-wide permissions is
 
 Permission Name         | Configuration Type
 ------------------------|-------------------
+config/authentication   | Users
 config/authorization    | Roles
 
 #### <a id="authorization-privileges-permissions-api"></a> API Permissions
