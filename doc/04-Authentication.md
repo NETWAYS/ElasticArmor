@@ -18,6 +18,34 @@ Each backend has a name which is also the name of the INI section. The type of b
 
 The following types of authentication backends are currently supported:
 
+## <a id="authentication-elasticsearch"></a> Elasticsearch
+
+Once configured ElasticArmor will look up users in the Elasticsearch index `.elasticarmor` and tries to authenticate
+a client using the stored credentials.
+
+Users are stored as documents of type `user` using their name as id and the following properties:
+
+Property      | Description
+--------------|------------------------------------------------------
+password_hash | A salted and hashed password as base64 encoded string
+
+An example on how to create a new user called *jdoe* with the password *p@ssw0rd*:
+
+```shell
+curl -XPOST localhost:9200/.elasticarmor/user/jdoe -d '{"password_hash": "JDEkZ0hLUlFqSW0kbDFxS2pTM0JYUVhwaVpzdnQ0MVh6MA=="}'
+```
+
+For more information on how to manage documents please take a look at the
+[documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs.html).
+
+### <a id="authentication-elasticsearch-hashing"></a> Hashing Passwords
+
+The backend currently supports only the MD5-based password algorithm. You can use the following to hash passwords:
+
+```shell
+openssl passwd -1 p@ssw0rd | tr -d '\n' | base64
+```
+
 ## <a id="authentication-ldap"></a> Ldap
 
 To authenticate clients by using Ldap, use the following options to define where and as who to connect:
