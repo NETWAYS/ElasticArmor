@@ -287,5 +287,5 @@ And a basic example on how to assign a user to this role:
 curl -XPOST localhost:9200/.elasticarmor/role_user?parent=kibana-user -d '{"name": "kibana"}'
 ```
 
-For more information on how to manage roles please take a look at the
+For more information on how to manage documents please take a look at the
 [documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs.html).
