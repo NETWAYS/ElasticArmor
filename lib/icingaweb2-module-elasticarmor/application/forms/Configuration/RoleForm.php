@@ -274,7 +274,6 @@ class RoleForm extends RepositoryForm
             case 'api/documents/termVector':
             case 'api/search/shards':
             case 'api/search/suggest':
-            case 'api/search/explain':
             case 'api/search/percolate':
             case 'api/search/fieldStats':
             case 'api/feature/notImplemented':
