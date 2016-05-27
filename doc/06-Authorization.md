@@ -220,6 +220,13 @@ This index is created on the first run using the following settings and mappings
     }
   },
   "mappings": {
+    "user": {
+      "properties": {
+        "password_hash": {
+          "type": "binary"
+        }
+      }
+    },
     "role": {
       "properties": {
         "privileges": {
