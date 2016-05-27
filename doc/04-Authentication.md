@@ -13,6 +13,9 @@ option *default_role*.
 Each backend has a name which is also the name of the INI section. The type of backend is denoted by the option
 *backend* and may be followed by backend-specific options.
 
+    [<name>]
+    backend=<type>
+
 The following types of authentication backends are currently supported:
 
 ## <a id="authentication-ldap"></a> Ldap
