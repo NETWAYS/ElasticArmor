@@ -10,6 +10,8 @@ by ElasticArmor if it's safe to do so without causing fundamental changes to a r
 to responses sent by Elasticsearch where ElasticArmor may inject its own error responses to avoid refusing an entire
 request.
 
+See [here](images/architecture_overview.png) for a graphical overview on how ElasticArmor works.
+
 ## <a id="about-installation"></a> Installation
 
 ElasticArmor is written in Python and can run on versions 2.6 and 2.7. Package installation is not available.
