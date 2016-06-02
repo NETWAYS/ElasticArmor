@@ -52,6 +52,8 @@ Elasticsearch to regulate access to its REST api.
 %doc AUTHORS COPYING doc
 %{python2_sitelib}
 %attr(0755,root,root) %{_initddir}/%name
+%attr(0750,root,%{name}) %dir %{_sysconfdir}/%{name}
+%attr(0750,%{name},%{name}) %dir %{_localstatedir}/log/%{name}
 
 
 %prep
@@ -62,6 +64,8 @@ Elasticsearch to regulate access to its REST api.
 %install
 %{__python2} setup.py install --prefix=%{_prefix} --root=%{buildroot}
 mkdir -p %{buildroot}%{_initddir}
+mkdir -p %{buildroot}%{_sysconfdir}/%{name}
+mkdir -p %{buildroot}%{_localstatedir}/log/%{name}
 cp etc/init.d/elasticarmor %{buildroot}%{_initddir}/%{name}
 
 %clean
