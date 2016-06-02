@@ -69,6 +69,8 @@ rm -rf %{buildroot}
 
 
 %pre
+getent group %{name} >/dev/null || /sbin/groupadd -r %{name}
+getent passwd %{name} >/dev/null || /sbin/useradd -c "%{name}" -s /sbin/nologin -r -g %{name} %{name}
 
 %post
 /sbin/chkconfig --add %{name}

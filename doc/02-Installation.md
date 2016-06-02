@@ -37,4 +37,10 @@ install -m 0744 etc/init.d/elasticarmor /etc/init.d/elasticarmor
 chkconfig --add elasticarmor
 ```
 
+Create the system user and group:
+
+```shell
+useradd -c "elasticarmor" -s /sbin/nologin -r elasticarmor
+```
+
 Done. You can now start [configuring ElasticArmor](01-About.md#about-configuration).

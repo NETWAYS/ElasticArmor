@@ -64,6 +64,17 @@ class elasticarmor_dev {
         ensure => file,
         source => '/vagrant/etc/init.d/elasticarmor'
     }
+    -> group { 'elasticarmor':
+        ensure  => present,
+        system  => true
+    }
+    -> user { 'elasticarmor':
+        ensure  => present,
+        system  => true,
+        shell   => '/sbin/nologin',
+        comment => 'elasticarmor',
+        gid     => 'elasticarmor'
+    }
     -> service { 'elasticarmor':
         require => [ Class['elasticsearch'], Package['python-ldap'], Package['python-requests'] ],
         ensure  => running,

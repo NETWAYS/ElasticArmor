@@ -23,11 +23,11 @@ set -e
 
 case "$1" in
     force-reload)
-        /usr/bin/python2 -m elasticarmor.elasticarmord -b "restart"
+        /usr/bin/python2 -m elasticarmor.elasticarmord -u elasticarmor -g elasticarmor -b "restart"
         exit $?
     ;;
     start|restart)
-        /usr/bin/python2 -m elasticarmor.elasticarmord -b "$1"
+        /usr/bin/python2 -m elasticarmor.elasticarmord -u elasticarmor -g elasticarmor -b "$1"
         exit $?
     ;;
     stop|reload|status)
