@@ -58,6 +58,38 @@ class icingaweb2_dev {
         target  => '/usr/share/icingaweb2/modules/elasticarmor'
     }
 
+    # TODO: Use a package or even a puppet module here
+    file { '/usr/share/icingaweb2/modules/elasticsearch':
+        require => Class['icingaweb2'],
+        ensure  => link,
+        target  => '/vagrant/lib/icingaweb2-module-elasticsearch'
+    }
+    -> file { '/etc/icingaweb2/enabledModules/elasticsearch':
+        ensure  => link,
+        target  => '/usr/share/icingaweb2/modules/elasticsearch'
+    }
+
+    # TODO: This is probably also a task for the puppet module
+    file { '/etc/icingaweb2/modules/elasticsearch':
+        ensure  => directory
+    }
+    -> file { '/etc/icingaweb2/modules/elasticsearch/config.ini':
+        ensure  => file,
+        source  => '/vagrant/.puppet/files/icingaweb2-module-elasticsearch/config.ini'
+    }
+
+    exec { 'config-role':
+        require     => Class['elasticarmor_dev'],
+        provider    => shell,
+        unless      => 'curl -sf -XHEAD localhost:9200/.elasticarmor/role/config-admin',
+        command     => 'curl -XPOST localhost:9200/.elasticarmor/role/config-admin?refresh -d @/vagrant/.puppet/files/icingaweb2-module-elasticarmor/config-admin.json'
+    }
+    -> exec { 'config-user':
+        provider    => shell,
+        unless      => 'curl -sf localhost:9200/.elasticarmor/role_user/_search/exists?q=name:admin%20AND%20_parent:config-admin',
+        command     => 'curl -XPOST localhost:9200/.elasticarmor/role_user?parent=config-admin -d \'{"name": "admin"}\''
+    }
+
     @user { 'vagrant': ensure => present }
     User <| title == vagrant |> { groups +> 'icingaweb2' }
 }
