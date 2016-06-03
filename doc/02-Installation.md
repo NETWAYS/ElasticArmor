@@ -4,7 +4,7 @@
 
 * [Python 2.6 or 2.7](https://www.python.org/)
 * [python-setuptools](https://pythonhosted.org/setuptools/)
-* [python-requests](http://docs.python-requests.org/en/master/)
+* [python-requests](http://docs.python-requests.org/en/master/) (>= 2.4.2)
 * [python-ldap](https://www.python-ldap.org/)
 
 **Python 2.6:**

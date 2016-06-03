@@ -32,7 +32,7 @@ Requires(postun):   /sbin/service
 Requires(preun):    /sbin/service
 Requires:           python < 3
 Requires:           python-ldap
-Requires:           python-requests
+Requires:           python-requests >= 2.4.2
 
 %if 0%{?rhel} == 6
 Requires:           python >= 2.6
