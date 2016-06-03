@@ -590,6 +590,7 @@ class SearchExistsApiRequest(ElasticRequest):
         ]
     }
 
+    @Permission('api/feature/notImplemented')
     @Permission('api/search/documents')
     def inspect(self, client):
         pass

@@ -188,6 +188,7 @@ endpoints. These include:
 
 * [Bulk API](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html)
 * [Explain API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-explain.html)
+* [Search Exists API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-exists.html)
 
 Expect this permission to fade out in the future once the missing functionality has been added.
 
