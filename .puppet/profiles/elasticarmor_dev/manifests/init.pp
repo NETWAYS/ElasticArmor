@@ -22,10 +22,6 @@ class elasticarmor_dev {
         source => '/vagrant/.puppet/files/elasticarmor/config.ini'
     }
 
-    file { '/var/log/elasticarmor':
-        ensure => directory
-    }
-
     exec { 'config-index':
         require     => Class['elasticsearch'],
         provider    => shell,
@@ -74,6 +70,11 @@ class elasticarmor_dev {
         shell   => '/sbin/nologin',
         comment => 'elasticarmor',
         gid     => 'elasticarmor'
+    }
+    -> file { '/var/log/elasticarmor':
+        ensure => directory,
+        owner  => 'elasticarmor',
+        group  => 'elasticarmor'
     }
     -> service { 'elasticarmor':
         require => [ Class['elasticsearch'], Package['python-ldap'], Package['python-requests'] ],
