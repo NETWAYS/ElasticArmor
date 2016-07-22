@@ -7,3 +7,7 @@
 # and the virtual python environment
 /Python2.6
 
+# But not .puppet
+!.puppet
+.puppet/modules
+

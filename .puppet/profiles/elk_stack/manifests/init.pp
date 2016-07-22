@@ -31,7 +31,7 @@ class elk_stack {
     }
 
     logstash::configfile { 'configname':
-        content => template('/vagrant/.puppet/files/logstash/uptime.conf')
+        content => template('/vagrant/.puppet/files/logstash/logstash.conf')
     }
 
     class { 'kibana':
