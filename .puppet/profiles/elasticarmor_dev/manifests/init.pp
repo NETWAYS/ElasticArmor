@@ -36,7 +36,7 @@ class elasticarmor_dev {
     -> exec { 'server-user':
         provider    => shell,
         unless      => 'curl -sf localhost:9200/.elasticarmor/role_user/_search/exists?q=name:localhost%20AND%20_parent:kibana-server',
-        command     => 'curl -XPOST localhost:9200/.elasticarmor/role_user?parent=kibana-user -d \'{"name": "localhost"}\''
+        command     => 'curl -XPOST localhost:9200/.elasticarmor/role_user?parent=kibana-server -d \'{"name": "localhost"}\''
     }
     -> exec { 'client-role':
         provider    => shell,
