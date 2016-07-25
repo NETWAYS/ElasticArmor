@@ -1,0 +1,4 @@
+[submodule "lib/icingaweb2-module-elasticsearch"]
+	path = lib/icingaweb2-module-elasticsearch
+	url = git@git.icinga.org:icingaweb2-module-elasticsearch.git
+	branch = master
