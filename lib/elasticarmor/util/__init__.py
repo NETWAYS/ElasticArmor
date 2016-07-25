@@ -4,7 +4,7 @@ import re
 from distutils.version import StrictVersion
 
 __all__ = ['format_ldap_error', 'format_elasticsearch_error', 'compare_major_and_minor_version',
-           'pattern_match', 'pattern_compare', 'classproperty', 'propertycache', 'strip_quotes']
+           'pattern_match', 'pattern_compare', 'classproperty', 'cachedproperty', 'strip_quotes']
 
 CACHE_MAX_SIZE = 1000
 _pattern_cache = {}
@@ -170,26 +170,30 @@ class classproperty(object):
         return self.func(owner)
 
 
-class propertycache(object):
-    """Cache decorator for object properties.
+class cachedproperty(property):
+    """A cached property.
 
     Usage:
         class Foo(object):
-            @property
-            @propertycache
+            @cachedproperty
             def bar(self):
                 return <some-value>
     """
 
     def __init__(self, func):
-        self.func = func
-        self.result = None
+        self._func = func
+        self._result = None
 
-    def __call__(self, instance):
-        if self.result is None:
-            self.result = self.func(instance)
+        super(cachedproperty, self).__init__(fget=self._get, fdel=self._del)
 
-        return self.result
+    def _get(self, obj):
+        if self._result is None:
+            self._result = self._func(obj)
+
+        return self._result
+
+    def _del(self, obj):
+        self._result = None
 
 
 def strip_quotes(buf):

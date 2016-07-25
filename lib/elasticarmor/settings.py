@@ -13,7 +13,7 @@ import requests
 from elasticarmor import *
 from elasticarmor.auth.elasticsearch_backend import ElasticsearchRoleBackend, ElasticsearchUserBackend
 from elasticarmor.auth.ldap_backend import LdapUserBackend, LdapUsergroupBackend
-from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version, propertycache
+from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version, cachedproperty
 from elasticarmor.util.config import Parser
 from elasticarmor.util.daemon import Settings
 from elasticarmor.util.elastic import ElasticConnection
@@ -70,47 +70,35 @@ class ElasticSettings(LoggingAware, Settings):
         parser.add_option('--skip-index-initialization', default=False, action='store_true',
                           help='Whether to skip the initialization of the configuration index.')
 
-    @property
+    @cachedproperty
     def config(self):
-        try:
-            return ElasticSettings.__config
-        except AttributeError:
-            parser = Parser(self.default_configuration)
-            config_ini = os.path.join(self.options.config, 'config.ini')
-            if self._check_file_permissions(config_ini, 'r', suppress_errors=True):
-                with open(config_ini) as f:
-                    parser.readfp(f)
+        parser = Parser(self.default_configuration)
+        config_ini = os.path.join(self.options.config, 'config.ini')
+        if self._check_file_permissions(config_ini, 'r', suppress_errors=True):
+            with open(config_ini) as f:
+                parser.readfp(f)
 
-            ElasticSettings.__config = parser
-            return ElasticSettings.__config
+        return parser
 
-    @property
+    @cachedproperty
     def authentication(self):
-        try:
-            return ElasticSettings.__authentication
-        except AttributeError:
-            parser = Parser(self.default_authentication_config['global'])
-            authentication_ini = os.path.join(self.options.config, 'authentication.ini')
-            if self._check_file_permissions(authentication_ini, 'r', suppress_errors=True):
-                with open(authentication_ini) as f:
-                    parser.readfp(f)
+        parser = Parser(self.default_authentication_config['global'])
+        authentication_ini = os.path.join(self.options.config, 'authentication.ini')
+        if self._check_file_permissions(authentication_ini, 'r', suppress_errors=True):
+            with open(authentication_ini) as f:
+                parser.readfp(f)
 
-            ElasticSettings.__authentication = parser
-            return ElasticSettings.__authentication
+        parser
 
-    @property
+    @cachedproperty
     def groups(self):
-        try:
-            return ElasticSettings.__groups
-        except AttributeError:
-            parser = Parser()
-            groups_ini = os.path.join(self.options.config, 'groups.ini')
-            if self._check_file_permissions(groups_ini, 'r', suppress_errors=True):
-                with open(groups_ini) as f:
-                    parser.readfp(f)
+        parser = Parser()
+        groups_ini = os.path.join(self.options.config, 'groups.ini')
+        if self._check_file_permissions(groups_ini, 'r', suppress_errors=True):
+            with open(groups_ini) as f:
+                parser.readfp(f)
 
-            ElasticSettings.__groups = parser
-            return ElasticSettings.__groups
+        parser
 
     @property
     def log_type(self):
@@ -253,8 +241,7 @@ class ElasticSettings(LoggingAware, Settings):
 
         return network_map
 
-    @property
-    @propertycache
+    @cachedproperty
     def elasticsearch(self):
         nodes = self.elasticsearch_nodes
         for node in nodes:
