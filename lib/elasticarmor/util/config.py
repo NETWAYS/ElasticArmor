@@ -4,6 +4,8 @@ import ConfigParser
 
 from elasticarmor.util import strip_quotes
 
+__all__ = ['Parser']
+
 
 class Parser(ConfigParser.RawConfigParser):
     """INI Parser derived from ConfigParser.RawConfigParser which is
