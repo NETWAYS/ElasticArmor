@@ -4,6 +4,7 @@
 /** @var $this \Icinga\Application\Modules\Module */
 
 $menuSection = $this->menuSection('Elasticsearch')
+    ->setUrl('elasticsearch')
     ->add(N_('Authentication'))
     ->setIcon('lock')
     ->setPriority(820)
