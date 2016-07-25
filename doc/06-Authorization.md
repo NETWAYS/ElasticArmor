@@ -67,69 +67,71 @@ Each permission in the table below has a scope assigned to it. This is the small
 granted to. This means that permissions can also be granted in a bigger scope, causing a permission to apply
 to all restrictions defined in the lower scopes, if they are able to inherit permissions.
 
-Permission Name                 | Applies to Scope
---------------------------------|-----------------
-api/cluster/health              | indices
-api/cluster/state               | cluster
-api/cluster/stats               | cluster
-api/cluster/pendingTasks        | cluster
-api/cluster/reroute             | cluster
-api/cluster/get/settings        | cluster
-api/cluster/update/settings     | cluster
-api/cluster/nodes/stats         | cluster
-api/cluster/nodes/info          | cluster
-api/cluster/nodes/hotThreads    | cluster
-api/cluster/nodes/shutdown      | cluster
-api/indices/create/index        | indices
-api/indices/delete/index        | indices
-api/indices/open                | indices
-api/indices/close               | indices
-api/indices/create/mappings     | types
-api/indices/delete/mappings     | types
-api/indices/get/mappings        | types
-api/indices/create/aliases      | indices
-api/indices/delete/aliases      | indices
-api/indices/get/aliases         | indices
-api/indices/update/settings     | indices
-api/indices/get/settings        | indices
-api/indices/analyze             | indices
-api/indices/create/templates    | cluster
-api/indices/delete/templates    | cluster
-api/indices/get/templates       | cluster
-api/indices/create/warmers      | indices
-api/indices/delete/warmers      | indices
-api/indices/get/warmers         | indices
-api/indices/stats               | indices
-api/indices/segments            | indices
-api/indices/recovery            | indices
-api/indices/cache/clear         | indices
-api/indices/flush               | indices
-api/indices/refresh             | indices
-api/indices/optimize            | indices
-api/indices/upgrade             | indices
-api/documents/index             | types
-api/documents/get               | fields
-api/documents/delete            | types
-api/documents/update            | fields
-api/documents/deleteByQuery     | types
-api/documents/termVector        | types
-api/search/documents            | fields
-api/search/templates            | cluster
-api/search/shards               | indices
-api/search/suggest              | cluster
-api/search/explain              | fields
-api/search/percolate            | types
-api/search/fieldStats           | indices
-api/cat                         | cluster
-api/bulk                        | cluster
-api/feature/deprecated          | cluster
-api/feature/facets              | types
-api/feature/fuzzyLikeThis       | fields
-api/feature/innerHits           | types
-api/feature/moreLikeThis        | fields
-api/feature/notImplemented      | types
-api/feature/queryString         | types
-api/feature/script              | fields
+Permission Name                 | Applies to Scope | Action
+--------------------------------|------------------|--------
+api/cluster/health              | indices          | monitor
+api/cluster/state               | cluster          | monitor
+api/cluster/stats               | cluster          | monitor
+api/cluster/pendingTasks        | cluster          | monitor
+api/cluster/reroute             | cluster          | operate
+api/cluster/get/settings        | cluster          | operate
+api/cluster/update/settings     | cluster          | operate
+api/cluster/nodes/stats         | cluster          | monitor
+api/cluster/nodes/info          | cluster          | monitor
+api/cluster/nodes/hotThreads    | cluster          | monitor
+api/cluster/nodes/shutdown      | cluster          | operate
+api/indices/create/index        | indices          | create
+api/indices/delete/index        | indices          | delete
+api/indices/open                | indices          | operate
+api/indices/close               | indices          | operate
+api/indices/create/mappings     | types            | create
+api/indices/delete/mappings     | types            | delete
+api/indices/get/mappings        | types            | read
+api/indices/create/aliases      | indices          | ~~operate~~ <sup>1</sup>
+api/indices/delete/aliases      | indices          | ~~operate~~ <sup>1</sup>
+api/indices/get/aliases         | indices          | ~~read~~ <sup>1</sup>
+api/indices/update/settings     | indices          | update
+api/indices/get/settings        | indices          | read
+api/indices/analyze             | indices          | operate
+api/indices/create/templates    | cluster          | operate
+api/indices/delete/templates    | cluster          | operate
+api/indices/get/templates       | cluster          | operate
+api/indices/create/warmers      | indices          | ~~operate~~ <sup>1</sup>
+api/indices/delete/warmers      | indices          | ~~operate~~ <sup>1</sup>
+api/indices/get/warmers         | indices          | ~~operate~~ <sup>1</sup>
+api/indices/stats               | indices          | ~~monitor~~ <sup>1</sup>
+api/indices/segments            | indices          | monitor
+api/indices/recovery            | indices          | monitor
+api/indices/cache/clear         | indices          | operate
+api/indices/flush               | indices          | operate
+api/indices/refresh             | indices          | operate
+api/indices/optimize            | indices          | operate
+api/indices/upgrade             | indices          | operate
+api/documents/index             | types            | create
+api/documents/get               | fields           | read
+api/documents/delete            | types            | delete
+api/documents/update            | fields           | update
+api/documents/deleteByQuery     | types            | delete
+api/documents/termVector        | types            | ~~read~~ <sup>1</sup>
+api/search/documents            | fields           | read
+api/search/templates            | cluster          | read
+api/search/shards               | indices          | ~~read~~ <sup>1</sup>
+api/search/suggest              | cluster          | ~~read~~ <sup>1</sup>
+api/search/explain              | fields           | read
+api/search/percolate            | types            | ~~read~~ <sup>1</sup>
+api/search/fieldStats           | indices          | ~~read~~ <sup>1</sup>
+api/cat                         | cluster          | -
+api/bulk                        | cluster          | bulk
+api/feature/deprecated          | cluster          | -
+api/feature/facets              | types            | -
+api/feature/fuzzyLikeThis       | fields           | -
+api/feature/innerHits           | types            | -
+api/feature/moreLikeThis        | fields           | -
+api/feature/notImplemented      | types            | -
+api/feature/queryString         | types            | -
+api/feature/script              | fields           | -
+
+<sup>1</sup>) Disabled for the time being until the protected endpoint is fully inspected.
 
 While the purpose of most of the permissions above should be clear, as they are very similar structured to how
 Elasticsearch's REST api is, you may wonder what these permissions in the feature namespace are for. They look
