@@ -16,7 +16,6 @@ import requests
 from elasticarmor import *
 from elasticarmor.auth import AuthorizationError, Auth, Client
 from elasticarmor.request import ElasticRequest, RequestError
-from elasticarmor.settings import Settings
 from elasticarmor.util import format_elasticsearch_error
 from elasticarmor.util.elastic import ElasticSearchError
 from elasticarmor.util.http import *
@@ -36,10 +35,9 @@ PRETTY_ERROR_FORMAT = '''{
 
 
 class ElasticReverseProxy(LoggingAware, ThreadingMixIn, HTTPServer):
-    def __init__(self):
+    def __init__(self, settings):
         self._terminator = threading.Event()
 
-        settings = Settings()
         self.auth = Auth(settings)
         self.elasticsearch = settings.elasticsearch
         self.skip_index_initialization = settings.options.skip_index_initialization

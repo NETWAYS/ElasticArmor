@@ -19,9 +19,129 @@ try:
 except ImportError:
     DEVNULL = open(os.devnull, 'w')
 
-__all__ = ['UnixDaemon', 'StreamLogger', 'create_daemon_option_parser']
+__all__ = ['StreamLogger', 'Settings', 'daemon_function', 'UnixDaemon']
 
-DAEMON_FUNCTIONS = ['start', 'stop', 'status', 'restart', 'reload']
+
+class DaemonOptionParser(optparse.OptionParser):
+    """Option parser which validates daemon function arguments."""
+
+    def parse_args(self, args=None, values=None):
+        options, args = optparse.OptionParser.parse_args(self, args, values)
+        if not args or args[0] not in UnixDaemon.functions:
+            self.print_usage()
+            sys.exit(1)
+
+        return options, args
+
+
+class StreamLogger(object):
+    """File-like object which redirects writes to a log handler."""
+
+    def __init__(self, log):
+        self.log = log
+
+    def write(self, buf):
+        buf = buf.rstrip()
+        if buf:
+            self.log(buf)
+
+
+class Settings(object):
+    """Container for application-settings.
+
+    This base class provides options and arguments for a daemon. Use a derived class to
+    customize or expand its functionality and set it as settings_class on the daemon.
+    """
+
+    _options = None
+    _arguments = None
+
+    def __init__(self, app_name, app_version):
+        self.app_name = app_name
+        self.app_version = app_version
+
+    @property
+    def options(self):
+        if self._options is None:
+            parser = self.create_option_parser(self.app_name, self.app_version)
+            self._options, self._arguments = parser.parse_args()
+
+        return self._options
+
+    @property
+    def arguments(self):
+        if self._arguments is None:
+            parser = self.create_option_parser(self.app_name, self.app_version)
+            self._options, self._arguments = parser.parse_args()
+
+        return self._arguments
+
+    @property
+    def pidfile(self):
+        return self.options.pidfile
+
+    @property
+    def umask(self):
+        return self.options.umask
+
+    @property
+    def chdir(self):
+        return self.options.chdir
+
+    @property
+    def user(self):
+        return self.options.user
+
+    @property
+    def group(self):
+        return self.options.group
+
+    @property
+    def detach(self):
+        return self.options.detach
+
+    def create_option_parser(self, prog=None, version=None):
+        """Create and return the option parser."""
+        usage = '%prog [options] {0}'.format('|'.join(UnixDaemon.functions))
+        parser = DaemonOptionParser(usage=usage, prog=prog, version=version)
+        pid_file_path = '/var/run/{0}.pid'.format(parser.get_prog_name())
+
+        start_stop_group = optparse.OptionGroup(parser, 'Start and Stop', 'Options used to start and stop the daemon:')
+        start_stop_group.add_option('-p', '--pidfile', dest='pidfile', metavar='PATH', default=pid_file_path,
+                                    help='pidfile PATH [default: %default]')
+        start_stop_group.add_option('-u', '--user', dest='user', default=None, help='The user to run the daemon as.')
+        start_stop_group.add_option('-g', '--group', dest='group', default=None, help='The group to run the daemon as.')
+        parser.add_option_group(start_stop_group)
+
+        start_group = optparse.OptionGroup(parser, 'Start', 'Options used to start the daemon:')
+        start_group.add_option('-b', '--background', dest='detach', default=False, action='store_true',
+                               help='Force the daemon into the background.')
+        start_group.add_option('-d', '--chdir', dest='chdir', metavar='DIR', default='/',
+                               help='Change to directory DIR before starting the daemon. [default: %default]')
+        start_group.add_option('-k', '--umask', type='int', dest='umask', default=0,
+                               help='The umask of the daemon. [default: %default]')
+        parser.add_option_group(start_group)
+
+        self.add_additional_options(parser)
+        return parser
+
+    def add_additional_options(self, parser):
+        """Overwrite this to add additional options to the given parser."""
+        pass
+
+
+def daemon_function(func):
+    """Decorator to declare a daemon's method as supported daemon function.
+
+    Usage:
+        class YourDaemon(UnixDaemon):
+            @daemon_function
+            def foo(self):
+                print 'bar'
+
+    """
+    UnixDaemon.functions.append(func.__name__)
+    return func
 
 
 class UnixDaemon(object):
@@ -31,18 +151,22 @@ class UnixDaemon(object):
     """
 
     name = 'daemon'
+    version = '1.0'
     default_maxfd = 1024
+    settings_class = Settings
+    functions = ['start', 'stop', 'status', 'restart', 'reload']
 
-    def __init__(self, pid_file_path, detach=False, user=None, group=None, umask=0, chdir='/'):
-        self._pid_locked = False
+    def __init__(self):
         self._pid_file = None
+        self._pid_locked = False
 
-        self.chdir = os.path.realpath(chdir)
-        self.pid_file_path = os.path.realpath(pid_file_path)
-        self.user_id = getpwnam(user).pw_uid if user else os.getuid()
-        self.group_id = getgrnam(group).gr_gid if group else os.getgid()
-        self.detach = detach
-        self.umask = umask
+        self.settings = self.settings_class(self.name, self.version)
+        self.chdir = os.path.realpath(self.settings.chdir)
+        self.pid_file_path = os.path.realpath(self.settings.pidfile)
+        self.user_id = getpwnam(self.settings.user).pw_uid if self.settings.user else os.getuid()
+        self.group_id = getgrnam(self.settings.group).gr_gid if self.settings.group else os.getgid()
+        self.detach = self.settings.detach
+        self.umask = self.settings.umask
 
         self.persistent_files = []
         super(UnixDaemon, self).__init__()
@@ -141,6 +265,9 @@ class UnixDaemon(object):
             exit_code = 3
 
         return exit_code
+
+    def invoke(self):
+        return getattr(self, self.settings.arguments[0])()
 
     def daemonize(self):
         try:
@@ -287,52 +414,3 @@ class UnixDaemon(object):
             os.unlink(self.pid_file_path)
         except (IOError, OSError):
             pass
-
-
-class StreamLogger(object):
-    """File-like object which redirects writes to a log handler."""
-
-    def __init__(self, log):
-        self.log = log
-
-    def write(self, buf):
-        buf = buf.rstrip()
-        if buf:
-            self.log(buf)
-
-
-class DaemonOptionParser(optparse.OptionParser):
-    """Option parser which validates daemon function arguments."""
-
-    def parse_args(self, args=None, values=None):
-        options, args = optparse.OptionParser.parse_args(self, args, values)
-        if not args or args[0] not in DAEMON_FUNCTIONS:
-            self.print_usage()
-            sys.exit(1)
-
-        return options, args
-
-
-def create_daemon_option_parser(version=None, chdir='/', prog=None):
-    """Create and return the option parser for a daemon."""
-    usage = '%prog [options] {0}'.format('|'.join(DAEMON_FUNCTIONS))
-    parser = DaemonOptionParser(usage=usage, version=version, prog=prog)
-    pid_file_path = '/var/run/{0}.pid'.format(parser.get_prog_name())
-
-    start_stop_group = optparse.OptionGroup(parser, 'Start and Stop', 'Options used to start and stop the daemon:')
-    start_stop_group.add_option('-p', '--pidfile', dest='pidfile', metavar='PATH', default=pid_file_path,
-                                help='pidfile PATH [default: %default]')
-    start_stop_group.add_option('-u', '--user', dest='user', default=None, help='The user to run the daemon as.')
-    start_stop_group.add_option('-g', '--group', dest='group', default=None, help='The group to run the daemon as.')
-    parser.add_option_group(start_stop_group)
-
-    start_group = optparse.OptionGroup(parser, 'Start', 'Options used to start the daemon:')
-    start_group.add_option('-b', '--background', dest='detach', default=False, action='store_true',
-                           help='Force the daemon into the background.')
-    start_group.add_option('-d', '--chdir', dest='chdir', metavar='DIR', default=chdir,
-                           help='Change to directory DIR before starting the daemon. [default: %default]')
-    start_group.add_option('-k', '--umask', type='int', dest='umask', default=0,
-                           help='The umask of the daemon. [default: %default]')
-    parser.add_option_group(start_group)
-
-    return parser

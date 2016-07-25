@@ -6,21 +6,22 @@ import sys
 from elasticarmor import *
 from elasticarmor.proxy import ElasticReverseProxy
 from elasticarmor.request import ElasticRequest
-from elasticarmor.settings import Settings
+from elasticarmor.settings import ElasticSettings
 from elasticarmor.util.daemon import UnixDaemon, StreamLogger
 from elasticarmor.util.mixins import LoggingAware
-
 
 __all__ = ['ElasticArmor']
 
 
 class ElasticArmor(UnixDaemon, LoggingAware):
     name = APP_NAME.lower()
+    version = VERSION
+    settings_class = ElasticSettings
 
     def __init__(self, *args, **kwargs):
         super(ElasticArmor, self).__init__(*args, **kwargs)
 
-        self._proxy = ElasticReverseProxy()
+        self._proxy = ElasticReverseProxy(self.settings)
         self.persistent_files.append(self._proxy.socket)
 
     def cleanup(self):
@@ -51,12 +52,11 @@ class ElasticArmor(UnixDaemon, LoggingAware):
         sys.stderr = StreamLogger(logging.getLogger(self.name + '.stderr').error)
 
     def before_daemonize(self):
-        settings = Settings()
         root_log = logging.getLogger()
-        root_log.setLevel(settings.log_level)
+        root_log.setLevel(self.settings.log_level)
 
-        if settings.detach:
-            root_log.handlers = [settings.log_handler]
+        if self.settings.detach:
+            root_log.handlers = [self.settings.log_handler]
         elif root_log.isEnabledFor(logging.DEBUG):
             # The default StreamHandler is the only one at this time
             root_log.handlers[0].setFormatter(logging.Formatter(FILE_LOG_FORMAT_DEBUG))
@@ -66,11 +66,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format=FILE_LOG_FORMAT)
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-    settings = Settings()
-    daemon = ElasticArmor(settings.pidfile, settings.detach, settings.user,
-                          settings.group, settings.umask, settings.chdir)
-    return getattr(daemon, settings.arguments[0])()
+    return ElasticArmor().invoke()
 
 
 if __name__ == '__main__':

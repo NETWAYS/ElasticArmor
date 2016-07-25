@@ -15,14 +15,14 @@ from elasticarmor.auth.elasticsearch_backend import ElasticsearchRoleBackend, El
 from elasticarmor.auth.ldap_backend import LdapUserBackend, LdapUsergroupBackend
 from elasticarmor.util import format_elasticsearch_error, compare_major_and_minor_version, propertycache
 from elasticarmor.util.config import Parser
-from elasticarmor.util.daemon import create_daemon_option_parser
+from elasticarmor.util.daemon import Settings
 from elasticarmor.util.elastic import ElasticConnection
 from elasticarmor.util.mixins import LoggingAware
 
-__all__ = ['Settings']
+__all__ = ['ElasticSettings']
 
 
-class Settings(LoggingAware, object):
+class ElasticSettings(LoggingAware, Settings):
     default_configuration = {
         'log': 'syslog',
         'file': DEFAULT_LOGFILE,
@@ -55,7 +55,8 @@ class Settings(LoggingAware, object):
         }
     }
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(ElasticSettings, self).__init__(*args, **kwargs)
         self._group_backend_type = None
 
     def _exit(self, message, *format_args):
@@ -63,30 +64,16 @@ class Settings(LoggingAware, object):
         self.log.critical(message, *format_args)
         sys.exit(2)
 
-    @property
-    def options(self):
-        try:
-            return Settings.__options
-        except AttributeError:
-            parser = create_daemon_option_parser(VERSION, prog=APP_NAME.lower())
-            parser.add_option('--config', dest='config', metavar='PATH', default=DEFAULT_CONFIG_DIR,
-                              help='config PATH [default: %default]')
-            parser.add_option('--skip-index-initialization', default=False, action='store_true',
-                              help='Whether to skip the initialization of the configuration index.')
-            Settings.__options, Settings.__arguments = parser.parse_args()
-            return Settings.__options
-
-    @property
-    def arguments(self):
-        try:
-            return Settings.__arguments
-        except AttributeError:
-            return (self.options, Settings.__arguments)[1]
+    def add_additional_options(self, parser):
+        parser.add_option('--config', dest='config', metavar='PATH', default=DEFAULT_CONFIG_DIR,
+                          help='config PATH [default: %default]')
+        parser.add_option('--skip-index-initialization', default=False, action='store_true',
+                          help='Whether to skip the initialization of the configuration index.')
 
     @property
     def config(self):
         try:
-            return Settings.__config
+            return ElasticSettings.__config
         except AttributeError:
             parser = Parser(self.default_configuration)
             config_ini = os.path.join(self.options.config, 'config.ini')
@@ -94,13 +81,13 @@ class Settings(LoggingAware, object):
                 with open(config_ini) as f:
                     parser.readfp(f)
 
-            Settings.__config = parser
-            return Settings.__config
+            ElasticSettings.__config = parser
+            return ElasticSettings.__config
 
     @property
     def authentication(self):
         try:
-            return Settings.__authentication
+            return ElasticSettings.__authentication
         except AttributeError:
             parser = Parser(self.default_authentication_config['global'])
             authentication_ini = os.path.join(self.options.config, 'authentication.ini')
@@ -108,13 +95,13 @@ class Settings(LoggingAware, object):
                 with open(authentication_ini) as f:
                     parser.readfp(f)
 
-            Settings.__authentication = parser
-            return Settings.__authentication
+            ElasticSettings.__authentication = parser
+            return ElasticSettings.__authentication
 
     @property
     def groups(self):
         try:
-            return Settings.__groups
+            return ElasticSettings.__groups
         except AttributeError:
             parser = Parser()
             groups_ini = os.path.join(self.options.config, 'groups.ini')
@@ -122,32 +109,8 @@ class Settings(LoggingAware, object):
                 with open(groups_ini) as f:
                     parser.readfp(f)
 
-            Settings.__groups = parser
-            return Settings.__groups
-
-    @property
-    def pidfile(self):
-        return self.options.pidfile
-
-    @property
-    def umask(self):
-        return self.options.umask
-
-    @property
-    def chdir(self):
-        return self.options.chdir
-
-    @property
-    def user(self):
-        return self.options.user
-
-    @property
-    def group(self):
-        return self.options.group
-
-    @property
-    def detach(self):
-        return self.options.detach
+            ElasticSettings.__groups = parser
+            return ElasticSettings.__groups
 
     @property
     def log_type(self):
