@@ -88,7 +88,7 @@ class ElasticSettings(LoggingAware, Settings):
             with open(authentication_ini) as f:
                 parser.readfp(f)
 
-        parser
+        return parser
 
     @cachedproperty
     def groups(self):
@@ -98,7 +98,7 @@ class ElasticSettings(LoggingAware, Settings):
             with open(groups_ini) as f:
                 parser.readfp(f)
 
-        parser
+        return parser
 
     @property
     def log_type(self):
