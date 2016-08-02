@@ -354,6 +354,8 @@ class UnixDaemon(object):
                     sys.exit(1)
 
             self._pid_file = open(self.pid_file_path, 'w+')
+
+        os.chown(self.pid_file_path, self.user_id, self.group_id)
         self._lock_pid_file(blocking=False)
 
     def _lock_pid_file(self, blocking=True):
