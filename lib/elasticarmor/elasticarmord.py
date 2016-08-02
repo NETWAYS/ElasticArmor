@@ -57,6 +57,8 @@ class ElasticArmor(UnixDaemon, LoggingAware):
 
         if self.settings.detach:
             root_log.handlers = [self.settings.log_handler]
+            if self.settings.log_type == 'syslog':
+                self.persistent_files.append(root_log.handlers[0].socket)
         elif root_log.isEnabledFor(logging.DEBUG):
             # The default StreamHandler is the only one at this time
             root_log.handlers[0].setFormatter(logging.Formatter(FILE_LOG_FORMAT_DEBUG))
